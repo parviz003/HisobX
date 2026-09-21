@@ -1,0 +1,367 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Enums
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+  SELLER
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum SaleStatus {
+  DRAFT
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentType {
+  CASH
+  CREDIT
+}
+
+enum CashTransactionType {
+  SALE
+  DEBT_PAYMENT
+  EXPENSE
+  OPENING
+  ADJUSTMENT
+}
+
+enum InventoryTransactionType {
+  PURCHASE
+  SALE
+  WRITE_OFF
+  OPENING
+  ADJUSTMENT
+}
+
+enum NotificationType {
+  DEBT_REMINDER
+  DEBT_OVERDUE
+  LOW_STOCK
+  DAILY_REPORT
+}
+
+// Models
+
+model Store {
+  id             String   @id @default(uuid())
+  name           String
+  phone          String?
+  address        String?
+  telegramChatId String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  users                 User[]
+  products              Product[]
+  categories            Category[]
+  customers             Customer[]
+  sales                 Sale[]
+  debts                 Debt[]
+  debtPayments          DebtPayment[]
+  cashTransactions      CashTransaction[]
+  expenses              Expense[]
+  expenseCategories     ExpenseCategory[]
+  inventoryTransactions InventoryTransaction[]
+  notifications         Notification[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String?
+  fullName  String?
+  phone     String   @unique
+  password  String
+  role      Role     @default(SELLER)
+  status    Status   @default(ACTIVE)
+  isActive  Boolean  @default(true)
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  devices          Devices[]
+  sales            Sale[]
+  cashTransactions CashTransaction[]
+  expenses         Expense[]
+
+  @@index([storeId])
+}
+
+model Devices {
+  deviceId           String   @id @default(uuid())
+  device             String
+  hashedRefreshToken String
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  products Product[]
+
+  @@unique([storeId, name])
+  @@index([storeId])
+}
+
+model Product {
+  id                String   @id @default(uuid())
+  name              String
+  barcode           String?
+  unit              String   @default("dona")
+  sellingPrice      Decimal  @db.Decimal(15, 2)
+  lastPurchasePrice Decimal  @default(0) @db.Decimal(15, 2)
+  stock             Int      @default(0)
+  minStock          Int      @default(0)
+  imageUrl          String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  storeId    String
+  store      Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  saleItems             SaleItem[]
+  inventoryTransactions InventoryTransaction[]
+
+  @@unique([storeId, barcode])
+  @@index([storeId])
+  @@index([storeId, categoryId])
+  @@index([storeId, isActive])
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  sales Sale[]
+  debts Debt[]
+
+  @@index([storeId])
+  @@index([storeId, phone])
+}
+
+model Sale {
+  id              String      @id @default(uuid())
+  saleNumber      Int
+  status          SaleStatus  @default(DRAFT)
+  paymentType     PaymentType @default(CASH)
+  subtotal        Decimal     @db.Decimal(15, 2)
+  discountPercent Decimal     @default(0) @db.Decimal(5, 2)
+  discountAmount  Decimal     @default(0) @db.Decimal(15, 2)
+  totalAmount     Decimal     @db.Decimal(15, 2)
+  note            String?
+  deletedAt       DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  storeId    String
+  store      Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  saleItems        SaleItem[]
+  debts            Debt[]
+  cashTransactions CashTransaction[]
+
+  @@unique([storeId, saleNumber])
+  @@index([storeId])
+  @@index([storeId, createdAt])
+  @@index([storeId, status])
+  @@index([storeId, customerId])
+  @@index([storeId, deletedAt])
+}
+
+model SaleItem {
+  id        String   @id @default(uuid())
+  quantity  Int
+  price     Decimal  @db.Decimal(15, 2)
+  costPrice Decimal  @db.Decimal(15, 2)
+  total     Decimal  @db.Decimal(15, 2)
+  createdAt DateTime @default(now())
+
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([saleId])
+  @@index([productId])
+}
+
+model Debt {
+  id              String    @id @default(uuid())
+  amount          Decimal   @db.Decimal(15, 2)
+  remainingAmount Decimal   @db.Decimal(15, 2)
+  dueDate         DateTime?
+  isPaid          Boolean   @default(false)
+  note            String?
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  storeId    String
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  saleId     String
+  sale       Sale     @relation(fields: [saleId], references: [id], onDelete: Restrict)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  debtPayments DebtPayment[]
+
+  @@index([storeId])
+  @@index([storeId, customerId])
+  @@index([storeId, isPaid])
+  @@index([storeId, dueDate])
+  @@index([storeId, deletedAt])
+}
+
+model DebtPayment {
+  id        String    @id @default(uuid())
+  amount    Decimal   @db.Decimal(15, 2)
+  note      String?
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  debtId  String
+  debt    Debt   @relation(fields: [debtId], references: [id], onDelete: Restrict)
+
+  @@index([storeId])
+  @@index([debtId])
+  @@index([storeId, createdAt])
+}
+
+model CashTransaction {
+  id        String              @id @default(uuid())
+  type      CashTransactionType
+  amount    Decimal             @db.Decimal(15, 2)
+  balance   Decimal             @db.Decimal(15, 2)
+  note      String?
+  deletedAt DateTime?
+  createdAt DateTime            @default(now())
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  saleId  String?
+  sale    Sale?  @relation(fields: [saleId], references: [id], onDelete: SetNull)
+
+  @@index([storeId])
+  @@index([storeId, type])
+  @@index([storeId, createdAt])
+  @@index([storeId, deletedAt])
+}
+
+model ExpenseCategory {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  expenses Expense[]
+
+  @@unique([storeId, name])
+  @@index([storeId])
+}
+
+model Expense {
+  id        String    @id @default(uuid())
+  amount    Decimal   @db.Decimal(15, 2)
+  note      String?
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  storeId           String
+  store             Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  expenseCategoryId String
+  expenseCategory   ExpenseCategory @relation(fields: [expenseCategoryId], references: [id], onDelete: Restrict)
+  userId            String
+  user              User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([storeId])
+  @@index([storeId, createdAt])
+  @@index([storeId, expenseCategoryId])
+  @@index([storeId, deletedAt])
+}
+
+model InventoryTransaction {
+  id        String                   @id @default(uuid())
+  type      InventoryTransactionType
+  quantity  Int
+  unitPrice Decimal?                 @db.Decimal(15, 2)
+  note      String?
+  createdAt DateTime                 @default(now())
+
+  storeId   String
+  store     Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([storeId])
+  @@index([storeId, productId])
+  @@index([storeId, type])
+  @@index([storeId, createdAt])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  isSent    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([storeId, isRead])
+  @@index([storeId, createdAt])
+}
