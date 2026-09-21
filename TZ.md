@@ -39,7 +39,7 @@ Loyiha magazin egasiga quyidagi savollarga tez va aniq javob berish imkonini ber
   - `sharp` (rasmlarni avtomatik siqish, hajmini kamaytirish va `.webp` formatga o'tkazish)
 - **Bildirishnomalar & Integratsiyalar:**
   - Telegram Bot API (xatoliklarni guruhga tashlash uchun `LoggerBot` va do'kon xabarnomalari)
-  - Eskiz SMS API (mobil telefon orqali tasdiqlash uchun)
+  - Local OTP SMS/Email simulator (kodlar konsol/response orqali uzatiladi)
   - Nodemailer / `@nestjs-modules/mailer` (pochta xabarlari uchun)
 - **API Hujjatlashtirish:** Swagger (`@nestjs/swagger`)
 
@@ -62,8 +62,7 @@ src/
 │   └── lib/                   
 │       ├── Crypt.ts           # bcrypt.hash, compare
 │       ├── Token.ts           # JWT sign, verify, cookie set/clear
-│       ├── File.ts            # Rasmlarni saqlash va o'chirish
-│       └── Eskiz.ts           # SMS provider integratsiyasi
+│       └── File.ts            # Rasmlarni saqlash va o'chirish
 ├── common/                    # Barcha modullar uchun umumiy utility va mexanizmlar
 │   ├── bot/                   # logger-bot.ts (Telegram orqali 400/500 xatoliklarini log qilish)
 │   ├── decorator/             # @UserId, @CurrentUser, @RefreshToken, @AccessRoles

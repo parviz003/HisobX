@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_FILTER } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './config/database/prisma.module';
 import { RedisModule } from './config/redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -12,12 +13,17 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { SalesModule } from './modules/sales/sales.module';
 import { DebtsModule } from './modules/debts/debts.module';
+import { CashModule } from './modules/cash/cash.module';
+import { ExpensesModule } from './modules/expenses/expenses.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { TelegramModule } from './modules/telegram/telegram.module';
 import { AuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { AllExceptionsFilter } from './common/filters/all-exception.filter';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     PrismaModule,
     RedisModule,
     OtpModule,
@@ -30,6 +36,10 @@ import { AllExceptionsFilter } from './common/filters/all-exception.filter';
     CustomersModule,
     SalesModule,
     DebtsModule,
+    CashModule,
+    ExpensesModule,
+    ReportsModule,
+    TelegramModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard },

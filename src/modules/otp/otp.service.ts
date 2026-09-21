@@ -3,14 +3,16 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import { createHmac, randomInt } from 'crypto';
 import { RedisService } from '../../config/redis/redis.service';
 import { env } from '../../config';
-import { Eskiz } from '../../infrastructure/lib/Eskiz';
 
 @Injectable()
 export class OtpService {
+  private readonly logger = new Logger(OtpService.name);
+
   constructor(private readonly redisService: RedisService) {}
 
   private normalizePhone(value: string): string {
@@ -93,10 +95,12 @@ export class OtpService {
       // Redis offline bo'lsa xabar bermasdan o'tkazish
     }
 
-    await Eskiz.sendSms(phone, `HisobX tasdiqlash kodi: ${code}`);
+    this.logger.log(`[LOCAL SMS] Qabul qiluvchi: ${phone} -> Kod: ${code}`);
 
     return {
-      code, // Dev/Demo uchun qaytariladi
+      code, // Local / dev uchun kod qaytariladi
+      phone,
+      message: `Tasdiqlash kodi: ${code}`,
       expiresIn: env.OTP.TTL,
       resendAfter: env.OTP.RESEND,
     };
