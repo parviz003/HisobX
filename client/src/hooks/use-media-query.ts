@@ -1,0 +1,26 @@
+import { useEffect, useState } from 'react';
+
+/** Tailwind `md` chegarasi — bundan kichigi "telefon" deb hisoblanadi. */
+export const MOBILE_BREAKPOINT = '(min-width: 768px)';
+
+export function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(query).matches;
+  });
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const onChange = () => setMatches(media.matches);
+    onChange();
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
+  }, [query]);
+
+  return matches;
+}
+
+/** `true` bo'lsa ekran planshet/kompyuter o'lchamida. */
+export function useIsDesktop(): boolean {
+  return useMediaQuery(MOBILE_BREAKPOINT);
+}
