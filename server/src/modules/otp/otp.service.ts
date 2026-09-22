@@ -1,20 +1,17 @@
-import {
-  BadRequestException,
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+import { HttpException, Inject, Injectable } from '@nestjs/common';
 import { createHmac, randomInt } from 'crypto';
 import { RedisService } from '../../config/redis/redis.service';
 import { env } from '../../config';
 import { OTP_SENDER, type OtpSender } from './otp-sender.interface';
+import { Phone } from '../../common/helper/phone';
+import { BusinessException } from '../../common/errors/business.exception';
+import { ErrorCode } from '../../common/errors/error-codes';
 
 /** OTP kodining maqsadi — kalitlar maqsad bo'yicha ajratiladi */
 export type OtpPurpose = 'signin' | 'reset';
 
 export interface OtpSendResult {
+  /** Har doim `+998901234567` formatida */
   phone: string;
   message: string;
   /** Kod faqat development muhitida qaytariladi */
@@ -30,14 +27,11 @@ export class OtpService {
     @Inject(OTP_SENDER) private readonly sender: OtpSender,
   ) {}
 
+  /** Redis kalitlari uchun: faqat raqamlar (`998901234567`) */
   normalizePhone(value: string): string {
-    const phone = value.replace(/\D/g, '');
-    if (!/^998\d{9}$/.test(phone)) {
-      throw new BadRequestException(
-        'Telefon raqam noto‘g‘ri. Masalan: +998901234567',
-      );
-    }
-    return phone;
+    // Format noto'g'ri bo'lsa 400 qaytadi
+    Phone.normalize(value);
+    return Phone.digits(value);
   }
 
   private generateOtp(): string {
@@ -66,14 +60,11 @@ export class OtpService {
     return `otp:${purpose}:pending:${phone}`;
   }
 
-  private tooManyRequests(retryAfter: number): never {
-    throw new HttpException(
-      {
-        statusCode: HttpStatus.TOO_MANY_REQUESTS,
-        message: `OTP qayta yuborish uchun ${retryAfter} sekund kuting`,
-        details: { retryAfter },
-      },
-      HttpStatus.TOO_MANY_REQUESTS,
+  private unavailable(message: string): never {
+    throw new BusinessException(
+      503,
+      ErrorCode.OTP_SERVICE_UNAVAILABLE,
+      message,
     );
   }
 
@@ -101,14 +92,18 @@ export class OtpService {
         'NX',
       );
     } catch (e) {
-      throw new ServiceUnavailableException(
-        'OTP xizmati vaqtincha ishlamayapti. Keyinroq urinib ko‘ring',
+      this.unavailable(
+        "OTP xizmati vaqtincha ishlamayapti. Keyinroq urinib ko'ring",
       );
     }
 
     if (cooldown !== 'OK') {
-      const remaining = await redis.ttl(resendKey);
-      this.tooManyRequests(Math.max(remaining, 1));
+      const remaining = Math.max(await redis.ttl(resendKey), 1);
+      throw BusinessException.tooManyRequests(
+        ErrorCode.OTP_RESEND_TOO_SOON,
+        `OTP qayta yuborish uchun ${remaining} sekund kuting`,
+        { retryAfter: remaining },
+      );
     }
 
     const code = this.generateOtp();
@@ -124,15 +119,13 @@ export class OtpService {
         .set(attemptsKey, '0', 'EX', env.OTP.TTL_SECONDS)
         .exec();
     } catch (error) {
-      throw new ServiceUnavailableException(
-        'OTP saqlashda xatolik. Keyinroq urinib ko‘ring',
-      );
+      this.unavailable("OTP saqlashda xatolik. Keyinroq urinib ko'ring");
     }
 
     await this.sender.send(phone, code, purpose);
 
     return {
-      phone,
+      phone: `+${phone}`,
       message: 'Tasdiqlash kodi yuborildi',
       ...(env.IS_DEV ? { code } : {}),
       expiresAt: new Date(now + env.OTP.TTL_SECONDS * 1000).toISOString(),
@@ -142,6 +135,14 @@ export class OtpService {
     };
   }
 
+  /**
+   * Kodni tekshiradi.
+   *
+   * Xatolar:
+   * - `OTP_EXPIRED` (400) — kod yo'q yoki muddati tugagan
+   * - `OTP_INVALID` (400) — kod xato, `data.attemptsLeft` qolgan urinishlar
+   * - `OTP_ATTEMPTS_EXCEEDED` (429) — urinishlar tugadi, kod bekor qilindi
+   */
   async verifyOtp(
     phoneInput: string,
     code: string,
@@ -153,11 +154,18 @@ export class OtpService {
     const attemptsKey = this.attemptsKey(purpose, phone);
     const candidateHash = this.hashOtp(purpose, phone, code);
 
+    /*
+     * Skript [holat, qolgan urinishlar] juftligini qaytaradi:
+     *   [ 1, 0] — kod to'g'ri
+     *   [ 0, n] — kod xato, yana n ta urinish bor
+     *   [-1, 0] — urinishlar tugadi (kod o'chirildi)
+     *   [-2, 0] — kod yo'q yoki muddati tugagan
+     */
     const script = `
       local stored = redis.call('GET', KEYS[1])
 
       if not stored then
-        return -2
+        return {-2, 0}
       end
 
       local attempts = tonumber(redis.call('GET', KEYS[2]) or '0')
@@ -165,12 +173,12 @@ export class OtpService {
 
       if attempts >= maxAttempts then
         redis.call('DEL', KEYS[1], KEYS[2])
-        return -1
+        return {-1, 0}
       end
 
       if stored == ARGV[1] then
         redis.call('DEL', KEYS[1], KEYS[2])
-        return 1
+        return {1, 0}
       end
 
       attempts = redis.call('INCR', KEYS[2])
@@ -182,52 +190,53 @@ export class OtpService {
 
       if attempts >= maxAttempts then
         redis.call('DEL', KEYS[1], KEYS[2])
-        return -1
+        return {-1, 0}
       end
 
-      return 0
+      return {0, maxAttempts - attempts}
     `;
 
-    let result: number;
+    let status: number;
+    let attemptsLeft: number;
     try {
-      result = Number(
-        await redis.eval(
-          script,
-          2,
-          otpKey,
-          attemptsKey,
-          candidateHash,
-          String(env.OTP.MAX_ATTEMPTS),
-        ),
-      );
+      const raw = (await redis.eval(
+        script,
+        2,
+        otpKey,
+        attemptsKey,
+        candidateHash,
+        String(env.OTP.MAX_ATTEMPTS),
+      )) as [number, number];
+      status = Number(raw?.[0]);
+      attemptsLeft = Number(raw?.[1] ?? 0);
     } catch (e: any) {
       if (e instanceof HttpException) throw e;
-      throw new ServiceUnavailableException(
-        'OTP tekshirish xizmati ishlamayapti. Keyinroq urinib ko‘ring',
+      this.unavailable(
+        "OTP tekshirish xizmati ishlamayapti. Keyinroq urinib ko'ring",
       );
     }
 
-    if (result === -2) {
-      throw new BadRequestException(
-        'OTP kodi mavjud emas yoki muddati tugagan',
+    if (status === -2) {
+      throw BusinessException.badRequest(
+        ErrorCode.OTP_EXPIRED,
+        'Kod muddati tugagan. Yangi kod so‘rang',
       );
     }
 
-    if (result === -1) {
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.TOO_MANY_REQUESTS,
-          message: 'OTP kiritish urinishlari soni tugadi. Yangi kod so‘rang.',
-        },
-        HttpStatus.TOO_MANY_REQUESTS,
+    if (status === -1) {
+      throw BusinessException.tooManyRequests(
+        ErrorCode.OTP_ATTEMPTS_EXCEEDED,
+        'Kod kiritish urinishlari tugadi. Yangi kod so‘rang',
       );
     }
 
-    if (result !== 1) {
-      throw new BadRequestException('OTP kodi noto‘g‘ri');
+    if (status !== 1) {
+      throw BusinessException.badRequest(ErrorCode.OTP_INVALID, 'Kod xato', {
+        attemptsLeft,
+      });
     }
 
-    return { verified: true, phone };
+    return { verified: true, phone: `+${phone}` };
   }
 
   /* ----------------------- Kutilayotgan urinish belgisi ---------------------- */
@@ -243,7 +252,7 @@ export class OtpService {
         env.OTP.PENDING_WINDOW_SECONDS,
       );
     } catch (e) {
-      throw new ServiceUnavailableException('Sessiya saqlashda xatolik');
+      this.unavailable('Sessiya saqlashda xatolik');
     }
   }
 
@@ -256,10 +265,11 @@ export class OtpService {
         this.pendingKey(purpose, phone),
       );
     } catch (e) {
-      throw new ServiceUnavailableException('Sessiya tekshirishda xatolik');
+      this.unavailable('Sessiya tekshirishda xatolik');
     }
     if (!exists) {
-      throw new BadRequestException(
+      throw BusinessException.badRequest(
+        ErrorCode.OTP_NOT_PENDING,
         'Avval telefon raqam va parol bilan tizimga kiring',
       );
     }
@@ -274,10 +284,11 @@ export class OtpService {
         this.pendingKey(purpose, phone),
       );
     } catch (e) {
-      throw new ServiceUnavailableException('Sessiya tekshirishda xatolik');
+      this.unavailable('Sessiya tekshirishda xatolik');
     }
     if (!removed) {
-      throw new BadRequestException(
+      throw BusinessException.badRequest(
+        ErrorCode.OTP_NOT_PENDING,
         'Avval telefon raqam va parol bilan tizimga kiring',
       );
     }

@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "resolvePackageJsonExports": false,
+    "allowJs": true,
+    "isolatedModules": false,
+    "declaration": false,
+    "incremental": false,
+    "noEmit": true,
+    "types": ["node", "express", "multer", "jest"]
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

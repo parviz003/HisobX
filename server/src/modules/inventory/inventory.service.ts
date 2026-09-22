@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../../config/database/prisma.service';
 import { CreateInventoryDto } from './dto/create-inventory.dto';
 import { QueryInventoryDto } from './dto/query-inventory.dto';
+import { successRes } from '../../common/helper/success-response';
 
 @Injectable()
 export class InventoryService {
@@ -37,7 +38,7 @@ export class InventoryService {
         },
       });
 
-      return { product: updatedProduct, transaction };
+      return successRes({ product: updatedProduct, transaction }, 201);
     });
   }
 
@@ -68,7 +69,7 @@ export class InventoryService {
         },
       });
 
-      return { product: updatedProduct, transaction };
+      return successRes({ product: updatedProduct, transaction }, 201);
     });
   }
 
@@ -99,7 +100,7 @@ export class InventoryService {
         },
       });
 
-      return { product: updatedProduct, transaction };
+      return successRes({ product: updatedProduct, transaction }, 201);
     });
   }
 
@@ -128,7 +129,7 @@ export class InventoryService {
       this.prisma.inventoryTransaction.count({ where }),
     ]);
 
-    return { data, total, page, limit };
+    return successRes({ data, total, page, limit });
   }
 
   async getStockLevels(storeId: number) {
@@ -144,9 +145,11 @@ export class InventoryService {
       orderBy: { name: 'asc' },
     });
 
-    return products.map((p) => ({
-      ...p,
-      lowStock: p.stock <= p.minStock,
-    }));
+    return successRes(
+      products.map((p) => ({
+        ...p,
+        lowStock: p.stock <= p.minStock,
+      })),
+    );
   }
 }

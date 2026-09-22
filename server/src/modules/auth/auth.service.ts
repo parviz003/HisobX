@@ -1,14 +1,4 @@
-import {
-  HttpException,
-  Logger,
-  UnauthorizedException,
-  HttpStatus,
-  NotFoundException,
-  BadRequestException,
-  Injectable,
-  ForbiddenException,
-  ConflictException,
-} from '@nestjs/common';
+import { HttpException, Logger, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../config/database/prisma.service';
 import { SignInDto } from './dto/sign-in.dto';
 import { SignUpDto } from './dto/sign-up.dto';
@@ -24,8 +14,10 @@ import { Role, Status } from '@prisma/client';
 import { RedisService } from '../../config/redis/redis.service';
 import { env } from '../../config';
 import { IPayload } from '../../common/interface';
-
-const MAX_DEVICES = 3;
+import { BusinessException } from '../../common/errors/business.exception';
+import { ErrorCode } from '../../common/errors/error-codes';
+import { Phone } from '../../common/helper/phone';
+import { DeviceService } from './device.service';
 
 @Injectable()
 export class AuthService {
@@ -35,14 +27,17 @@ export class AuthService {
     private readonly db: PrismaService,
     private readonly otp: OtpService,
     private readonly redis: RedisService,
+    private readonly devices: DeviceService,
   ) {}
 
   async signUp(dto: SignUpDto) {
-    const existing = await this.db.user.findUnique({
-      where: { phone: dto.phone },
-    });
+    const phone = Phone.normalize(dto.phone);
+    const existing = await this.db.user.findUnique({ where: { phone } });
     if (existing) {
-      throw new ConflictException('Bu telefon raqam allaqachon mavjud');
+      throw BusinessException.conflict(
+        ErrorCode.PHONE_TAKEN,
+        'Bu telefon raqam allaqachon mavjud',
+      );
     }
 
     const hashedPassword = await Crypt.hash(dto.password);
@@ -51,13 +46,13 @@ export class AuthService {
       const store = await tx.store.create({
         data: {
           name: dto.storeName,
-          phone: dto.phone,
+          phone,
         },
       });
 
       const user = await tx.user.create({
         data: {
-          phone: dto.phone,
+          phone,
           password: hashedPassword,
           fullName: dto.fullName,
           role: Role.ADMIN,
@@ -79,23 +74,23 @@ export class AuthService {
   }
 
   async signIn(dto: SignInDto) {
-    await this.assertNotLockedOut(dto.phone);
+    const phone = Phone.normalize(dto.phone);
+    await this.assertNotLockedOut(phone);
 
-    const user = await this.db.user.findUnique({
-      where: { phone: dto.phone },
-    });
+    const user = await this.db.user.findUnique({ where: { phone } });
     const isMatchPass = await Crypt.compare(
       dto.password,
       user ? user.password : '',
     );
     if (!isMatchPass || !user) {
-      await this.registerFailedLogin(dto.phone);
-      throw new BadRequestException('Telefon raqam yoki parol xato');
+      await this.registerFailedLogin(phone);
+      throw BusinessException.badRequest(
+        ErrorCode.INVALID_CREDENTIALS,
+        'Telefon raqam yoki parol xato',
+      );
     }
-    await this.clearFailedLogins(dto.phone);
-    if (!user.isActive || user.status !== Status.ACTIVE) {
-      throw new ForbiddenException('Hisobingiz faol emas');
-    }
+    await this.clearFailedLogins(phone);
+    this.assertUserActive(user);
 
     const data = await this.otp.sendOtp(user.phone, 'signin');
     await this.otp.markPending(user.phone, 'signin');
@@ -122,15 +117,12 @@ export class AuthService {
       return; // Redis ishlamasa, kirishni to'sib qo'ymaymiz
     }
     if (ttl > 0) {
-      throw new HttpException(
-        {
-          statusCode: HttpStatus.TOO_MANY_REQUESTS,
-          message: `Ketma-ket xato urinishlar sababli bu raqam vaqtincha bloklangan. ${Math.ceil(
-            ttl / 60,
-          )} daqiqadan so'ng urinib ko'ring`,
-          details: { retryAfter: ttl },
-        },
-        HttpStatus.TOO_MANY_REQUESTS,
+      throw BusinessException.tooManyRequests(
+        ErrorCode.LOGIN_BLOCKED,
+        `Ketma-ket xato urinishlar sababli bu raqam vaqtincha bloklangan. ${Math.ceil(
+          ttl / 60,
+        )} daqiqadan so'ng urinib ko'ring`,
+        { retryAfter: ttl },
       );
     }
   }
@@ -149,13 +141,10 @@ export class AuthService {
           .set(blockKey, '1', 'EX', blockSeconds)
           .del(failKey)
           .exec();
-        throw new HttpException(
-          {
-            statusCode: HttpStatus.TOO_MANY_REQUESTS,
-            message: `Ketma-ket ${env.LOGIN.MAX_FAILED_ATTEMPTS} ta xato urinish. Raqam ${env.LOGIN.BLOCK_MINUTES} daqiqaga bloklandi`,
-            details: { retryAfter: blockSeconds },
-          },
-          HttpStatus.TOO_MANY_REQUESTS,
+        throw BusinessException.tooManyRequests(
+          ErrorCode.LOGIN_BLOCKED,
+          `Ketma-ket ${env.LOGIN.MAX_FAILED_ATTEMPTS} ta xato urinish. Raqam ${env.LOGIN.BLOCK_MINUTES} daqiqaga bloklandi`,
+          { retryAfter: blockSeconds },
         );
       }
     } catch (e) {
@@ -174,39 +163,53 @@ export class AuthService {
   }
 
   async confirmSignIn(dto: VerifyOTPDto, req: Request, res: Response) {
-    const user = await this.db.user.findUnique({ where: { phone: dto.phone } });
+    const phone = Phone.normalize(dto.phone);
+    const user = await this.db.user.findUnique({ where: { phone } });
     if (!user) {
-      throw new NotFoundException('Foydalanuvchi topilmadi');
+      throw BusinessException.notFound(
+        ErrorCode.USER_NOT_FOUND,
+        'Foydalanuvchi topilmadi',
+      );
     }
-    if (!user.isActive || user.status !== Status.ACTIVE) {
-      throw new ForbiddenException('Hisobingiz faol emas');
-    }
+    this.assertUserActive(user);
 
     // OTP faqat parol tekshiruvidan o'tgan signIn urinishi uchun tasdiqlanadi
     await this.otp.verifyOtp(user.phone, dto.code, 'signin');
     await this.otp.consumePending(user.phone, 'signin');
 
-    const { client, os } = getDeviceInfo(req);
-    const deviceName = `${client?.name || 'Browser'} ${os?.name || 'Device'}`;
+    const info = getDeviceInfo(req);
 
     // Bir xil qurilmadan qayta kirilsa yangi sessiya ochilmaydi, eskisi yangilanadi
     let device = await this.db.devices.findFirst({
-      where: { userId: user.id, device: deviceName },
+      where: { userId: user.id, device: info.device },
     });
 
     if (!device) {
+      /*
+       * Limit HAR BIR FOYDALANUVCHI uchun hisoblanadi (do'kon uchun emas):
+       * bitta do'konda bir nechta xodim bo'lsa, har biri o'z limitiga ega.
+       */
       const deviceCount = await this.db.devices.count({
         where: { userId: user.id },
       });
-      if (deviceCount >= MAX_DEVICES) {
-        throw new ForbiddenException(
-          `Qurilmalar soni ${MAX_DEVICES} tadan oshishi taqiqlanadi. Avval eski qurilmalarni o\u2018chiring.`,
+      if (deviceCount >= env.DEVICE.LIMIT_PER_USER) {
+        throw BusinessException.forbidden(
+          ErrorCode.DEVICE_LIMIT_REACHED,
+          `Qurilmalar soni ${env.DEVICE.LIMIT_PER_USER} tadan oshmasligi kerak. Avval eski qurilmalardan birini o'chiring`,
+          {
+            limit: env.DEVICE.LIMIT_PER_USER,
+            devices: await this.devices.listForUser(user.id),
+          },
         );
       }
       device = await this.db.devices.create({
         data: {
           userId: user.id,
-          device: deviceName,
+          device: info.device,
+          browser: info.browser,
+          os: info.os,
+          deviceType: info.deviceType,
+          ip: info.ip,
           hashedRefreshToken: '',
         },
       });
@@ -230,6 +233,12 @@ export class AuthService {
         prevHashedRefreshToken: null,
         prevTokenExpiresAt: null,
         prevTokenUsed: false,
+        // Qurilma tafsilotlari va faollik vaqti har kirishda yangilanadi
+        browser: info.browser,
+        os: info.os,
+        deviceType: info.deviceType,
+        ip: info.ip,
+        lastActiveAt: new Date(),
       },
     });
 
@@ -242,10 +251,22 @@ export class AuthService {
         device: device.device,
         role: user.role,
         storeId: user.storeId,
+        phone: user.phone,
+        fullName: user.fullName,
         createdAt: device.createdAt,
       },
       200,
     );
+  }
+
+  /** Bloklangan yoki o'chirilgan hisob uchun yagona xato */
+  private assertUserActive(user: { isActive: boolean; status: Status }) {
+    if (!user.isActive || user.status !== Status.ACTIVE) {
+      throw BusinessException.forbidden(
+        ErrorCode.ACCOUNT_INACTIVE,
+        'Hisobingiz faol emas',
+      );
+    }
   }
 
   /**
@@ -255,17 +276,21 @@ export class AuthService {
    * Grace oynasidan tashqari eski token ishlatilsa — o'g'irlik belgisi:
    * shu qurilma sessiyasi bekor qilinadi.
    */
-  async refreshToken(refreshToken: string, res: Response) {
+  async refreshToken(refreshToken: string, res: Response, req?: Request) {
     if (!refreshToken) {
       // Sessiya yo'q — frontend uchun 401 yagona "qaytadan kiring" signali
-      throw new UnauthorizedException('Refresh token topilmadi');
+      throw BusinessException.unauthorized(
+        ErrorCode.REFRESH_TOKEN_MISSING,
+        'Sessiya topilmadi. Qaytadan tizimga kiring',
+      );
     }
     const verifiedData = await Token.verifyToken(refreshToken, 'refresh');
     const device = await this.db.devices.findUnique({
       where: { deviceId: verifiedData.deviceId },
     });
     if (!device) {
-      throw new UnauthorizedException(
+      throw BusinessException.unauthorized(
+        ErrorCode.SESSION_EXPIRED,
         'Sessiya topilmadi. Qaytadan tizimga kiring',
       );
     }
@@ -283,7 +308,8 @@ export class AuthService {
       // Notanish token: sessiyani bekor qilamiz
       await this.db.devices.delete({ where: { deviceId: device.deviceId } });
       Token.clearCookie(res);
-      throw new UnauthorizedException(
+      throw BusinessException.unauthorized(
+        ErrorCode.SESSION_REVOKED,
         'Sessiya bekor qilindi. Qaytadan tizimga kiring',
       );
     }
@@ -298,7 +324,8 @@ export class AuthService {
         this.logger.warn(
           `Refresh token qayta ishlatildi (grace tashqarisida): deviceId=${device.deviceId} userId=${device.userId}`,
         );
-        throw new UnauthorizedException(
+        throw BusinessException.unauthorized(
+          ErrorCode.SESSION_REVOKED,
           'Sessiya xavfsizlik sababli bekor qilindi. Qaytadan tizimga kiring',
         );
       }
@@ -308,11 +335,12 @@ export class AuthService {
       where: { id: device.userId },
     });
     if (!user) {
-      throw new NotFoundException('Foydalanuvchi topilmadi');
+      throw BusinessException.notFound(
+        ErrorCode.USER_NOT_FOUND,
+        'Foydalanuvchi topilmadi',
+      );
     }
-    if (!user.isActive || user.status !== Status.ACTIVE) {
-      throw new ForbiddenException('Hisobingiz faol emas');
-    }
+    this.assertUserActive(user);
 
     // Token payloadi bazadagi dolzarb ma'lumot asosida qayta quriladi
     const payload = {
@@ -324,6 +352,7 @@ export class AuthService {
     };
 
     const tokens = await Token.getToken(payload);
+    const info = req ? getDeviceInfo(req) : undefined;
     const graceUntil = new Date(
       Date.now() + env.TOKEN.REFRESH_GRACE_SECONDS * 1000,
     );
@@ -342,6 +371,16 @@ export class AuthService {
         prevHashedRefreshToken: device.hashedRefreshToken,
         prevTokenExpiresAt: graceUntil,
         prevTokenUsed: false,
+        // Har refreshda faollik vaqti (va mavjud bo'lsa qurilma tafsilotlari) yangilanadi
+        lastActiveAt: new Date(),
+        ...(info
+          ? {
+              browser: info.browser,
+              os: info.os,
+              deviceType: info.deviceType,
+              ip: info.ip,
+            }
+          : {}),
       },
     });
 
@@ -359,7 +398,8 @@ export class AuthService {
   }
 
   /** Sign-in uchun OTP kodini qayta yuborish (parol tekshiruvi o'tgan urinish uchun) */
-  async resendSignInOtp(phone: string) {
+  async resendSignInOtp(phoneInput: string) {
+    const phone = Phone.normalize(phoneInput);
     await this.otp.assertPending(phone, 'signin');
     const data = await this.otp.sendOtp(phone, 'signin');
     // Muddat cho'zilganda urinish belgisi ham yangilanadi
@@ -371,7 +411,8 @@ export class AuthService {
    * Parolni tiklash uchun OTP.
    * Raqam bazada bor-yo'qligidan qat'i nazar javob bir xil bo'ladi.
    */
-  async forgotPassword(phone: string) {
+  async forgotPassword(phoneInput: string) {
+    const phone = Phone.normalize(phoneInput);
     const data = await this.otp.sendOtp(phone, 'reset');
     return successRes(
       {
@@ -388,14 +429,17 @@ export class AuthService {
 
   /** OTP bilan parolni tiklash: barcha sessiyalar bekor qilinadi */
   async resetPassword(dto: ResetPasswordDto) {
-    await this.otp.verifyOtp(dto.phone, dto.code, 'reset');
+    const phone = Phone.normalize(dto.phone);
+    await this.otp.verifyOtp(phone, dto.code, 'reset');
 
-    const user = await this.db.user.findUnique({
-      where: { phone: dto.phone },
-    });
+    const user = await this.db.user.findUnique({ where: { phone } });
     if (!user) {
       // Mavjud bo'lmagan raqam uchun ham bir xil umumiy xatolik
-      throw new BadRequestException('Kod yaroqsiz yoki muddati tugagan');
+      throw BusinessException.badRequest(
+        ErrorCode.OTP_INVALID,
+        'Kod yaroqsiz yoki muddati tugagan',
+        { attemptsLeft: 0 },
+      );
     }
 
     await this.db.$transaction([

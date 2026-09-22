@@ -11,6 +11,7 @@ import {
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
+import { NormalizePhone } from '../../../common/helper/phone';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'Alisher Valiyev' })
@@ -19,6 +20,7 @@ export class CreateUserDto {
   fullName!: string;
 
   @ApiProperty({ example: '+998901234567' })
+  @NormalizePhone()
   @IsPhoneNumber('UZ')
   @IsNotEmpty()
   phone!: string;

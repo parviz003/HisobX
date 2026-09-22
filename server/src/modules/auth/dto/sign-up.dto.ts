@@ -5,6 +5,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
+import { NormalizePhone } from '../../../common/helper/phone';
 
 export class SignUpDto {
   @ApiProperty({ example: 'My Super Store' })
@@ -18,6 +19,7 @@ export class SignUpDto {
   fullName!: string;
 
   @ApiProperty({ example: '+998901234567' })
+  @NormalizePhone()
   @IsPhoneNumber('UZ')
   @IsNotEmpty()
   phone!: string;

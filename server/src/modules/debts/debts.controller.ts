@@ -14,10 +14,21 @@ import {
   StoreId,
   UserId,
 } from '../../common/decorators/current-user.decorator';
-import type { JwtPayload } from '../../common/types/jwt-payload.interface';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import {
+  ApiAuthErrors,
+  ApiError,
+  ApiSuccess,
+  ApiValidationError,
+} from '../../common/swagger';
+import {
+  DebtDetailResponseDto,
+  DebtListResponseDto,
+  DebtResponseDto,
+  OverdueDebtGroupDto,
+} from './dto/debt-response.dto';
 
 @ApiTags('Debts')
 @Controller('debts')
@@ -27,24 +38,49 @@ export class DebtsController {
 
   @Get()
   @ApiOperation({ summary: "Qarzlar ro'yxati" })
+  @ApiSuccess(DebtListResponseDto, { description: 'Sahifalangan qarzlar' })
+  @ApiValidationError()
+  @ApiAuthErrors()
   findAll(@Query() query: QueryDebtDto, @StoreId() storeId: number) {
     return this.debtsService.findAll(query, storeId);
   }
 
   @Get('overdue')
-  @ApiOperation({ summary: "Muddati o'tgan qarzlar" })
+  @ApiOperation({
+    summary: "Muddati o'tgan qarzlar",
+    description: "Mijoz bo'yicha guruhlangan",
+  })
+  @ApiSuccess(OverdueDebtGroupDto, {
+    isArray: true,
+    description: "Muddati o'tgan qarzlar",
+  })
+  @ApiAuthErrors()
   getOverdue(@StoreId() storeId: number) {
     return this.debtsService.getOverdue(storeId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: "Qarz tafsilotlari va to'lovlar tarixi" })
+  @ApiParam({ name: 'id', type: Number, example: 11 })
+  @ApiSuccess(DebtDetailResponseDto, { description: 'Qarz' })
+  @ApiError(404, 'NOT_FOUND', 'Qarz topilmadi')
+  @ApiAuthErrors()
   findOne(@Param('id', ParseIntPipe) id: number, @StoreId() storeId: number) {
     return this.debtsService.findOne(id, storeId);
   }
 
   @Post(':id/pay')
   @ApiOperation({ summary: "Qarzga to'lov qabul qilish" })
+  @ApiParam({ name: 'id', type: Number, example: 11 })
+  @ApiSuccess(DebtResponseDto, { description: "To'lov qabul qilindi" })
+  @ApiValidationError()
+  @ApiError(
+    400,
+    'BAD_REQUEST',
+    "To'lov summasi qoldiqdan katta yoki qarz yopilgan",
+  )
+  @ApiError(404, 'NOT_FOUND', 'Qarz topilmadi')
+  @ApiAuthErrors()
   makePayment(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: MakePaymentDto,

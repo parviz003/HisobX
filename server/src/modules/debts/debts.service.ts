@@ -8,6 +8,7 @@ import { QueryDebtDto } from './dto/query-debt.dto';
 import { MakePaymentDto } from './dto/make-payment.dto';
 import { JwtPayload } from '../../common/types/jwt-payload.interface';
 import { Prisma } from '@prisma/client';
+import { successRes } from '../../common/helper/success-response';
 
 @Injectable()
 export class DebtsService {
@@ -45,7 +46,7 @@ export class DebtsService {
       }),
     ]);
 
-    return {
+    return successRes({
       data,
       meta: {
         total,
@@ -53,7 +54,7 @@ export class DebtsService {
         limit,
         totalPages: Math.ceil(total / limit),
       },
-    };
+    });
   }
 
   async findOne(id: number, storeId: number) {
@@ -74,7 +75,7 @@ export class DebtsService {
       throw new NotFoundException('Qarz topilmadi');
     }
 
-    return debt;
+    return successRes(debt);
   }
 
   async getOverdue(storeId: number) {
@@ -108,7 +109,7 @@ export class DebtsService {
       {} as Record<number, any>,
     );
 
-    return Object.values(grouped);
+    return successRes(Object.values(grouped));
   }
 
   async makePayment(
@@ -185,7 +186,7 @@ export class DebtsService {
         },
       });
 
-      return updatedDebt;
+      return successRes(updatedDebt);
     });
   }
 }

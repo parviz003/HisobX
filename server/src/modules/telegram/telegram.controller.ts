@@ -3,13 +3,14 @@ import { TelegramNotificationService } from './telegram-notification.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { ApiTags, ApiOperation, ApiProperty } from '@nestjs/swagger';
 import {
-  ApiTags,
-  ApiOperation,
-  ApiProperty,
-  ApiBadRequestResponse,
-  ApiServiceUnavailableResponse,
-} from '@nestjs/swagger';
+  ApiAuthErrors,
+  ApiError,
+  ApiSuccess,
+  ApiValidationError,
+  MessageResponseDto,
+} from '../../common/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
 import { successRes } from '../../common/helper/success-response';
 
@@ -33,10 +34,11 @@ export class TelegramController {
       "Do'konning `telegramChatId` maydoni sozlangan bo'lishi kerak," +
       ' aks holda 400 qaytadi. Telegram xabarni qabul qilmasa — 503.',
   })
-  @ApiBadRequestResponse({ description: 'telegramChatId sozlanmagan' })
-  @ApiServiceUnavailableResponse({
-    description: "Telegramga xabar yuborib bo'lmadi",
-  })
+  @ApiSuccess(MessageResponseDto, { description: 'Xabar yuborildi' })
+  @ApiValidationError()
+  @ApiError(400, 'BAD_REQUEST', 'telegramChatId sozlanmagan')
+  @ApiError(503, 'SERVICE_UNAVAILABLE', "Telegramga xabar yuborib bo'lmadi")
+  @ApiAuthErrors()
   async sendTest(
     @CurrentUser('storeId') storeId: number,
     @Body() dto: TestNotificationDto,
@@ -50,6 +52,8 @@ export class TelegramController {
 
   @Post('trigger/debt-reminder')
   @ApiOperation({ summary: 'Qarzdorlik eslatmalarini qo‘lda ishga tushirish' })
+  @ApiSuccess(MessageResponseDto, { description: 'Bajarildi' })
+  @ApiAuthErrors()
   async triggerDebtReminder() {
     await this.telegramService.checkDebtReminders();
     return successRes({ message: 'Qarzlar eslatmasi bajarildi' });
@@ -59,6 +63,8 @@ export class TelegramController {
   @ApiOperation({
     summary: 'Kam qolgan mahsulotlar eslatmasini qo‘lda ishga tushirish',
   })
+  @ApiSuccess(MessageResponseDto, { description: 'Bajarildi' })
+  @ApiAuthErrors()
   async triggerLowStock() {
     await this.telegramService.checkLowStock();
     return successRes({ message: 'Kam qolgan tovarlar eslatmasi bajarildi' });
@@ -66,6 +72,8 @@ export class TelegramController {
 
   @Post('trigger/daily-summary')
   @ApiOperation({ summary: 'Kunlik yakuniy hisobotni qo‘lda yuborish' })
+  @ApiSuccess(MessageResponseDto, { description: 'Bajarildi' })
+  @ApiAuthErrors()
   async triggerDailySummary() {
     await this.telegramService.sendDailySummary();
     return successRes({ message: 'Kunlik hisobot yuborildi' });

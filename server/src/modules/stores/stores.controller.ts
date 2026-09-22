@@ -8,12 +8,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import {
-  ApiConflictResponse,
-  ApiCreatedResponse,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { StoresService } from './stores.service';
 import { UpdateStoreDto } from './dto/update-store.dto';
@@ -21,6 +16,18 @@ import { CreateStoreDto } from './dto/create-store.dto';
 import { OnboardStoreDto } from './dto/onboard-store.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import {
+  ApiAuthErrors,
+  ApiError,
+  ApiSuccess,
+  ApiValidationError,
+  DeletedResponseDto,
+} from '../../common/swagger';
+import {
+  OnboardStoreResponseDto,
+  StoreListItemResponseDto,
+  StoreResponseDto,
+} from './dto/store-response.dto';
 
 @ApiTags('Stores')
 @Controller('stores')
@@ -30,6 +37,9 @@ export class StoresController {
   @Roles(Role.ADMIN, Role.SELLER)
   @Get('me')
   @ApiOperation({ summary: "Joriy do'kon ma'lumotlarini olish" })
+  @ApiSuccess(StoreResponseDto, { description: "Do'kon ma'lumotlari" })
+  @ApiError(404, 'NOT_FOUND', "Do'kon topilmadi")
+  @ApiAuthErrors()
   getStore(@CurrentUser('storeId') storeId: number) {
     return this.storesService.getStore(storeId);
   }
@@ -37,6 +47,10 @@ export class StoresController {
   @Roles(Role.ADMIN)
   @Patch('me')
   @ApiOperation({ summary: "Do'kon ma'lumotlarini tahrirlash" })
+  @ApiSuccess(StoreResponseDto, { description: "Do'kon yangilandi" })
+  @ApiValidationError()
+  @ApiError(404, 'NOT_FOUND', "Do'kon topilmadi")
+  @ApiAuthErrors()
   updateStore(
     @CurrentUser('storeId') storeId: number,
     @Body() dto: UpdateStoreDto,
@@ -49,6 +63,11 @@ export class StoresController {
   @Roles(Role.SUPERADMIN)
   @Get()
   @ApiOperation({ summary: "Barcha do'konlar (faqat SUPERADMIN)" })
+  @ApiSuccess(StoreListItemResponseDto, {
+    isArray: true,
+    description: "Do'konlar ro'yxati (xodim/mahsulot/savdo soni bilan)",
+  })
+  @ApiAuthErrors()
   findAll() {
     return this.storesService.findAll();
   }
@@ -56,6 +75,12 @@ export class StoresController {
   @Roles(Role.SUPERADMIN)
   @Post()
   @ApiOperation({ summary: "Yangi do'kon ochish (faqat SUPERADMIN)" })
+  @ApiSuccess(StoreResponseDto, {
+    status: 201,
+    description: "Do'kon yaratildi",
+  })
+  @ApiValidationError()
+  @ApiAuthErrors()
   create(@Body() dto: CreateStoreDto) {
     return this.storesService.create(dto);
   }
@@ -69,34 +94,13 @@ export class StoresController {
       "Do'kon hamda ADMIN rolidagi foydalanuvchi bir vaqtda yaratiladi." +
       " Admin telefoni band bo'lsa 409 qaytadi va do'kon ham yaratilmaydi.",
   })
-  @ApiCreatedResponse({
-    description: "Yaratilgan do'kon va admin (maxfiy maydonlarsiz)",
-    schema: {
-      example: {
-        statusCode: 201,
-        data: {
-          store: {
-            id: 1,
-            name: 'Mening Do‘konim',
-            phone: '+998901234567',
-            address: 'Toshkent, Chilonzor 5',
-            telegramChatId: null,
-            isActive: true,
-          },
-          admin: {
-            id: 2,
-            fullName: 'Alisher Valiyev',
-            phone: '+998901234567',
-            role: Role.ADMIN,
-            status: 'ACTIVE',
-            isActive: true,
-            storeId: 1,
-          },
-        },
-      },
-    },
+  @ApiSuccess(OnboardStoreResponseDto, {
+    status: 201,
+    description: "Yaratilgan do'kon va uning rahbari (maxfiy maydonlarsiz)",
   })
-  @ApiConflictResponse({ description: 'Bu telefon raqami band' })
+  @ApiValidationError()
+  @ApiError(409, 'PHONE_TAKEN', 'Telefon raqami band')
+  @ApiAuthErrors()
   onboard(@Body() dto: OnboardStoreDto) {
     return this.storesService.onboard(dto);
   }
@@ -104,6 +108,10 @@ export class StoresController {
   @Roles(Role.SUPERADMIN)
   @Get(':id')
   @ApiOperation({ summary: "Do'kon ma'lumoti (faqat SUPERADMIN)" })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiSuccess(StoreResponseDto, { description: "Do'kon" })
+  @ApiError(404, 'NOT_FOUND', "Do'kon topilmadi")
+  @ApiAuthErrors()
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.storesService.getStore(id);
   }
@@ -111,6 +119,11 @@ export class StoresController {
   @Roles(Role.SUPERADMIN)
   @Patch(':id')
   @ApiOperation({ summary: "Do'konni tahrirlash (faqat SUPERADMIN)" })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiSuccess(StoreResponseDto, { description: "Do'kon yangilandi" })
+  @ApiValidationError()
+  @ApiError(404, 'NOT_FOUND', "Do'kon topilmadi")
+  @ApiAuthErrors()
   updateById(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateStoreDto,
@@ -121,6 +134,10 @@ export class StoresController {
   @Roles(Role.SUPERADMIN)
   @Delete(':id')
   @ApiOperation({ summary: "Do'konni o'chirish (faqat SUPERADMIN)" })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiSuccess(DeletedResponseDto, { description: "Do'kon o'chirildi" })
+  @ApiError(404, 'NOT_FOUND', "Do'kon topilmadi")
+  @ApiAuthErrors()
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.storesService.remove(id);
   }

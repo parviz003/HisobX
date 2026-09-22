@@ -75,6 +75,16 @@ export class App {
           "**Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon); ",
           'autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP). ',
           '429 javobida `Retry-After` header qaytariladi.',
+          '',
+          '**Javob formati:** muvaffaqiyat — `{ statusCode, data }`; ',
+          'xato — `{ statusCode, message, code, data }`. Frontend mantiqini ',
+          "barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.",
+          '',
+          '**Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`. ',
+          'Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.',
+          '',
+          '**Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3). ',
+          "Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.",
         ].join('\n'),
       )
       .setVersion('1.0')

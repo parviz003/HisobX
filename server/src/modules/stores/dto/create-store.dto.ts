@@ -6,6 +6,7 @@ import {
   IsString,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { NormalizePhone } from '../../../common/helper/phone';
 
 export class CreateStoreDto {
   @ApiProperty({ example: 'Mening Do‘konim' })
@@ -14,6 +15,7 @@ export class CreateStoreDto {
   name!: string;
 
   @ApiPropertyOptional({ example: '+998901234567' })
+  @NormalizePhone()
   @IsPhoneNumber('UZ')
   @IsOptional()
   @IsString()

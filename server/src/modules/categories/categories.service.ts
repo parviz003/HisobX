@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../../config/database/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { successRes } from '../../common/helper/success-response';
 
 @Injectable()
 export class CategoriesService {
@@ -25,19 +26,21 @@ export class CategoriesService {
       throw new ConflictException('Category with this name already exists');
     }
 
-    return this.prisma.category.create({
+    const category = await this.prisma.category.create({
       data: {
         ...createCategoryDto,
         storeId,
       },
     });
+    return successRes(category, 201);
   }
 
   async findAll(storeId: number) {
-    return this.prisma.category.findMany({
+    const categories = await this.prisma.category.findMany({
       where: { storeId },
       orderBy: { createdAt: 'desc' },
     });
+    return successRes(categories);
   }
 
   async update(
@@ -68,10 +71,11 @@ export class CategoriesService {
       }
     }
 
-    return this.prisma.category.update({
+    const updated = await this.prisma.category.update({
       where: { id },
       data: updateCategoryDto,
     });
+    return successRes(updated);
   }
 
   async remove(storeId: number, id: number) {
@@ -83,8 +87,7 @@ export class CategoriesService {
       throw new NotFoundException('Category not found');
     }
 
-    return this.prisma.category.delete({
-      where: { id },
-    });
+    await this.prisma.category.delete({ where: { id } });
+    return successRes({ message: "Toifa o'chirildi", id });
   }
 }

@@ -8,6 +8,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { NormalizePhone } from '../../../common/helper/phone';
 
 export class OnboardStoreInfoDto {
   @ApiProperty({ example: 'Mening Do‘konim' })
@@ -17,6 +18,7 @@ export class OnboardStoreInfoDto {
 
   @ApiPropertyOptional({ example: '+998901234567' })
   @IsOptional()
+  @NormalizePhone()
   @IsPhoneNumber('UZ')
   phone?: string;
 
@@ -33,6 +35,7 @@ export class OnboardAdminDto {
   fullName!: string;
 
   @ApiProperty({ example: '+998901234567' })
+  @NormalizePhone()
   @IsPhoneNumber('UZ')
   @IsNotEmpty()
   phone!: string;

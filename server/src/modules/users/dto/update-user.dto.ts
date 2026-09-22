@@ -1,6 +1,7 @@
 import { IsEnum, IsOptional, IsPhoneNumber, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Role, Status } from '@prisma/client';
+import { NormalizePhone } from '../../../common/helper/phone';
 
 export class UpdateUserDto {
   @ApiPropertyOptional({ example: 'Alisher Valiyev' })
@@ -10,6 +11,7 @@ export class UpdateUserDto {
 
   @ApiPropertyOptional({ example: '+998901234567' })
   @IsOptional()
+  @NormalizePhone()
   @IsPhoneNumber('UZ')
   phone?: string;
 

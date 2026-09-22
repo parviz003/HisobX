@@ -37,6 +37,15 @@ export const env = {
     SECRET: String(process.env.OTP_SECRET),
   },
 
+  /** Qurilma sessiyalari — limit HAR BIR FOYDALANUVCHI uchun (do'kon uchun emas) */
+  DEVICE: {
+    LIMIT_PER_USER: Number(process.env.DEVICE_LIMIT_PER_USER ?? 3),
+    /** Qurilmani o'chirish uchun u yaratilgandan beri o'tishi kerak bo'lgan vaqt (soat) */
+    REMOVAL_MIN_AGE_HOURS: Number(
+      process.env.DEVICE_REMOVAL_MIN_AGE_HOURS ?? 24,
+    ),
+  },
+
   TOKEN: {
     ACCESS_KEY: String(process.env.JWT_ACCESS_SECRET),
     // "15m", "1h", "7d" ko'rinishida

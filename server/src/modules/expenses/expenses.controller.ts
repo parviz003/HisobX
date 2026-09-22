@@ -22,7 +22,19 @@ import {
 } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
+import {
+  ApiAuthErrors,
+  ApiError,
+  ApiSuccess,
+  ApiValidationError,
+  MessageResponseDto,
+} from '../../common/swagger';
+import {
+  ExpenseCategoryResponseDto,
+  ExpenseListResponseDto,
+  ExpenseResponseDto,
+} from './dto/expense-response.dto';
 
 @ApiTags('Expenses')
 @Roles(Role.ADMIN)
@@ -33,12 +45,24 @@ export class ExpensesController {
   // Categories
   @Get('categories')
   @ApiOperation({ summary: 'Xarajat toifalarini olish' })
+  @ApiSuccess(ExpenseCategoryResponseDto, {
+    isArray: true,
+    description: 'Xarajat toifalari',
+  })
+  @ApiAuthErrors()
   findAllCategories(@CurrentUser('storeId') storeId: number) {
     return this.expensesService.findAllCategories(storeId);
   }
 
   @Post('categories')
   @ApiOperation({ summary: 'Yangi xarajat toifasini yaratish' })
+  @ApiSuccess(ExpenseCategoryResponseDto, {
+    status: 201,
+    description: 'Toifa yaratildi',
+  })
+  @ApiValidationError()
+  @ApiError(409, 'CONFLICT', 'Bu nomli toifa mavjud')
+  @ApiAuthErrors()
   createCategory(
     @CurrentUser('storeId') storeId: number,
     @Body() dto: CreateExpenseCategoryDto,
@@ -48,6 +72,11 @@ export class ExpensesController {
 
   @Patch('categories/:id')
   @ApiOperation({ summary: 'Xarajat toifasini tahrirlash' })
+  @ApiParam({ name: 'id', type: Number, example: 2 })
+  @ApiSuccess(ExpenseCategoryResponseDto, { description: 'Toifa yangilandi' })
+  @ApiValidationError()
+  @ApiError(404, 'NOT_FOUND', 'Toifa topilmadi')
+  @ApiAuthErrors()
   updateCategory(
     @CurrentUser('storeId') storeId: number,
     @Param('id', ParseIntPipe) id: number,
@@ -58,6 +87,11 @@ export class ExpensesController {
 
   @Delete('categories/:id')
   @ApiOperation({ summary: "Xarajat toifasini o'chirish" })
+  @ApiParam({ name: 'id', type: Number, example: 2 })
+  @ApiSuccess(MessageResponseDto, { description: "Toifa o'chirildi" })
+  @ApiError(400, 'BAD_REQUEST', "Toifaga bog'langan xarajatlar mavjud")
+  @ApiError(404, 'NOT_FOUND', 'Toifa topilmadi')
+  @ApiAuthErrors()
   removeCategory(
     @CurrentUser('storeId') storeId: number,
     @Param('id', ParseIntPipe) id: number,
@@ -68,6 +102,14 @@ export class ExpensesController {
   // Expenses
   @Post()
   @ApiOperation({ summary: 'Xarajat qo‘shish (avtomatik kassadan chiqadi)' })
+  @ApiSuccess(ExpenseResponseDto, {
+    status: 201,
+    description: 'Xarajat yozildi va kassadan chiqarildi',
+  })
+  @ApiValidationError()
+  @ApiError(400, 'BAD_REQUEST', "Kassada yetarli mablag' yo'q")
+  @ApiError(404, 'NOT_FOUND', 'Xarajat toifasi topilmadi')
+  @ApiAuthErrors()
   create(
     @CurrentUser('storeId') storeId: number,
     @UserId() userId: number,
@@ -78,6 +120,11 @@ export class ExpensesController {
 
   @Get()
   @ApiOperation({ summary: 'Xarajatlar ro‘yxatini sahifalash va filtrlash' })
+  @ApiSuccess(ExpenseListResponseDto, {
+    description: 'Sahifalangan xarajatlar',
+  })
+  @ApiValidationError()
+  @ApiAuthErrors()
   findAll(
     @CurrentUser('storeId') storeId: number,
     @Query() query: QueryExpenseDto,

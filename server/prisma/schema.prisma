@@ -103,6 +103,13 @@ model User {
 model Devices {
   deviceId               Int       @id @default(autoincrement())
   device                 String
+  // Qurilma tafsilotlari (GET /device javobida ko'rsatiladi)
+  browser                String?
+  os                     String?
+  deviceType             String?
+  ip                     String?
+  // Har refresh va har kirishda yangilanadi
+  lastActiveAt           DateTime  @default(now())
   hashedRefreshToken     String
   // Rotatsiyadan keyingi qisqa "grace" oynasi uchun oldingi token
   prevHashedRefreshToken String?

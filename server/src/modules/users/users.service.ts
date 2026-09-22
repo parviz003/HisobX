@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -15,6 +14,10 @@ import { Crypt } from '../../infrastructure/lib/Crypt';
 import { File } from '../../infrastructure/lib/File';
 import { successRes } from '../../common/helper/success-response';
 import { IPayload } from '../../common/interface';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { BusinessException } from '../../common/errors/business.exception';
+import { ErrorCode } from '../../common/errors/error-codes';
+import { Phone } from '../../common/helper/phone';
 import 'multer';
 
 const userSelect = {
@@ -46,22 +49,60 @@ export class UsersService {
     return successRes(user);
   }
 
+  /** Faqat `fullName`. Telefon va parol bu yerdan o'zgarmaydi (xavfsizlik). */
   async updateProfile(userId: number, dto: UpdateProfileDto) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
 
-    await this.ensurePhoneFree(dto.phone, userId);
-
     const updated = await this.prisma.user.update({
       where: { id: userId },
-      data: {
-        fullName: dto.fullName,
-        phone: dto.phone,
-        ...(dto.password ? { password: await Crypt.hash(dto.password) } : {}),
-      },
+      data: { fullName: dto.fullName },
       select: userSelect,
     });
     return successRes(updated);
+  }
+
+  /**
+   * Parolni almashtirish.
+   *
+   * Joriy parol tasdiqlanadi (`WRONG_PASSWORD`), so'ng JORIY QURILMADAN
+   * TASHQARI barcha sessiyalar bekor qilinadi — parol o'g'irlangan bo'lsa,
+   * o'g'ri darhol chiqarib yuboriladi, egasi esa tizimda qoladi.
+   */
+  async changePassword(
+    userId: number,
+    currentDeviceId: number | undefined,
+    dto: ChangePasswordDto,
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
+
+    const isMatch = await Crypt.compare(dto.currentPassword, user.password);
+    if (!isMatch) {
+      throw BusinessException.badRequest(
+        ErrorCode.WRONG_PASSWORD,
+        "Joriy parol noto'g'ri",
+      );
+    }
+
+    const [, revoked] = await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { password: await Crypt.hash(dto.newPassword) },
+      }),
+      this.prisma.devices.deleteMany({
+        where: {
+          userId,
+          ...(currentDeviceId ? { deviceId: { not: currentDeviceId } } : {}),
+        },
+      }),
+    ]);
+
+    return successRes({
+      message:
+        'Parol yangilandi. Joriy qurilmadan tashqari barcha sessiyalar bekor qilindi',
+      revokedSessions: revoked.count,
+    });
   }
 
   /** Yangi rasm yuklanganda eskisi diskdan o'chiriladi */
@@ -173,12 +214,13 @@ export class UsersService {
       storeId = actor.storeId;
     }
 
-    await this.ensurePhoneFree(dto.phone);
+    const phone = Phone.normalize(dto.phone);
+    await this.ensurePhoneFree(phone);
 
     const user = await this.prisma.user.create({
       data: {
         fullName: dto.fullName,
-        phone: dto.phone,
+        phone,
         password: await Crypt.hash(dto.password),
         role: dto.role,
         storeId,
@@ -189,7 +231,8 @@ export class UsersService {
   }
 
   async update(actor: IPayload, id: number, dto: UpdateUserDto) {
-    const user = await this.loadManageableUser(actor, id);
+    // Ruxsat tekshiruvi: ko'rinmasligi kerak bo'lgan hisob uchun 404/403 qaytaradi
+    await this.loadManageableUser(actor, id);
 
     if (dto.role) {
       if (dto.role === Role.SUPERADMIN) {
@@ -208,13 +251,14 @@ export class UsersService {
       );
     }
 
-    await this.ensurePhoneFree(dto.phone, id);
+    const phone = dto.phone ? Phone.normalize(dto.phone) : undefined;
+    await this.ensurePhoneFree(phone, id);
 
     const updated = await this.prisma.user.update({
       where: { id },
       data: {
         fullName: dto.fullName,
-        phone: dto.phone,
+        phone,
         role: dto.role,
         ...(dto.status
           ? { status: dto.status, isActive: dto.status === Status.ACTIVE }
@@ -301,9 +345,14 @@ export class UsersService {
 
   private async ensurePhoneFree(phone?: string, exceptUserId?: number) {
     if (!phone) return;
-    const existing = await this.prisma.user.findUnique({ where: { phone } });
+    const existing = await this.prisma.user.findUnique({
+      where: { phone: Phone.normalize(phone) },
+    });
     if (existing && existing.id !== exceptUserId) {
-      throw new ConflictException('Bu telefon raqami band');
+      throw BusinessException.conflict(
+        ErrorCode.PHONE_TAKEN,
+        'Bu telefon raqami band',
+      );
     }
   }
 }

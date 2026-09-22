@@ -1,7 +1,10 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateCategoryDto {
+  @ApiProperty({ example: 'Ichimliklar', maxLength: 100 })
   @IsNotEmpty()
   @IsString()
-  name: string;
+  @MaxLength(100)
+  name!: string;
 }

@@ -7,6 +7,7 @@ import { PrismaService } from '../../config/database/prisma.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { QuerySaleDto } from './dto/query-sale.dto';
 import { PaymentType, SaleStatus, Prisma } from '@prisma/client';
+import { successRes } from '../../common/helper/success-response';
 
 @Injectable()
 export class SalesService {
@@ -157,7 +158,7 @@ export class SalesService {
         });
       }
 
-      return sale;
+      return successRes(sale, 201);
     });
   }
 
@@ -199,13 +200,13 @@ export class SalesService {
       this.prisma.sale.count({ where }),
     ]);
 
-    return {
+    return successRes({
       items,
       total,
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-    };
+    });
   }
 
   async findOne(storeId: number, id: number) {
@@ -225,8 +226,8 @@ export class SalesService {
       },
     });
 
-    if (!sale) throw new NotFoundException('Sale not found');
-    return sale;
+    if (!sale) throw new NotFoundException('Savdo topilmadi');
+    return successRes(sale);
   }
 
   async cancel(storeId: number, id: number, userId: number) {
@@ -288,13 +289,14 @@ export class SalesService {
       }
 
       // 3. Mark sale as CANCELLED
-      return prisma.sale.update({
+      const cancelled = await prisma.sale.update({
         where: { id: sale.id },
         data: {
           status: SaleStatus.CANCELLED,
           deletedAt: new Date(),
         },
       });
+      return successRes(cancelled);
     });
   }
 }

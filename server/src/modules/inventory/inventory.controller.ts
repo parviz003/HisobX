@@ -6,6 +6,17 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiAuthErrors,
+  ApiError,
+  ApiSuccess,
+  ApiValidationError,
+} from '../../common/swagger';
+import {
+  InventoryOperationResponseDto,
+  InventoryTransactionListResponseDto,
+  StockLevelResponseDto,
+} from './dto/inventory-response.dto';
 
 @ApiTags('Inventory')
 @Controller('inventory')
@@ -14,6 +25,13 @@ export class InventoryController {
 
   @Post('purchase')
   @ApiOperation({ summary: 'Ombor kirimi (xarid)' })
+  @ApiSuccess(InventoryOperationResponseDto, {
+    status: 201,
+    description: 'Zaxira oshirildi',
+  })
+  @ApiValidationError()
+  @ApiError(404, 'NOT_FOUND', 'Mahsulot topilmadi')
+  @ApiAuthErrors()
   @Roles(Role.ADMIN)
   purchase(
     @CurrentUser('storeId') storeId: number,
@@ -24,6 +42,14 @@ export class InventoryController {
 
   @Post('write-off')
   @ApiOperation({ summary: 'Hisobdan chiqarish' })
+  @ApiSuccess(InventoryOperationResponseDto, {
+    status: 201,
+    description: 'Zaxira kamaytirildi',
+  })
+  @ApiValidationError()
+  @ApiError(400, 'BAD_REQUEST', "Yetarli zaxira yo'q")
+  @ApiError(404, 'NOT_FOUND', 'Mahsulot topilmadi')
+  @ApiAuthErrors()
   @Roles(Role.ADMIN)
   writeOff(
     @CurrentUser('storeId') storeId: number,
@@ -34,6 +60,13 @@ export class InventoryController {
 
   @Post('opening')
   @ApiOperation({ summary: "Boshlang'ich qoldiq kiritish" })
+  @ApiSuccess(InventoryOperationResponseDto, {
+    status: 201,
+    description: "Boshlang'ich qoldiq kiritildi",
+  })
+  @ApiValidationError()
+  @ApiError(404, 'NOT_FOUND', 'Mahsulot topilmadi')
+  @ApiAuthErrors()
   @Roles(Role.ADMIN)
   openingStock(
     @CurrentUser('storeId') storeId: number,
@@ -44,6 +77,11 @@ export class InventoryController {
 
   @Get('transactions')
   @ApiOperation({ summary: 'Ombor harakatlari tarixi' })
+  @ApiSuccess(InventoryTransactionListResponseDto, {
+    description: 'Sahifalangan ombor harakatlari',
+  })
+  @ApiValidationError()
+  @ApiAuthErrors()
   @Roles(Role.ADMIN, Role.SELLER)
   getTransactions(
     @CurrentUser('storeId') storeId: number,
@@ -54,6 +92,11 @@ export class InventoryController {
 
   @Get('stock')
   @ApiOperation({ summary: 'Joriy qoldiqlar' })
+  @ApiSuccess(StockLevelResponseDto, {
+    isArray: true,
+    description: 'Mahsulotlar qoldig‘i va kam qolganlik belgisi',
+  })
+  @ApiAuthErrors()
   @Roles(Role.ADMIN, Role.SELLER)
   getStockLevels(@CurrentUser('storeId') storeId: number) {
     return this.inventoryService.getStockLevels(storeId);

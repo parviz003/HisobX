@@ -7,18 +7,20 @@ import { PrismaService } from '../../config/database/prisma.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { Prisma } from '@prisma/client';
+import { successRes } from '../../common/helper/success-response';
 
 @Injectable()
 export class CustomersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(storeId: number, createCustomerDto: CreateCustomerDto) {
-    return this.prisma.customer.create({
+    const customer = await this.prisma.customer.create({
       data: {
         ...createCustomerDto,
         storeId,
       },
     });
+    return successRes(customer, 201);
   }
 
   async findAll(storeId: number, search?: string) {
@@ -29,10 +31,11 @@ export class CustomersService {
         { phone: { contains: search, mode: 'insensitive' } },
       ];
     }
-    return this.prisma.customer.findMany({
+    const customers = await this.prisma.customer.findMany({
       where,
       orderBy: { createdAt: 'desc' },
     });
+    return successRes(customers);
   }
 
   async findOne(storeId: number, id: number) {
@@ -54,10 +57,10 @@ export class CustomersService {
       0,
     );
 
-    return {
+    return successRes({
       ...customer,
       totalDebt,
-    };
+    });
   }
 
   async update(
@@ -72,10 +75,11 @@ export class CustomersService {
       throw new NotFoundException(`Customer with ID ${id} not found`);
     }
 
-    return this.prisma.customer.update({
+    const updated = await this.prisma.customer.update({
       where: { id },
       data: updateCustomerDto,
     });
+    return successRes(updated);
   }
 
   async remove(storeId: number, id: number) {
@@ -104,8 +108,7 @@ export class CustomersService {
       );
     }
 
-    return this.prisma.customer.delete({
-      where: { id },
-    });
+    await this.prisma.customer.delete({ where: { id } });
+    return successRes({ message: "Mijoz o'chirildi", id });
   }
 }
