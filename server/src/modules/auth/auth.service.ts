@@ -284,7 +284,7 @@ export class AuthService {
       await this.db.devices.delete({ where: { deviceId: device.deviceId } });
       Token.clearCookie(res);
       throw new UnauthorizedException(
-        "Sessiya bekor qilindi. Qaytadan tizimga kiring",
+        'Sessiya bekor qilindi. Qaytadan tizimga kiring',
       );
     }
 
@@ -299,12 +299,14 @@ export class AuthService {
           `Refresh token qayta ishlatildi (grace tashqarisida): deviceId=${device.deviceId} userId=${device.userId}`,
         );
         throw new UnauthorizedException(
-          "Sessiya xavfsizlik sababli bekor qilindi. Qaytadan tizimga kiring",
+          'Sessiya xavfsizlik sababli bekor qilindi. Qaytadan tizimga kiring',
         );
       }
     }
 
-    const user = await this.db.user.findUnique({ where: { id: device.userId } });
+    const user = await this.db.user.findUnique({
+      where: { id: device.userId },
+    });
     if (!user) {
       throw new NotFoundException('Foydalanuvchi topilmadi');
     }
@@ -393,9 +395,7 @@ export class AuthService {
     });
     if (!user) {
       // Mavjud bo'lmagan raqam uchun ham bir xil umumiy xatolik
-      throw new BadRequestException(
-        'Kod yaroqsiz yoki muddati tugagan',
-      );
+      throw new BadRequestException('Kod yaroqsiz yoki muddati tugagan');
     }
 
     await this.db.$transaction([
@@ -407,7 +407,7 @@ export class AuthService {
     ]);
 
     return successRes({
-      message: "Parol yangilandi, barcha sessiyalar bekor qilindi",
+      message: 'Parol yangilandi, barcha sessiyalar bekor qilindi',
     });
   }
 

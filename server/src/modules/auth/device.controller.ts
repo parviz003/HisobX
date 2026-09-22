@@ -1,4 +1,11 @@
-import { Controller, Delete, Get, Param, UseGuards, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  Param,
+  UseGuards,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { DeviceService } from './device.service';
 import { UserId } from '../../common/decorators/current-user.decorator';
 import { AuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -22,7 +29,10 @@ export class DeviceController {
   @ApiOperation({
     summary: "Eski qurilmani o'chirish (24 soatdan so'ng mumkin)",
   })
-  remove(@RefreshToken() refreshToken: string, @Param('id', ParseIntPipe) id: number) {
+  remove(
+    @RefreshToken() refreshToken: string,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.deviceService.remove(refreshToken, id);
   }
 }

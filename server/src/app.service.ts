@@ -64,15 +64,15 @@ export class App {
           'Marketplace uslubidagi modular monolit API.',
           '',
           '**Autentifikatsiya:** cookie-based JWT. `POST /auth/signin` -> OTP -> ',
-          '`POST /auth/confirm` so\'ng `accessToken` va `refreshToken` httpOnly ',
+          "`POST /auth/confirm` so'ng `accessToken` va `refreshToken` httpOnly ",
           'cookie sifatida yoziladi. So\'rovlarni `credentials: "include"` bilan yuboring.',
           '',
-          '**Rollar:** SUPERADMIN (platforma), ADMIN (do\'kon egasi), SELLER (sotuvchi).',
+          "**Rollar:** SUPERADMIN (platforma), ADMIN (do'kon egasi), SELLER (sotuvchi).",
           '',
-          '**x-store-id:** faqat SUPERADMIN uchun — do\'kon kontekstida O\'QISH (GET). ',
-          'ADMIN/SELLER yuborsa e\'tiborsiz qoldiriladi.',
+          "**x-store-id:** faqat SUPERADMIN uchun — do'kon kontekstida O'QISH (GET). ",
+          "ADMIN/SELLER yuborsa e'tiborsiz qoldiriladi.",
           '',
-          '**Rate limiting:** sign-in/OTP/parol tiklash — 3 so\'rov/daqiqa (IP + telefon); ',
+          "**Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon); ",
           'autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP). ',
           '429 javobida `Retry-After` header qaytariladi.',
         ].join('\n'),
@@ -82,7 +82,7 @@ export class App {
         type: 'apiKey',
         in: 'cookie',
         name: 'accessToken',
-        description: 'Sign-in oqimida avtomatik o\'rnatiladigan httpOnly cookie',
+        description: "Sign-in oqimida avtomatik o'rnatiladigan httpOnly cookie",
       })
       .addGlobalParameters({
         name: 'x-store-id',
@@ -93,7 +93,7 @@ export class App {
         schema: { type: 'integer', example: 1 },
       })
       .addTag('Auth', 'Kirish, OTP, refresh, parolni tiklash')
-      .addTag('Users', "Profil va xodimlar boshqaruvi")
+      .addTag('Users', 'Profil va xodimlar boshqaruvi')
       .addTag('Stores', "Do'konlar")
       .addTag('Devices', 'Qurilmalar va sessiyalar')
       .build();

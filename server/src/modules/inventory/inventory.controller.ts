@@ -13,7 +13,7 @@ export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
 
   @Post('purchase')
-  @ApiOperation({ summary: "Ombor kirimi (xarid)" })
+  @ApiOperation({ summary: 'Ombor kirimi (xarid)' })
   @Roles(Role.ADMIN)
   purchase(
     @CurrentUser('storeId') storeId: number,
@@ -23,7 +23,7 @@ export class InventoryController {
   }
 
   @Post('write-off')
-  @ApiOperation({ summary: "Hisobdan chiqarish" })
+  @ApiOperation({ summary: 'Hisobdan chiqarish' })
   @Roles(Role.ADMIN)
   writeOff(
     @CurrentUser('storeId') storeId: number,
@@ -43,7 +43,7 @@ export class InventoryController {
   }
 
   @Get('transactions')
-  @ApiOperation({ summary: "Ombor harakatlari tarixi" })
+  @ApiOperation({ summary: 'Ombor harakatlari tarixi' })
   @Roles(Role.ADMIN, Role.SELLER)
   getTransactions(
     @CurrentUser('storeId') storeId: number,
@@ -53,7 +53,7 @@ export class InventoryController {
   }
 
   @Get('stock')
-  @ApiOperation({ summary: "Joriy qoldiqlar" })
+  @ApiOperation({ summary: 'Joriy qoldiqlar' })
   @Roles(Role.ADMIN, Role.SELLER)
   getStockLevels(@CurrentUser('storeId') storeId: number) {
     return this.inventoryService.getStockLevels(storeId);

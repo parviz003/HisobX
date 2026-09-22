@@ -12,7 +12,9 @@ export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get('daily')
-  @ApiOperation({ summary: 'Kunlik hisobot (Savdo, Foyda, Xarajat, Kassa, Qarzlar)' })
+  @ApiOperation({
+    summary: 'Kunlik hisobot (Savdo, Foyda, Xarajat, Kassa, Qarzlar)',
+  })
   @ApiQuery({ name: 'date', required: false, example: '2026-09-21' })
   getDaily(
     @CurrentUser('storeId') storeId: number,

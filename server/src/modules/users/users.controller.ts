@@ -127,7 +127,7 @@ export class UsersController {
   @Roles(Role.SUPERADMIN, Role.ADMIN)
   @Patch(':id/password')
   @ApiOperation({
-    summary: "Xodim parolini tiklash (barcha sessiyalari bekor qilinadi)",
+    summary: 'Xodim parolini tiklash (barcha sessiyalari bekor qilinadi)',
   })
   resetPassword(
     @CurrentUser() actor: IPayload,

@@ -44,7 +44,11 @@ export class ExpensesService {
     return successRes(category, 201);
   }
 
-  async updateCategory(storeId: number, id: number, dto: UpdateExpenseCategoryDto) {
+  async updateCategory(
+    storeId: number,
+    id: number,
+    dto: UpdateExpenseCategoryDto,
+  ) {
     const category = await this.prisma.expenseCategory.findFirst({
       where: { id, storeId },
     });
@@ -125,7 +129,13 @@ export class ExpensesService {
   }
 
   async findAll(storeId: number, query: QueryExpenseDto) {
-    const { page = 1, limit = 10, expenseCategoryId, startDate, endDate } = query;
+    const {
+      page = 1,
+      limit = 10,
+      expenseCategoryId,
+      startDate,
+      endDate,
+    } = query;
     const skip = (Number(page) - 1) * Number(limit);
 
     const where: Prisma.ExpenseWhereInput = {

@@ -53,7 +53,10 @@ export class ProductsController {
   @Roles('ADMIN', 'SELLER')
   @Get(':id')
   @ApiOperation({ summary: 'Mahsulot tafsilotlari' })
-  findOne(@CurrentUser('storeId') storeId: number, @Param('id', ParseIntPipe) id: number) {
+  findOne(
+    @CurrentUser('storeId') storeId: number,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.productsService.findOne(storeId, id);
   }
 
@@ -76,7 +79,10 @@ export class ProductsController {
   @ApiOperation({
     summary: "Mahsulotni o'chirish (soft delete va rasmni tozalash)",
   })
-  remove(@CurrentUser('storeId') storeId: number, @Param('id', ParseIntPipe) id: number) {
+  remove(
+    @CurrentUser('storeId') storeId: number,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.productsService.remove(storeId, id);
   }
 }

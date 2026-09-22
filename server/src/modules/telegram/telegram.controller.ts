@@ -24,9 +24,7 @@ class TestNotificationDto {
 @Roles(Role.ADMIN)
 @Controller('telegram')
 export class TelegramController {
-  constructor(
-    private readonly telegramService: TelegramNotificationService,
-  ) {}
+  constructor(private readonly telegramService: TelegramNotificationService) {}
 
   @Post('test')
   @ApiOperation({
@@ -35,7 +33,7 @@ export class TelegramController {
       "Do'konning `telegramChatId` maydoni sozlangan bo'lishi kerak," +
       ' aks holda 400 qaytadi. Telegram xabarni qabul qilmasa — 503.',
   })
-  @ApiBadRequestResponse({ description: "telegramChatId sozlanmagan" })
+  @ApiBadRequestResponse({ description: 'telegramChatId sozlanmagan' })
   @ApiServiceUnavailableResponse({
     description: "Telegramga xabar yuborib bo'lmadi",
   })
@@ -58,7 +56,9 @@ export class TelegramController {
   }
 
   @Post('trigger/low-stock')
-  @ApiOperation({ summary: 'Kam qolgan mahsulotlar eslatmasini qo‘lda ishga tushirish' })
+  @ApiOperation({
+    summary: 'Kam qolgan mahsulotlar eslatmasini qo‘lda ishga tushirish',
+  })
   async triggerLowStock() {
     await this.telegramService.checkLowStock();
     return successRes({ message: 'Kam qolgan tovarlar eslatmasi bajarildi' });

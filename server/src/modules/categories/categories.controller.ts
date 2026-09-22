@@ -22,7 +22,7 @@ export class CategoriesController {
 
   @Roles('ADMIN')
   @Post()
-  @ApiOperation({ summary: "Yangi toifa yaratish" })
+  @ApiOperation({ summary: 'Yangi toifa yaratish' })
   create(
     @CurrentUser('storeId') storeId: number,
     @Body() createCategoryDto: CreateCategoryDto,
@@ -39,7 +39,7 @@ export class CategoriesController {
 
   @Roles('ADMIN')
   @Patch(':id')
-  @ApiOperation({ summary: "Toifani tahrirlash" })
+  @ApiOperation({ summary: 'Toifani tahrirlash' })
   update(
     @CurrentUser('storeId') storeId: number,
     @Param('id', ParseIntPipe) id: number,
@@ -51,7 +51,10 @@ export class CategoriesController {
   @Roles('ADMIN')
   @Delete(':id')
   @ApiOperation({ summary: "Toifani o'chirish" })
-  remove(@CurrentUser('storeId') storeId: number, @Param('id', ParseIntPipe) id: number) {
+  remove(
+    @CurrentUser('storeId') storeId: number,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.categoriesService.remove(storeId, id);
   }
 }

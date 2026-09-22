@@ -44,14 +44,20 @@ export class Token {
      * va rotatsiya/qayta ishlatishni aniqlab bo'lmaydi.
      */
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwt.signAsync({ ...payload, jti: randomUUID(), typ: 'access' }, {
-        secret: env.TOKEN.ACCESS_KEY,
-        expiresIn: env.TOKEN.ACCESS_TTL as JwtSignOptions['expiresIn'],
-      }),
-      this.jwt.signAsync({ ...payload, jti: randomUUID(), typ: 'refresh' }, {
-        secret: env.TOKEN.REFRESH_KEY,
-        expiresIn: env.TOKEN.REFRESH_TTL as JwtSignOptions['expiresIn'],
-      }),
+      this.jwt.signAsync(
+        { ...payload, jti: randomUUID(), typ: 'access' },
+        {
+          secret: env.TOKEN.ACCESS_KEY,
+          expiresIn: env.TOKEN.ACCESS_TTL as JwtSignOptions['expiresIn'],
+        },
+      ),
+      this.jwt.signAsync(
+        { ...payload, jti: randomUUID(), typ: 'refresh' },
+        {
+          secret: env.TOKEN.REFRESH_KEY,
+          expiresIn: env.TOKEN.REFRESH_TTL as JwtSignOptions['expiresIn'],
+        },
+      ),
     ]);
     return { accessToken, refreshToken };
   }
@@ -62,7 +68,8 @@ export class Token {
   ): Promise<any> {
     try {
       return await this.jwt.verifyAsync(token, {
-        secret: type === 'access' ? env.TOKEN.ACCESS_KEY : env.TOKEN.REFRESH_KEY,
+        secret:
+          type === 'access' ? env.TOKEN.ACCESS_KEY : env.TOKEN.REFRESH_KEY,
       });
     } catch (error) {
       throw new UnauthorizedException('Tizimga kirishda nosozlik');
@@ -74,7 +81,11 @@ export class Token {
     accessToken: string,
     refreshToken?: string,
   ): void {
-    res.cookie('accessToken', accessToken, this.cookieOptions(this.accessMaxAge));
+    res.cookie(
+      'accessToken',
+      accessToken,
+      this.cookieOptions(this.accessMaxAge),
+    );
     if (refreshToken) {
       res.cookie(
         'refreshToken',

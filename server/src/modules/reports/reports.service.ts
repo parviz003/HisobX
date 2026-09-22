@@ -15,41 +15,42 @@ export class ReportsService {
     const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const [sales, expenses, cashTx, lowStockCount, totalDebts] = await Promise.all([
-      this.prisma.sale.findMany({
-        where: {
-          storeId,
-          status: SaleStatus.COMPLETED,
-          createdAt: { gte: startOfDay, lte: endOfDay },
-          deletedAt: null,
-        },
-        include: {
-          saleItems: true,
-        },
-      }),
-      this.prisma.expense.findMany({
-        where: {
-          storeId,
-          createdAt: { gte: startOfDay, lte: endOfDay },
-          deletedAt: null,
-        },
-      }),
-      this.prisma.cashTransaction.findFirst({
-        where: { storeId, deletedAt: null },
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.product.count({
-        where: {
-          storeId,
-          isActive: true,
-          stock: { lte: this.prisma.product.fields.minStock },
-        },
-      }),
-      this.prisma.debt.aggregate({
-        where: { storeId, isPaid: false, deletedAt: null },
-        _sum: { remainingAmount: true },
-      }),
-    ]);
+    const [sales, expenses, cashTx, lowStockCount, totalDebts] =
+      await Promise.all([
+        this.prisma.sale.findMany({
+          where: {
+            storeId,
+            status: SaleStatus.COMPLETED,
+            createdAt: { gte: startOfDay, lte: endOfDay },
+            deletedAt: null,
+          },
+          include: {
+            saleItems: true,
+          },
+        }),
+        this.prisma.expense.findMany({
+          where: {
+            storeId,
+            createdAt: { gte: startOfDay, lte: endOfDay },
+            deletedAt: null,
+          },
+        }),
+        this.prisma.cashTransaction.findFirst({
+          where: { storeId, deletedAt: null },
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.product.count({
+          where: {
+            storeId,
+            isActive: true,
+            stock: { lte: this.prisma.product.fields.minStock },
+          },
+        }),
+        this.prisma.debt.aggregate({
+          where: { storeId, isPaid: false, deletedAt: null },
+          _sum: { remainingAmount: true },
+        }),
+      ]);
 
     let totalRevenue = 0;
     let totalCogs = 0;
@@ -62,7 +63,10 @@ export class ReportsService {
     }
 
     const grossProfit = totalRevenue - totalCogs;
-    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    const totalExpenses = expenses.reduce(
+      (sum, e) => sum + Number(e.amount),
+      0,
+    );
     const netProfit = grossProfit - totalExpenses;
     const currentCashBalance = cashTx ? Number(cashTx.balance) : 0;
     const totalOutstandingDebt = Number(totalDebts._sum.remainingAmount || 0);
@@ -91,7 +95,15 @@ export class ReportsService {
     const targetMonth = month !== undefined ? month - 1 : now.getMonth();
 
     const startOfMonth = new Date(targetYear, targetMonth, 1, 0, 0, 0, 0);
-    const endOfMonth = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+    const endOfMonth = new Date(
+      targetYear,
+      targetMonth + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
 
     const [sales, expenses] = await Promise.all([
       this.prisma.sale.findMany({
@@ -125,7 +137,10 @@ export class ReportsService {
     }
 
     const grossProfit = totalRevenue - totalCogs;
-    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    const totalExpenses = expenses.reduce(
+      (sum, e) => sum + Number(e.amount),
+      0,
+    );
     const netProfit = grossProfit - totalExpenses;
 
     return successRes({

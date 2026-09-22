@@ -203,7 +203,9 @@ export class UsersService {
     }
 
     if (dto.status && id === actor.sub) {
-      throw new ForbiddenException("O'z hisobingiz holatini o'zgartira olmaysiz");
+      throw new ForbiddenException(
+        "O'z hisobingiz holatini o'zgartira olmaysiz",
+      );
     }
 
     await this.ensurePhoneFree(dto.phone, id);
@@ -242,7 +244,7 @@ export class UsersService {
 
     return successRes({
       ...updated,
-      message: "Parol tiklandi, barcha sessiyalar bekor qilindi",
+      message: 'Parol tiklandi, barcha sessiyalar bekor qilindi',
     });
   }
 

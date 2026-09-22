@@ -26,7 +26,7 @@ export class SalesController {
 
   @Roles(Role.ADMIN, Role.SELLER)
   @Post()
-  @ApiOperation({ summary: "Savdo yaratish (naqd yoki nasiya)" })
+  @ApiOperation({ summary: 'Savdo yaratish (naqd yoki nasiya)' })
   create(
     @StoreId() storeId: number,
     @UserId() userId: number,
@@ -44,14 +44,16 @@ export class SalesController {
 
   @Roles(Role.ADMIN, Role.SELLER)
   @Get(':id')
-  @ApiOperation({ summary: "Savdo tafsilotlari" })
+  @ApiOperation({ summary: 'Savdo tafsilotlari' })
   findOne(@StoreId() storeId: number, @Param('id', ParseIntPipe) id: number) {
     return this.salesService.findOne(storeId, id);
   }
 
   @Roles(Role.ADMIN, Role.SELLER)
   @Patch(':id/cancel')
-  @ApiOperation({ summary: "Savdoni bekor qilish (zaxira va kassa qaytariladi)" })
+  @ApiOperation({
+    summary: 'Savdoni bekor qilish (zaxira va kassa qaytariladi)',
+  })
   cancel(
     @StoreId() storeId: number,
     @UserId() userId: number,

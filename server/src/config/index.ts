@@ -14,9 +14,7 @@ export const env = {
     PASSWORD: String(process.env.SUPERADMIN_PASSWORD),
   },
   TELEGRAM: {
-    TOKEN: String(
-      process.env.BOT_TOKEN,
-    ),
+    TOKEN: String(process.env.BOT_TOKEN),
     ID: Number(process.env.CHAT_ID),
   },
   OTP: {

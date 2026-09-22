@@ -41,14 +41,14 @@ export class CustomersController {
 
   @Roles(Role.ADMIN, Role.SELLER)
   @Get(':id')
-  @ApiOperation({ summary: "Mijoz tafsilotlari" })
+  @ApiOperation({ summary: 'Mijoz tafsilotlari' })
   findOne(@StoreId() storeId: number, @Param('id', ParseIntPipe) id: number) {
     return this.customersService.findOne(storeId, id);
   }
 
   @Roles(Role.ADMIN, Role.SELLER)
   @Patch(':id')
-  @ApiOperation({ summary: "Mijozni tahrirlash" })
+  @ApiOperation({ summary: 'Mijozni tahrirlash' })
   update(
     @StoreId() storeId: number,
     @Param('id', ParseIntPipe) id: number,

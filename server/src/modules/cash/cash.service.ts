@@ -43,7 +43,10 @@ export class CashService {
         dto.type === CashTransactionType.EXPENSE ||
         dto.type === CashTransactionType.ADJUSTMENT
       ) {
-        if (currentBalance < Number(dto.amount) && dto.type === CashTransactionType.EXPENSE) {
+        if (
+          currentBalance < Number(dto.amount) &&
+          dto.type === CashTransactionType.EXPENSE
+        ) {
           throw new BadRequestException(
             `Kassada yetarli mablag‘ mavjud emas. Joriy balans: ${currentBalance}`,
           );

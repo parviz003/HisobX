@@ -47,9 +47,7 @@ import { AllExceptionsFilter } from './common/filters/all-exception.filter';
             ttl: env.RATE_LIMIT.TTL_SECONDS * 1000,
             // Autentifikatsiyalangan foydalanuvchiga kengroq limit
             limit: async (context: ExecutionContext) =>
-              (await resolveThrottleUserId(
-                context.switchToHttp().getRequest(),
-              ))
+              (await resolveThrottleUserId(context.switchToHttp().getRequest()))
                 ? env.RATE_LIMIT.USER_LIMIT
                 : env.RATE_LIMIT.ANON_LIMIT,
           },

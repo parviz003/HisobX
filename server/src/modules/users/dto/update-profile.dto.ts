@@ -1,4 +1,9 @@
-import { IsOptional, IsPhoneNumber, IsString, MinLength } from 'class-validator';
+import {
+  IsOptional,
+  IsPhoneNumber,
+  IsString,
+  MinLength,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 /** Foydalanuvchi faqat shu maydonlarni o'zgartira oladi (rol va holat bundan mustasno) */

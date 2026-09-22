@@ -208,15 +208,16 @@ export class OtpService {
     }
 
     if (result === -2) {
-      throw new BadRequestException('OTP kodi mavjud emas yoki muddati tugagan');
+      throw new BadRequestException(
+        'OTP kodi mavjud emas yoki muddati tugagan',
+      );
     }
 
     if (result === -1) {
       throw new HttpException(
         {
           statusCode: HttpStatus.TOO_MANY_REQUESTS,
-          message:
-            'OTP kiritish urinishlari soni tugadi. Yangi kod so‘rang.',
+          message: 'OTP kiritish urinishlari soni tugadi. Yangi kod so‘rang.',
         },
         HttpStatus.TOO_MANY_REQUESTS,
       );

@@ -215,7 +215,10 @@ export class TelegramNotificationService {
         }
       }
 
-      const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+      const totalExpenses = expenses.reduce(
+        (sum, e) => sum + Number(e.amount),
+        0,
+      );
       const grossProfit = revenue - cogs;
       const netProfit = grossProfit - totalExpenses;
       const currentCash = lastCashTx ? Number(lastCashTx.balance) : 0;
