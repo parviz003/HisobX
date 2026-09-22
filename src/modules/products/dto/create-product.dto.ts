@@ -5,7 +5,6 @@ import {
   IsOptional,
   Min,
   IsInt,
-  IsUUID,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -26,8 +25,10 @@ export class CreateProductDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
-  categoryId?: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  categoryId?: number;
 
   @ApiPropertyOptional({ example: 'dona' })
   @IsOptional()

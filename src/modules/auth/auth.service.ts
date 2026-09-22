@@ -23,6 +23,7 @@ import { getDeviceInfo } from '../../common/helper/device-info';
 import { Role, Status } from '@prisma/client';
 import { RedisService } from '../../config/redis/redis.service';
 import { env } from '../../config';
+import { IPayload } from '../../common/interface';
 
 const MAX_DEVICES = 3;
 
@@ -211,7 +212,7 @@ export class AuthService {
       });
     }
 
-    const payload = {
+    const payload: IPayload = {
       sub: user.id,
       role: user.role,
       status: user.status,

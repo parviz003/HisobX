@@ -1,11 +1,11 @@
 import { Role, Status } from '@prisma/client';
 
 export interface IPayload {
-  sub: string;
+  sub: number;
   role: Role;
   status: Status;
-  deviceId?: string;
-  storeId?: string | null;
+  deviceId?: number;
+  storeId?: number | null;
 }
 
 export interface IToken {

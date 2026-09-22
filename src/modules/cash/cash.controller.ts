@@ -15,7 +15,7 @@ export class CashController {
   @Roles(Role.ADMIN, Role.SELLER)
   @Get('balance')
   @ApiOperation({ summary: "Joriy kassa balansini ko'rish" })
-  getBalance(@CurrentUser('storeId') storeId: string) {
+  getBalance(@CurrentUser('storeId') storeId: number) {
     return this.cashService.getBalance(storeId);
   }
 
@@ -23,8 +23,8 @@ export class CashController {
   @Post('transaction')
   @ApiOperation({ summary: 'Kassaga pul kiritish / chiqarish (Opening, Adjustment, Expense)' })
   create(
-    @CurrentUser('storeId') storeId: string,
-    @UserId() userId: string,
+    @CurrentUser('storeId') storeId: number,
+    @UserId() userId: number,
     @Body() dto: CreateCashTransactionDto,
   ) {
     return this.cashService.create(storeId, userId, dto);
@@ -34,7 +34,7 @@ export class CashController {
   @Get('transactions')
   @ApiOperation({ summary: 'Kassa operatsiyalari tarixini sahifalash va filtrlash' })
   findAll(
-    @CurrentUser('storeId') storeId: string,
+    @CurrentUser('storeId') storeId: number,
     @Query() query: QueryCashTransactionDto,
   ) {
     return this.cashService.findAll(storeId, query);

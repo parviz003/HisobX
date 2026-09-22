@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
@@ -25,7 +26,7 @@ export class CustomersController {
   @Post()
   @ApiOperation({ summary: "Yangi mijoz qo'shish" })
   create(
-    @StoreId() storeId: string,
+    @StoreId() storeId: number,
     @Body() createCustomerDto: CreateCustomerDto,
   ) {
     return this.customersService.create(storeId, createCustomerDto);
@@ -34,14 +35,14 @@ export class CustomersController {
   @Roles(Role.ADMIN, Role.SELLER)
   @Get()
   @ApiOperation({ summary: "Mijozlar ro'yxati (qidiruv bilan)" })
-  findAll(@StoreId() storeId: string, @Query('search') search?: string) {
+  findAll(@StoreId() storeId: number, @Query('search') search?: string) {
     return this.customersService.findAll(storeId, search);
   }
 
   @Roles(Role.ADMIN, Role.SELLER)
   @Get(':id')
   @ApiOperation({ summary: "Mijoz tafsilotlari" })
-  findOne(@StoreId() storeId: string, @Param('id') id: string) {
+  findOne(@StoreId() storeId: number, @Param('id', ParseIntPipe) id: number) {
     return this.customersService.findOne(storeId, id);
   }
 
@@ -49,8 +50,8 @@ export class CustomersController {
   @Patch(':id')
   @ApiOperation({ summary: "Mijozni tahrirlash" })
   update(
-    @StoreId() storeId: string,
-    @Param('id') id: string,
+    @StoreId() storeId: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateCustomerDto: UpdateCustomerDto,
   ) {
     return this.customersService.update(storeId, id, updateCustomerDto);
@@ -59,7 +60,7 @@ export class CustomersController {
   @Roles(Role.ADMIN)
   @Delete(':id')
   @ApiOperation({ summary: "Mijozni o'chirish (qarzi/savdosi bo'lmasa)" })
-  remove(@StoreId() storeId: string, @Param('id') id: string) {
+  remove(@StoreId() storeId: number, @Param('id', ParseIntPipe) id: number) {
     return this.customersService.remove(storeId, id);
   }
 }

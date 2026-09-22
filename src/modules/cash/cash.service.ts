@@ -9,7 +9,7 @@ import { successRes } from '../../common/helper/success-response';
 export class CashService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getBalance(storeId: string) {
+  async getBalance(storeId: number) {
     const lastTx = await this.prisma.cashTransaction.findFirst({
       where: { storeId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
@@ -23,7 +23,7 @@ export class CashService {
     });
   }
 
-  async create(storeId: string, userId: string, dto: CreateCashTransactionDto) {
+  async create(storeId: number, userId: number, dto: CreateCashTransactionDto) {
     return this.prisma.$transaction(async (tx) => {
       const lastTx = await tx.cashTransaction.findFirst({
         where: { storeId, deletedAt: null },
@@ -69,7 +69,7 @@ export class CashService {
     });
   }
 
-  async findAll(storeId: string, query: QueryCashTransactionDto) {
+  async findAll(storeId: number, query: QueryCashTransactionDto) {
     const { page = 1, limit = 10, type, startDate, endDate } = query;
     const skip = (Number(page) - 1) * Number(limit);
 

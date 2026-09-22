@@ -25,7 +25,7 @@ export const UserId = createParamDecorator(
  * ko'rsatilmasa tushunarli xatolik qaytariladi.
  */
 export const StoreId = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext): string => {
+  (data: unknown, ctx: ExecutionContext): number => {
     const request = ctx.switchToHttp().getRequest();
     const storeId = request.user?.storeId;
     if (!storeId) {

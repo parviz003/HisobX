@@ -12,7 +12,7 @@ import { Prisma } from '@prisma/client';
 export class CustomersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(storeId: string, createCustomerDto: CreateCustomerDto) {
+  async create(storeId: number, createCustomerDto: CreateCustomerDto) {
     return this.prisma.customer.create({
       data: {
         ...createCustomerDto,
@@ -21,7 +21,7 @@ export class CustomersService {
     });
   }
 
-  async findAll(storeId: string, search?: string) {
+  async findAll(storeId: number, search?: string) {
     const where: Prisma.CustomerWhereInput = { storeId };
     if (search) {
       where.OR = [
@@ -35,7 +35,7 @@ export class CustomersService {
     });
   }
 
-  async findOne(storeId: string, id: string) {
+  async findOne(storeId: number, id: number) {
     const customer = await this.prisma.customer.findFirst({
       where: { id, storeId },
       include: {
@@ -61,8 +61,8 @@ export class CustomersService {
   }
 
   async update(
-    storeId: string,
-    id: string,
+    storeId: number,
+    id: number,
     updateCustomerDto: UpdateCustomerDto,
   ) {
     const customer = await this.prisma.customer.findFirst({
@@ -78,7 +78,7 @@ export class CustomersService {
     });
   }
 
-  async remove(storeId: string, id: string) {
+  async remove(storeId: number, id: number) {
     const customer = await this.prisma.customer.findFirst({
       where: { id, storeId },
     });

@@ -4,14 +4,16 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
   Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateInventoryDto {
-  @IsUUID()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   @IsNotEmpty()
-  productId: string;
+  productId: number;
 
   @IsInt()
   @Min(1)

@@ -11,7 +11,7 @@ import { QueryInventoryDto } from './dto/query-inventory.dto';
 export class InventoryService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async purchase(storeId: string, dto: CreateInventoryDto) {
+  async purchase(storeId: number, dto: CreateInventoryDto) {
     return this.prisma.$transaction(async (tx) => {
       const product = await tx.product.findFirst({
         where: { id: dto.productId, storeId },
@@ -41,7 +41,7 @@ export class InventoryService {
     });
   }
 
-  async writeOff(storeId: string, dto: CreateInventoryDto) {
+  async writeOff(storeId: number, dto: CreateInventoryDto) {
     return this.prisma.$transaction(async (tx) => {
       const product = await tx.product.findFirst({
         where: { id: dto.productId, storeId },
@@ -72,7 +72,7 @@ export class InventoryService {
     });
   }
 
-  async openingStock(storeId: string, dto: CreateInventoryDto) {
+  async openingStock(storeId: number, dto: CreateInventoryDto) {
     return this.prisma.$transaction(async (tx) => {
       const product = await tx.product.findFirst({
         where: { id: dto.productId, storeId },
@@ -103,7 +103,7 @@ export class InventoryService {
     });
   }
 
-  async getTransactions(storeId: string, query: QueryInventoryDto) {
+  async getTransactions(storeId: number, query: QueryInventoryDto) {
     const { productId, type, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
@@ -131,7 +131,7 @@ export class InventoryService {
     return { data, total, page, limit };
   }
 
-  async getStockLevels(storeId: string) {
+  async getStockLevels(storeId: number) {
     const products = await this.prisma.product.findMany({
       where: { storeId },
       select: {

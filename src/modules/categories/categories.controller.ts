@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -23,7 +24,7 @@ export class CategoriesController {
   @Post()
   @ApiOperation({ summary: "Yangi toifa yaratish" })
   create(
-    @CurrentUser('storeId') storeId: string,
+    @CurrentUser('storeId') storeId: number,
     @Body() createCategoryDto: CreateCategoryDto,
   ) {
     return this.categoriesService.create(storeId, createCategoryDto);
@@ -32,7 +33,7 @@ export class CategoriesController {
   @Roles('ADMIN', 'SELLER')
   @Get()
   @ApiOperation({ summary: "Toifalar ro'yxati" })
-  findAll(@CurrentUser('storeId') storeId: string) {
+  findAll(@CurrentUser('storeId') storeId: number) {
     return this.categoriesService.findAll(storeId);
   }
 
@@ -40,8 +41,8 @@ export class CategoriesController {
   @Patch(':id')
   @ApiOperation({ summary: "Toifani tahrirlash" })
   update(
-    @CurrentUser('storeId') storeId: string,
-    @Param('id') id: string,
+    @CurrentUser('storeId') storeId: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateCategoryDto: UpdateCategoryDto,
   ) {
     return this.categoriesService.update(storeId, id, updateCategoryDto);
@@ -50,7 +51,7 @@ export class CategoriesController {
   @Roles('ADMIN')
   @Delete(':id')
   @ApiOperation({ summary: "Toifani o'chirish" })
-  remove(@CurrentUser('storeId') storeId: string, @Param('id') id: string) {
+  remove(@CurrentUser('storeId') storeId: number, @Param('id', ParseIntPipe) id: number) {
     return this.categoriesService.remove(storeId, id);
   }
 }

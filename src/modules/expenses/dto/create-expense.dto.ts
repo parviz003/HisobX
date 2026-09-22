@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateExpenseDto {
   @ApiProperty({
@@ -13,13 +14,15 @@ export class CreateExpenseDto {
   amount!: number;
 
   @ApiProperty({
-    type: String,
-    example: 'd9b2d63d-a262-4211-8975-4d7426eb6128',
+    type: Number,
+    example: 1,
     description: 'Xarajat toifasi ID si',
   })
-  @IsUUID()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   @IsNotEmpty()
-  expenseCategoryId!: string;
+  expenseCategoryId!: number;
 
   @ApiPropertyOptional({
     type: String,

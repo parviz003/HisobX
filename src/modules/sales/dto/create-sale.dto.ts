@@ -1,6 +1,7 @@
 import {
   IsDateString,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -12,8 +13,10 @@ import { Type } from 'class-transformer';
 import { PaymentType } from '@prisma/client';
 
 export class SaleItemDto {
-  @IsString()
-  productId: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  productId: number;
 
   @IsNumber()
   @Min(1)
@@ -24,9 +27,11 @@ export class CreateSaleDto {
   @IsEnum(PaymentType)
   paymentType: PaymentType;
 
-  @IsString()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   @IsOptional()
-  customerId?: string;
+  customerId?: number;
 
   @IsNumber()
   @IsOptional()

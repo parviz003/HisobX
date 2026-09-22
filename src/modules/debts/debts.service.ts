@@ -13,7 +13,7 @@ import { Prisma } from '@prisma/client';
 export class DebtsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: QueryDebtDto, storeId: string) {
+  async findAll(query: QueryDebtDto, storeId: number) {
     const { page = 1, limit = 10, customerId, isPaid } = query;
     const skip = (page - 1) * limit;
 
@@ -56,7 +56,7 @@ export class DebtsService {
     };
   }
 
-  async findOne(id: string, storeId: string) {
+  async findOne(id: number, storeId: number) {
     const debt = await this.prisma.debt.findUnique({
       where: { id },
       include: {
@@ -77,7 +77,7 @@ export class DebtsService {
     return debt;
   }
 
-  async getOverdue(storeId: string) {
+  async getOverdue(storeId: number) {
     const overdueDebts = await this.prisma.debt.findMany({
       where: {
         storeId,
@@ -105,17 +105,17 @@ export class DebtsService {
         acc[customerId].debts.push(debt);
         return acc;
       },
-      {} as Record<string, any>,
+      {} as Record<number, any>,
     );
 
     return Object.values(grouped);
   }
 
   async makePayment(
-    id: string,
+    id: number,
     dto: MakePaymentDto,
-    storeId: string,
-    userId: string,
+    storeId: number,
+    userId: number,
   ) {
     const { amount, note } = dto;
     const paymentAmount = new Prisma.Decimal(amount);

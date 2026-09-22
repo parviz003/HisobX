@@ -1,4 +1,4 @@
-import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsPhoneNumber, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateStoreDto {
@@ -8,6 +8,7 @@ export class CreateStoreDto {
   name!: string;
 
   @ApiPropertyOptional({ example: '+998901234567' })
+  @IsPhoneNumber('UZ')
   @IsOptional()
   @IsString()
   phone?: string;

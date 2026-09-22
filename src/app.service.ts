@@ -90,7 +90,7 @@ export class App {
         required: false,
         description:
           "Faqat SUPERADMIN uchun: do'kon konteksti (GET amallari uchun)",
-        schema: { type: 'string', format: 'uuid' },
+        schema: { type: 'integer', example: 1 },
       })
       .addTag('Auth', 'Kirish, OTP, refresh, parolni tiklash')
       .addTag('Users', "Profil va xodimlar boshqaruvi")

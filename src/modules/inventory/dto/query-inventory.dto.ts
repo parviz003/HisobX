@@ -3,9 +3,11 @@ import { Type } from 'class-transformer';
 import { InventoryTransactionType } from '@prisma/client';
 
 export class QueryInventoryDto {
-  @IsString()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   @IsOptional()
-  productId?: string;
+  productId?: number;
 
   @IsEnum(InventoryTransactionType)
   @IsOptional()

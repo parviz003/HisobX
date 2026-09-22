@@ -81,11 +81,17 @@ export class AuthGuard implements CanActivate {
      * SUPERADMIN `x-store-id` bilan do'kon kontekstiga kirishi mumkin,
      * ammo u kontekstda faqat o'qish (GET) amallari ruxsat etiladi.
      */
-    let storeId: string | null = user.storeId;
+    let storeId: number | null = user.storeId;
     const storeIdHeader = req.headers['x-store-id'];
 
     if (storeIdHeader && user.role === Role.SUPERADMIN) {
-      storeId = String(storeIdHeader);
+      const parsedStoreId = Number(storeIdHeader);
+      if (!Number.isInteger(parsedStoreId) || parsedStoreId <= 0) {
+        throw new ForbiddenException(
+          "'x-store-id' header butun son bo'lishi kerak",
+        );
+      }
+      storeId = parsedStoreId;
       const method = String(req.method).toUpperCase();
 
       this.storeContextLogger.log(

@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
@@ -27,8 +28,8 @@ export class SalesController {
   @Post()
   @ApiOperation({ summary: "Savdo yaratish (naqd yoki nasiya)" })
   create(
-    @StoreId() storeId: string,
-    @UserId() userId: string,
+    @StoreId() storeId: number,
+    @UserId() userId: number,
     @Body() createSaleDto: CreateSaleDto,
   ) {
     return this.salesService.create(storeId, userId, createSaleDto);
@@ -37,14 +38,14 @@ export class SalesController {
   @Roles(Role.ADMIN, Role.SELLER)
   @Get()
   @ApiOperation({ summary: "Savdolar ro'yxati (filtrlar bilan)" })
-  findAll(@StoreId() storeId: string, @Query() query: QuerySaleDto) {
+  findAll(@StoreId() storeId: number, @Query() query: QuerySaleDto) {
     return this.salesService.findAll(storeId, query);
   }
 
   @Roles(Role.ADMIN, Role.SELLER)
   @Get(':id')
   @ApiOperation({ summary: "Savdo tafsilotlari" })
-  findOne(@StoreId() storeId: string, @Param('id') id: string) {
+  findOne(@StoreId() storeId: number, @Param('id', ParseIntPipe) id: number) {
     return this.salesService.findOne(storeId, id);
   }
 
@@ -52,9 +53,9 @@ export class SalesController {
   @Patch(':id/cancel')
   @ApiOperation({ summary: "Savdoni bekor qilish (zaxira va kassa qaytariladi)" })
   cancel(
-    @StoreId() storeId: string,
-    @UserId() userId: string,
-    @Param('id') id: string,
+    @StoreId() storeId: number,
+    @UserId() userId: number,
+    @Param('id', ParseIntPipe) id: number,
   ) {
     return this.salesService.cancel(storeId, id, userId);
   }

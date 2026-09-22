@@ -16,7 +16,7 @@ export class InventoryController {
   @ApiOperation({ summary: "Ombor kirimi (xarid)" })
   @Roles(Role.ADMIN)
   purchase(
-    @CurrentUser('storeId') storeId: string,
+    @CurrentUser('storeId') storeId: number,
     @Body() dto: CreateInventoryDto,
   ) {
     return this.inventoryService.purchase(storeId, dto);
@@ -26,7 +26,7 @@ export class InventoryController {
   @ApiOperation({ summary: "Hisobdan chiqarish" })
   @Roles(Role.ADMIN)
   writeOff(
-    @CurrentUser('storeId') storeId: string,
+    @CurrentUser('storeId') storeId: number,
     @Body() dto: CreateInventoryDto,
   ) {
     return this.inventoryService.writeOff(storeId, dto);
@@ -36,7 +36,7 @@ export class InventoryController {
   @ApiOperation({ summary: "Boshlang'ich qoldiq kiritish" })
   @Roles(Role.ADMIN)
   openingStock(
-    @CurrentUser('storeId') storeId: string,
+    @CurrentUser('storeId') storeId: number,
     @Body() dto: CreateInventoryDto,
   ) {
     return this.inventoryService.openingStock(storeId, dto);
@@ -46,7 +46,7 @@ export class InventoryController {
   @ApiOperation({ summary: "Ombor harakatlari tarixi" })
   @Roles(Role.ADMIN, Role.SELLER)
   getTransactions(
-    @CurrentUser('storeId') storeId: string,
+    @CurrentUser('storeId') storeId: number,
     @Query() query: QueryInventoryDto,
   ) {
     return this.inventoryService.getTransactions(storeId, query);
@@ -55,7 +55,7 @@ export class InventoryController {
   @Get('stock')
   @ApiOperation({ summary: "Joriy qoldiqlar" })
   @Roles(Role.ADMIN, Role.SELLER)
-  getStockLevels(@CurrentUser('storeId') storeId: string) {
+  getStockLevels(@CurrentUser('storeId') storeId: number) {
     return this.inventoryService.getStockLevels(storeId);
   }
 }

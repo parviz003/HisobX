@@ -7,7 +7,7 @@ import { Token } from '../../infrastructure/lib/Token';
 export class DeviceService {
   constructor(private readonly db: PrismaService) {}
 
-  async findAll(userId: string) {
+  async findAll(userId: number) {
     const devices = await this.db.devices.findMany({
       where: { userId },
       select: {
@@ -20,7 +20,7 @@ export class DeviceService {
     return successRes(devices);
   }
 
-  async remove(refreshToken: string, id: string) {
+  async remove(refreshToken: string, id: number) {
     if (!refreshToken) {
       throw new BadRequestException('Refresh token topilmadi');
     }

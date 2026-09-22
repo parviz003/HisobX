@@ -17,7 +17,7 @@ export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(
-    storeId: string,
+    storeId: number,
     dto: CreateProductDto,
     image?: Express.Multer.File,
   ) {
@@ -50,7 +50,7 @@ export class ProductsService {
     return successRes(product, 201);
   }
 
-  async findAll(storeId: string, query: QueryProductDto) {
+  async findAll(storeId: number, query: QueryProductDto) {
     const { page = 1, limit = 10, categoryId, isActive, search } = query;
     const skip = (Number(page) - 1) * Number(limit);
 
@@ -92,7 +92,7 @@ export class ProductsService {
     });
   }
 
-  async findOne(storeId: string, id: string) {
+  async findOne(storeId: number, id: number) {
     const product = await this.prisma.product.findFirst({
       where: { id, storeId },
       include: {
@@ -105,8 +105,8 @@ export class ProductsService {
   }
 
   async update(
-    storeId: string,
-    id: string,
+    storeId: number,
+    id: number,
     dto: UpdateProductDto,
     image?: Express.Multer.File,
   ) {
@@ -148,7 +148,7 @@ export class ProductsService {
     return successRes(updated);
   }
 
-  async remove(storeId: string, id: string) {
+  async remove(storeId: number, id: number) {
     const product = await this.prisma.product.findFirst({
       where: { id, storeId },
     });

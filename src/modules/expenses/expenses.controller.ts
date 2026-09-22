@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
@@ -29,14 +30,14 @@ export class ExpensesController {
   // Categories
   @Get('categories')
   @ApiOperation({ summary: 'Xarajat toifalarini olish' })
-  findAllCategories(@CurrentUser('storeId') storeId: string) {
+  findAllCategories(@CurrentUser('storeId') storeId: number) {
     return this.expensesService.findAllCategories(storeId);
   }
 
   @Post('categories')
   @ApiOperation({ summary: 'Yangi xarajat toifasini yaratish' })
   createCategory(
-    @CurrentUser('storeId') storeId: string,
+    @CurrentUser('storeId') storeId: number,
     @Body() dto: CreateExpenseCategoryDto,
   ) {
     return this.expensesService.createCategory(storeId, dto);
@@ -45,8 +46,8 @@ export class ExpensesController {
   @Patch('categories/:id')
   @ApiOperation({ summary: 'Xarajat toifasini tahrirlash' })
   updateCategory(
-    @CurrentUser('storeId') storeId: string,
-    @Param('id') id: string,
+    @CurrentUser('storeId') storeId: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateExpenseCategoryDto,
   ) {
     return this.expensesService.updateCategory(storeId, id, dto);
@@ -55,8 +56,8 @@ export class ExpensesController {
   @Delete('categories/:id')
   @ApiOperation({ summary: "Xarajat toifasini o'chirish" })
   removeCategory(
-    @CurrentUser('storeId') storeId: string,
-    @Param('id') id: string,
+    @CurrentUser('storeId') storeId: number,
+    @Param('id', ParseIntPipe) id: number,
   ) {
     return this.expensesService.removeCategory(storeId, id);
   }
@@ -65,8 +66,8 @@ export class ExpensesController {
   @Post()
   @ApiOperation({ summary: 'Xarajat qo‘shish (avtomatik kassadan chiqadi)' })
   create(
-    @CurrentUser('storeId') storeId: string,
-    @UserId() userId: string,
+    @CurrentUser('storeId') storeId: number,
+    @UserId() userId: number,
     @Body() dto: CreateExpenseDto,
   ) {
     return this.expensesService.create(storeId, userId, dto);
@@ -75,7 +76,7 @@ export class ExpensesController {
   @Get()
   @ApiOperation({ summary: 'Xarajatlar ro‘yxatini sahifalash va filtrlash' })
   findAll(
-    @CurrentUser('storeId') storeId: string,
+    @CurrentUser('storeId') storeId: number,
     @Query() query: QueryExpenseDto,
   ) {
     return this.expensesService.findAll(storeId, query);

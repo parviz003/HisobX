@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, ParseIntPipe, Query } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -15,7 +15,7 @@ export class ReportsController {
   @ApiOperation({ summary: 'Kunlik hisobot (Savdo, Foyda, Xarajat, Kassa, Qarzlar)' })
   @ApiQuery({ name: 'date', required: false, example: '2026-09-21' })
   getDaily(
-    @CurrentUser('storeId') storeId: string,
+    @CurrentUser('storeId') storeId: number,
     @Query('date') date?: string,
   ) {
     return this.reportsService.getDailyReport(storeId, date);
@@ -26,9 +26,9 @@ export class ReportsController {
   @ApiQuery({ name: 'year', required: false, example: 2026 })
   @ApiQuery({ name: 'month', required: false, example: 9 })
   getMonthly(
-    @CurrentUser('storeId') storeId: string,
-    @Query('year') year?: number,
-    @Query('month') month?: number,
+    @CurrentUser('storeId') storeId: number,
+    @Query('year', new ParseIntPipe({ optional: true })) year?: number,
+    @Query('month', new ParseIntPipe({ optional: true })) month?: number,
   ) {
     return this.reportsService.getMonthlyReport(storeId, year, month);
   }

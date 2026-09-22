@@ -4,7 +4,7 @@ import {
   Delete,
   Get,
   Param,
-  ParseUUIDPipe,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -12,7 +12,13 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBadRequestResponse,
+  ApiConsumes,
+  ApiNotFoundResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -38,13 +44,13 @@ export class UsersController {
 
   @Get('me')
   @ApiOperation({ summary: "O'z profilini ko'rish" })
-  getProfile(@UserId() userId: string) {
+  getProfile(@UserId() userId: number) {
     return this.usersService.getProfile(userId);
   }
 
   @Patch('me')
   @ApiOperation({ summary: "O'z profilini tahrirlash" })
-  updateProfile(@UserId() userId: string, @Body() dto: UpdateProfileDto) {
+  updateProfile(@UserId() userId: number, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(userId, dto);
   }
 
@@ -55,7 +61,7 @@ export class UsersController {
     summary: "Profil rasmini yuklash (eski rasm avtomatik o'chiriladi)",
   })
   updateProfileImage(
-    @UserId() userId: string,
+    @UserId() userId: number,
     @UploadedFile(new ImageValidationPipe()) image?: Express.Multer.File,
   ) {
     return this.usersService.updateProfileImage(userId, image);
@@ -63,7 +69,7 @@ export class UsersController {
 
   @Delete('me/image')
   @ApiOperation({ summary: "Profil rasmini o'chirish" })
-  removeProfileImage(@UserId() userId: string) {
+  removeProfileImage(@UserId() userId: number) {
     return this.usersService.removeProfileImage(userId);
   }
 
@@ -84,7 +90,15 @@ export class UsersController {
   @ApiOperation({
     summary:
       "Xodim yaratish (ADMIN — o'z do'koniga SELLER, SUPERADMIN — ADMIN/SELLER)",
+    description:
+      "SUPERADMIN uchun `storeId` majburiy va mavjud, faol do'konga tegishli bo'lishi kerak." +
+      " ADMIN uchun `storeId` e'tiborsiz qoldiriladi — xodim o'z do'koniga qo'shiladi." +
+      " Yangi do'kon bilan birga ADMIN yaratish uchun `POST /stores/onboard` ishlatiladi.",
   })
+  @ApiBadRequestResponse({
+    description: "storeId ko'rsatilmagan yoki do'kon faol emas",
+  })
+  @ApiNotFoundResponse({ description: "Do'kon topilmadi" })
   create(@CurrentUser() actor: IPayload, @Body() dto: CreateUserDto) {
     return this.usersService.create(actor, dto);
   }
@@ -94,7 +108,7 @@ export class UsersController {
   @ApiOperation({ summary: "Xodim ma'lumoti" })
   findOne(
     @CurrentUser() actor: IPayload,
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseIntPipe) id: number,
   ) {
     return this.usersService.findOne(actor, id);
   }
@@ -104,7 +118,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Xodimni tahrirlash / bloklash (status)' })
   update(
     @CurrentUser() actor: IPayload,
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUserDto,
   ) {
     return this.usersService.update(actor, id, dto);
@@ -117,7 +131,7 @@ export class UsersController {
   })
   resetPassword(
     @CurrentUser() actor: IPayload,
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: ResetUserPasswordDto,
   ) {
     return this.usersService.resetPassword(actor, id, dto.password);
@@ -128,7 +142,7 @@ export class UsersController {
   @ApiOperation({ summary: "Foydalanuvchini o'chirish (faqat SUPERADMIN)" })
   remove(
     @CurrentUser() actor: IPayload,
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseIntPipe) id: number,
   ) {
     return this.usersService.remove(actor, id);
   }

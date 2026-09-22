@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsNumber } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsNumber, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaymentType, SaleStatus } from '@prisma/client';
 
@@ -22,8 +22,10 @@ export class QuerySaleDto {
   paymentType?: PaymentType;
 
   @IsOptional()
-  @IsString()
-  customerId?: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  customerId?: number;
 
   @IsOptional()
   @IsString()

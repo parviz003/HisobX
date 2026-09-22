@@ -1,12 +1,14 @@
 import {
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsPhoneNumber,
   IsString,
-  IsUUID,
+  Min,
   MinLength,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 
@@ -32,18 +34,15 @@ export class CreateUserDto {
   role!: Role;
 
   @ApiPropertyOptional({
+    example: 1,
     description:
-      "Faqat SUPERADMIN uchun. ADMIN uchun e'tiborsiz qoldiriladi (o'z do'koni)",
+      "SUPERADMIN uchun majburiy — xodim qo'shiladigan mavjud do'kon ID'si." +
+      " ADMIN uchun e'tiborsiz qoldiriladi (o'z do'koni ishlatiladi)." +
+      " Yangi do'kon + ADMIN yaratish uchun POST /stores/onboard ishlatiladi.",
   })
   @IsOptional()
-  @IsUUID()
-  storeId?: string;
-
-  @ApiPropertyOptional({
-    description:
-      "SUPERADMIN ADMIN yaratganda storeId o'rniga yangi do'kon nomi berilishi mumkin",
-  })
-  @IsOptional()
-  @IsString()
-  storeName?: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  storeId?: number;
 }

@@ -7,7 +7,7 @@ import { SaleStatus } from '@prisma/client';
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getDailyReport(storeId: string, dateString?: string) {
+  async getDailyReport(storeId: number, dateString?: string) {
     const targetDate = dateString ? new Date(dateString) : new Date();
     const startOfDay = new Date(targetDate);
     startOfDay.setHours(0, 0, 0, 0);
@@ -85,7 +85,7 @@ export class ReportsService {
     });
   }
 
-  async getMonthlyReport(storeId: string, year?: number, month?: number) {
+  async getMonthlyReport(storeId: number, year?: number, month?: number) {
     const now = new Date();
     const targetYear = year || now.getFullYear();
     const targetMonth = month !== undefined ? month - 1 : now.getMonth();

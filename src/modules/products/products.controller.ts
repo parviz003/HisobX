@@ -9,6 +9,7 @@ import {
   Query,
   UseInterceptors,
   UploadedFile,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -32,7 +33,7 @@ export class ProductsController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Mahsulot yaratish (rasm bilan)' })
   create(
-    @CurrentUser('storeId') storeId: string,
+    @CurrentUser('storeId') storeId: number,
     @Body() createProductDto: CreateProductDto,
     @UploadedFile(new ImageValidationPipe()) image?: Express.Multer.File,
   ) {
@@ -43,7 +44,7 @@ export class ProductsController {
   @Get()
   @ApiOperation({ summary: 'Barcha mahsulotlarni qidirish va sahifalash' })
   findAll(
-    @CurrentUser('storeId') storeId: string,
+    @CurrentUser('storeId') storeId: number,
     @Query() query: QueryProductDto,
   ) {
     return this.productsService.findAll(storeId, query);
@@ -52,7 +53,7 @@ export class ProductsController {
   @Roles('ADMIN', 'SELLER')
   @Get(':id')
   @ApiOperation({ summary: 'Mahsulot tafsilotlari' })
-  findOne(@CurrentUser('storeId') storeId: string, @Param('id') id: string) {
+  findOne(@CurrentUser('storeId') storeId: number, @Param('id', ParseIntPipe) id: number) {
     return this.productsService.findOne(storeId, id);
   }
 
@@ -62,8 +63,8 @@ export class ProductsController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Mahsulotni tahrirlash (rasmni yangilash bilan)' })
   update(
-    @CurrentUser('storeId') storeId: string,
-    @Param('id') id: string,
+    @CurrentUser('storeId') storeId: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateProductDto: UpdateProductDto,
     @UploadedFile(new ImageValidationPipe()) image?: Express.Multer.File,
   ) {
@@ -75,7 +76,7 @@ export class ProductsController {
   @ApiOperation({
     summary: "Mahsulotni o'chirish (soft delete va rasmni tozalash)",
   })
-  remove(@CurrentUser('storeId') storeId: string, @Param('id') id: string) {
+  remove(@CurrentUser('storeId') storeId: number, @Param('id', ParseIntPipe) id: number) {
     return this.productsService.remove(storeId, id);
   }
 }

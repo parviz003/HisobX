@@ -19,7 +19,7 @@ export class ExpensesService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Category methods
-  async findAllCategories(storeId: string) {
+  async findAllCategories(storeId: number) {
     const categories = await this.prisma.expenseCategory.findMany({
       where: { storeId },
       orderBy: { name: 'asc' },
@@ -27,7 +27,7 @@ export class ExpensesService {
     return successRes(categories);
   }
 
-  async createCategory(storeId: string, dto: CreateExpenseCategoryDto) {
+  async createCategory(storeId: number, dto: CreateExpenseCategoryDto) {
     const existing = await this.prisma.expenseCategory.findUnique({
       where: { storeId_name: { storeId, name: dto.name } },
     });
@@ -44,7 +44,7 @@ export class ExpensesService {
     return successRes(category, 201);
   }
 
-  async updateCategory(storeId: string, id: string, dto: UpdateExpenseCategoryDto) {
+  async updateCategory(storeId: number, id: number, dto: UpdateExpenseCategoryDto) {
     const category = await this.prisma.expenseCategory.findFirst({
       where: { id, storeId },
     });
@@ -57,7 +57,7 @@ export class ExpensesService {
     return successRes(updated);
   }
 
-  async removeCategory(storeId: string, id: string) {
+  async removeCategory(storeId: number, id: number) {
     const category = await this.prisma.expenseCategory.findFirst({
       where: { id, storeId },
       include: { _count: { select: { expenses: true } } },
@@ -75,7 +75,7 @@ export class ExpensesService {
   }
 
   // Expense methods
-  async create(storeId: string, userId: string, dto: CreateExpenseDto) {
+  async create(storeId: number, userId: number, dto: CreateExpenseDto) {
     return this.prisma.$transaction(async (tx) => {
       const category = await tx.expenseCategory.findFirst({
         where: { id: dto.expenseCategoryId, storeId },
@@ -124,7 +124,7 @@ export class ExpensesService {
     });
   }
 
-  async findAll(storeId: string, query: QueryExpenseDto) {
+  async findAll(storeId: number, query: QueryExpenseDto) {
     const { page = 1, limit = 10, expenseCategoryId, startDate, endDate } = query;
     const skip = (Number(page) - 1) * Number(limit);
 

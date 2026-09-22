@@ -37,7 +37,7 @@ export class UsersService {
 
   /* ----------------------------- PROFIL (o'zi) ---------------------------- */
 
-  async getProfile(userId: string) {
+  async getProfile(userId: number) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { ...userSelect, store: { select: { id: true, name: true } } },
@@ -46,7 +46,7 @@ export class UsersService {
     return successRes(user);
   }
 
-  async updateProfile(userId: string, dto: UpdateProfileDto) {
+  async updateProfile(userId: number, dto: UpdateProfileDto) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
 
@@ -65,7 +65,7 @@ export class UsersService {
   }
 
   /** Yangi rasm yuklanganda eskisi diskdan o'chiriladi */
-  async updateProfileImage(userId: string, image?: Express.Multer.File) {
+  async updateProfileImage(userId: number, image?: Express.Multer.File) {
     if (!image) {
       throw new BadRequestException("Rasm yuborilmadi ('image' maydoni)");
     }
@@ -87,7 +87,7 @@ export class UsersService {
     return successRes(updated);
   }
 
-  async removeProfileImage(userId: string) {
+  async removeProfileImage(userId: number) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
     if (!user.imageUrl) {
@@ -134,7 +134,7 @@ export class UsersService {
     return successRes(users);
   }
 
-  async findOne(actor: IPayload, id: string) {
+  async findOne(actor: IPayload, id: number) {
     const user = await this.loadManageableUser(actor, id, {
       store: { select: { id: true, name: true } },
     });
@@ -146,25 +146,20 @@ export class UsersService {
       throw new ForbiddenException('SUPERADMIN yaratish taqiqlanadi');
     }
 
-    let storeId: string | undefined;
+    let storeId: number | undefined;
 
     if (actor.role === Role.SUPERADMIN) {
-      if (dto.storeId) {
-        const store = await this.prisma.store.findUnique({
-          where: { id: dto.storeId },
-        });
-        if (!store) throw new NotFoundException("Do'kon topilmadi");
-        storeId = store.id;
-      } else if (dto.role === Role.ADMIN && dto.storeName) {
-        const store = await this.prisma.store.create({
-          data: { name: dto.storeName, phone: dto.phone },
-        });
-        storeId = store.id;
-      } else {
-        throw new BadRequestException(
-          "storeId yoki (ADMIN uchun) storeName ko'rsatilishi shart",
-        );
+      if (!dto.storeId) {
+        throw new BadRequestException("storeId ko'rsatilishi shart");
       }
+      const store = await this.prisma.store.findUnique({
+        where: { id: dto.storeId },
+      });
+      if (!store) throw new NotFoundException("Do'kon topilmadi");
+      if (!store.isActive) {
+        throw new BadRequestException("Do'kon faol emas");
+      }
+      storeId = store.id;
     } else {
       // ADMIN: faqat o'z do'koni va faqat SELLER
       if (dto.role !== Role.SELLER) {
@@ -193,7 +188,7 @@ export class UsersService {
     return successRes(user, 201);
   }
 
-  async update(actor: IPayload, id: string, dto: UpdateUserDto) {
+  async update(actor: IPayload, id: number, dto: UpdateUserDto) {
     const user = await this.loadManageableUser(actor, id);
 
     if (dto.role) {
@@ -235,7 +230,7 @@ export class UsersService {
   }
 
   /** Xodim parolini tiklash — barcha sessiyalari bekor qilinadi */
-  async resetPassword(actor: IPayload, id: string, password: string) {
+  async resetPassword(actor: IPayload, id: number, password: string) {
     await this.loadManageableUser(actor, id);
 
     const updated = await this.prisma.user.update({
@@ -251,7 +246,7 @@ export class UsersService {
     });
   }
 
-  async remove(actor: IPayload, id: string) {
+  async remove(actor: IPayload, id: number) {
     const user = await this.loadManageableUser(actor, id);
     if (id === actor.sub) {
       throw new ForbiddenException("O'z hisobingizni o'chira olmaysiz");
@@ -271,7 +266,7 @@ export class UsersService {
    */
   private async loadManageableUser(
     actor: IPayload,
-    id: string,
+    id: number,
     include: Prisma.UserSelect = {},
   ) {
     const user = await this.prisma.user.findUnique({
@@ -302,7 +297,7 @@ export class UsersService {
     return user;
   }
 
-  private async ensurePhoneFree(phone?: string, exceptUserId?: string) {
+  private async ensurePhoneFree(phone?: string, exceptUserId?: number) {
     if (!phone) return;
     const existing = await this.prisma.user.findUnique({ where: { phone } });
     if (existing && existing.id !== exceptUserId) {

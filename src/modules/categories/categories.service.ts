@@ -11,7 +11,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 export class CategoriesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(storeId: string, createCategoryDto: CreateCategoryDto) {
+  async create(storeId: number, createCategoryDto: CreateCategoryDto) {
     const existing = await this.prisma.category.findUnique({
       where: {
         storeId_name: {
@@ -33,7 +33,7 @@ export class CategoriesService {
     });
   }
 
-  async findAll(storeId: string) {
+  async findAll(storeId: number) {
     return this.prisma.category.findMany({
       where: { storeId },
       orderBy: { createdAt: 'desc' },
@@ -41,8 +41,8 @@ export class CategoriesService {
   }
 
   async update(
-    storeId: string,
-    id: string,
+    storeId: number,
+    id: number,
     updateCategoryDto: UpdateCategoryDto,
   ) {
     const category = await this.prisma.category.findFirst({
@@ -74,7 +74,7 @@ export class CategoriesService {
     });
   }
 
-  async remove(storeId: string, id: string) {
+  async remove(storeId: number, id: number) {
     const category = await this.prisma.category.findFirst({
       where: { id, storeId },
     });

@@ -15,8 +15,10 @@ export class QueryProductDto {
   limit?: number = 10;
 
   @IsOptional()
-  @IsString()
-  categoryId?: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  categoryId?: number;
 
   @IsOptional()
   @Transform(({ value }) => {

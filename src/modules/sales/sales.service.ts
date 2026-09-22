@@ -12,7 +12,7 @@ import { PaymentType, SaleStatus, Prisma } from '@prisma/client';
 export class SalesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(storeId: string, userId: string, createSaleDto: CreateSaleDto) {
+  async create(storeId: number, userId: number, createSaleDto: CreateSaleDto) {
     const {
       items,
       paymentType,
@@ -47,7 +47,7 @@ export class SalesService {
 
       let subtotal = 0;
       const saleItemsData: {
-        productId: string;
+        productId: number;
         quantity: number;
         price: any;
         costPrice: any;
@@ -161,7 +161,7 @@ export class SalesService {
     });
   }
 
-  async findAll(storeId: string, query: QuerySaleDto) {
+  async findAll(storeId: number, query: QuerySaleDto) {
     const {
       page = 1,
       limit = 10,
@@ -208,7 +208,7 @@ export class SalesService {
     };
   }
 
-  async findOne(storeId: string, id: string) {
+  async findOne(storeId: number, id: number) {
     const sale = await this.prisma.sale.findFirst({
       where: { id, storeId },
       include: {
@@ -229,7 +229,7 @@ export class SalesService {
     return sale;
   }
 
-  async cancel(storeId: string, id: string, userId: string) {
+  async cancel(storeId: number, id: number, userId: number) {
     return this.prisma.$transaction(async (prisma) => {
       const sale = await prisma.sale.findFirst({
         where: { id, storeId },

@@ -4,15 +4,21 @@ import {
   Delete,
   Get,
   Param,
-  ParseUUIDPipe,
+  ParseIntPipe,
   Patch,
   Post,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { StoresService } from './stores.service';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import { CreateStoreDto } from './dto/create-store.dto';
+import { OnboardStoreDto } from './dto/onboard-store.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 
@@ -24,7 +30,7 @@ export class StoresController {
   @Roles(Role.ADMIN, Role.SELLER)
   @Get('me')
   @ApiOperation({ summary: "Joriy do'kon ma'lumotlarini olish" })
-  getStore(@CurrentUser('storeId') storeId: string) {
+  getStore(@CurrentUser('storeId') storeId: number) {
     return this.storesService.getStore(storeId);
   }
 
@@ -32,7 +38,7 @@ export class StoresController {
   @Patch('me')
   @ApiOperation({ summary: "Do'kon ma'lumotlarini tahrirlash" })
   updateStore(
-    @CurrentUser('storeId') storeId: string,
+    @CurrentUser('storeId') storeId: number,
     @Body() dto: UpdateStoreDto,
   ) {
     return this.storesService.updateStore(storeId, dto);
@@ -55,9 +61,50 @@ export class StoresController {
   }
 
   @Roles(Role.SUPERADMIN)
+  @Post('onboard')
+  @ApiOperation({
+    summary:
+      "Do'kon va uning ADMIN'ini bitta tranzaksiyada yaratish (faqat SUPERADMIN)",
+    description:
+      "Do'kon hamda ADMIN rolidagi foydalanuvchi bir vaqtda yaratiladi." +
+      " Admin telefoni band bo'lsa 409 qaytadi va do'kon ham yaratilmaydi.",
+  })
+  @ApiCreatedResponse({
+    description: "Yaratilgan do'kon va admin (maxfiy maydonlarsiz)",
+    schema: {
+      example: {
+        statusCode: 201,
+        data: {
+          store: {
+            id: 1,
+            name: 'Mening Do‘konim',
+            phone: '+998901234567',
+            address: 'Toshkent, Chilonzor 5',
+            telegramChatId: null,
+            isActive: true,
+          },
+          admin: {
+            id: 2,
+            fullName: 'Alisher Valiyev',
+            phone: '+998901234567',
+            role: Role.ADMIN,
+            status: 'ACTIVE',
+            isActive: true,
+            storeId: 1,
+          },
+        },
+      },
+    },
+  })
+  @ApiConflictResponse({ description: 'Bu telefon raqami band' })
+  onboard(@Body() dto: OnboardStoreDto) {
+    return this.storesService.onboard(dto);
+  }
+
+  @Roles(Role.SUPERADMIN)
   @Get(':id')
   @ApiOperation({ summary: "Do'kon ma'lumoti (faqat SUPERADMIN)" })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.storesService.getStore(id);
   }
 
@@ -65,7 +112,7 @@ export class StoresController {
   @Patch(':id')
   @ApiOperation({ summary: "Do'konni tahrirlash (faqat SUPERADMIN)" })
   updateById(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateStoreDto,
   ) {
     return this.storesService.updateStore(id, dto);
@@ -74,7 +121,7 @@ export class StoresController {
   @Roles(Role.SUPERADMIN)
   @Delete(':id')
   @ApiOperation({ summary: "Do'konni o'chirish (faqat SUPERADMIN)" })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.storesService.remove(id);
   }
 }

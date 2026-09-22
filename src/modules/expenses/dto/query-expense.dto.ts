@@ -1,11 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class QueryExpenseDto {
-  @ApiPropertyOptional()
-  @IsUUID()
+  @ApiPropertyOptional({ example: 1 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   @IsOptional()
-  expenseCategoryId?: string;
+  expenseCategoryId?: number;
 
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()

@@ -1,4 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { PrismaService } from '../../config/database/prisma.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { env } from '../../config';
@@ -32,6 +38,38 @@ export class TelegramNotificationService {
       this.logger.error(`Telegram yuborishda xatolik: ${e.message}`);
       return false;
     }
+  }
+
+  /**
+   * Do'kon guruhiga qo'lda test xabar yuboradi.
+   * telegramChatId sozlanmagan bo'lsa yoki Telegram rad etsa xatolik qaytaradi.
+   */
+  async sendTestMessage(storeId: number, message: string) {
+    const store = await this.prisma.store.findUnique({
+      where: { id: storeId },
+      select: { id: true, name: true, telegramChatId: true },
+    });
+    if (!store) throw new NotFoundException("Do'kon topilmadi");
+    if (!store.telegramChatId) {
+      throw new BadRequestException(
+        "Do'kon uchun telegramChatId sozlanmagan. PATCH /stores/me orqali qo'shing",
+      );
+    }
+
+    const sent = await this.sendToChat(
+      store.telegramChatId,
+      `\u{1F9EA} <b>${store.name} \u2014 test xabar</b>\n\n${message}`,
+    );
+    if (!sent) {
+      throw new ServiceUnavailableException(
+        "Telegramga xabar yuborib bo'lmadi",
+      );
+    }
+
+    return {
+      message: "Xabar muvaffaqiyatli jo'natildi",
+      chatId: store.telegramChatId,
+    };
   }
 
   // 1. Har soatda qarzlar muddatini tekshirish

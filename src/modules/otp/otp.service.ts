@@ -2,13 +2,14 @@ import {
   BadRequestException,
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
-  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { createHmac, randomInt } from 'crypto';
 import { RedisService } from '../../config/redis/redis.service';
 import { env } from '../../config';
+import { OTP_SENDER, type OtpSender } from './otp-sender.interface';
 
 /** OTP kodining maqsadi — kalitlar maqsad bo'yicha ajratiladi */
 export type OtpPurpose = 'signin' | 'reset';
@@ -24,9 +25,10 @@ export interface OtpSendResult {
 
 @Injectable()
 export class OtpService {
-  private readonly logger = new Logger(OtpService.name);
-
-  constructor(private readonly redisService: RedisService) {}
+  constructor(
+    private readonly redisService: RedisService,
+    @Inject(OTP_SENDER) private readonly sender: OtpSender,
+  ) {}
 
   normalizePhone(value: string): string {
     const phone = value.replace(/\D/g, '');
@@ -127,9 +129,7 @@ export class OtpService {
       );
     }
 
-    this.logger.log(
-      `[LOCAL SMS] purpose=${purpose} Qabul qiluvchi: ${phone} -> Kod: ${code}`,
-    );
+    await this.sender.send(phone, code, purpose);
 
     return {
       phone,

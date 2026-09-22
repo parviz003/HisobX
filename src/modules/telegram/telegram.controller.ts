@@ -3,7 +3,13 @@ import { TelegramNotificationService } from './telegram-notification.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
-import { ApiTags, ApiOperation, ApiProperty } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiProperty,
+  ApiBadRequestResponse,
+  ApiServiceUnavailableResponse,
+} from '@nestjs/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
 import { successRes } from '../../common/helper/success-response';
 
@@ -23,12 +29,25 @@ export class TelegramController {
   ) {}
 
   @Post('test')
-  @ApiOperation({ summary: 'Do‘kon telegram guruhiga test xabar yuborish' })
+  @ApiOperation({
+    summary: `Do'kon telegram guruhiga test xabar yuborish`,
+    description:
+      "Do'konning `telegramChatId` maydoni sozlangan bo'lishi kerak," +
+      ' aks holda 400 qaytadi. Telegram xabarni qabul qilmasa — 503.',
+  })
+  @ApiBadRequestResponse({ description: "telegramChatId sozlanmagan" })
+  @ApiServiceUnavailableResponse({
+    description: "Telegramga xabar yuborib bo'lmadi",
+  })
   async sendTest(
-    @CurrentUser('storeId') storeId: string,
+    @CurrentUser('storeId') storeId: number,
     @Body() dto: TestNotificationDto,
   ) {
-    return successRes({ message: 'Xabar muvaffaqiyatli jo‘natildi' });
+    const result = await this.telegramService.sendTestMessage(
+      storeId,
+      dto.message,
+    );
+    return successRes(result);
   }
 
   @Post('trigger/debt-reminder')

@@ -5,6 +5,7 @@ import {
   Body,
   Param,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { DebtsService } from './debts.service';
 import { MakePaymentDto } from './dto/make-payment.dto';
@@ -26,29 +27,29 @@ export class DebtsController {
 
   @Get()
   @ApiOperation({ summary: "Qarzlar ro'yxati" })
-  findAll(@Query() query: QueryDebtDto, @StoreId() storeId: string) {
+  findAll(@Query() query: QueryDebtDto, @StoreId() storeId: number) {
     return this.debtsService.findAll(query, storeId);
   }
 
   @Get('overdue')
   @ApiOperation({ summary: "Muddati o'tgan qarzlar" })
-  getOverdue(@StoreId() storeId: string) {
+  getOverdue(@StoreId() storeId: number) {
     return this.debtsService.getOverdue(storeId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: "Qarz tafsilotlari va to'lovlar tarixi" })
-  findOne(@Param('id') id: string, @StoreId() storeId: string) {
+  findOne(@Param('id', ParseIntPipe) id: number, @StoreId() storeId: number) {
     return this.debtsService.findOne(id, storeId);
   }
 
   @Post(':id/pay')
   @ApiOperation({ summary: "Qarzga to'lov qabul qilish" })
   makePayment(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: MakePaymentDto,
-    @StoreId() storeId: string,
-    @UserId() userId: string,
+    @StoreId() storeId: number,
+    @UserId() userId: number,
   ) {
     return this.debtsService.makePayment(id, dto, storeId, userId);
   }
