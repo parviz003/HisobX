@@ -10,6 +10,8 @@ import {
 import { AuthService } from './auth.service';
 import { SignInDto } from './dto/sign-in.dto';
 import { SignUpDto } from './dto/sign-up.dto';
+import { PhoneDto } from './dto/phone.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyOTPDto } from '../otp/dto/verify-otp.dto';
 import type { Response, Request } from 'express';
 import { RefreshToken } from '../../common/decorators/get-cookie.decorator';
@@ -50,6 +52,38 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.authService.confirmSignIn(dto, req, res);
+  }
+
+  @Public()
+  @Post('resend-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      "Sign-in OTP kodini qayta yuborish (parol tekshiruvidan o'tgan urinish uchun)",
+  })
+  resendOtp(@Body() dto: PhoneDto) {
+    return this.authService.resendSignInOtp(dto.phone);
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      "Parolni tiklash uchun OTP so'rash (javob raqam mavjudligini oshkor qilmaydi)",
+  })
+  forgotPassword(@Body() dto: PhoneDto) {
+    return this.authService.forgotPassword(dto.phone);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'OTP bilan parolni tiklash (barcha sessiyalar bekor qilinadi)',
+  })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 
   @Public()

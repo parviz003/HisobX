@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../../config/database/prisma.service';
 import { SignInDto } from './dto/sign-in.dto';
 import { SignUpDto } from './dto/sign-up.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Crypt } from '../../infrastructure/lib/Crypt';
 import { successRes } from '../../common/helper/success-response';
 import { OtpService } from '../otp/otp.service';
@@ -82,8 +83,8 @@ export class AuthService {
       throw new ForbiddenException('Hisobingiz faol emas');
     }
 
-    const data = await this.otp.sendOtp(user.phone);
-    await this.otp.markSignInPending(user.phone);
+    const data = await this.otp.sendOtp(user.phone, 'signin');
+    await this.otp.markPending(user.phone, 'signin');
     return successRes(data, 200);
   }
 
@@ -97,8 +98,8 @@ export class AuthService {
     }
 
     // OTP faqat parol tekshiruvidan o'tgan signIn urinishi uchun tasdiqlanadi
-    await this.otp.consumeSignInPending(user.phone);
-    await this.otp.verifyOtp(user.phone, dto.code);
+    await this.otp.verifyOtp(user.phone, dto.code, 'signin');
+    await this.otp.consumePending(user.phone, 'signin');
 
     const { client, os } = getDeviceInfo(req);
     const deviceName = `${client?.name || 'Browser'} ${os?.name || 'Device'}`;
@@ -214,6 +215,61 @@ export class AuthService {
       },
       200,
     );
+  }
+
+  /** Sign-in uchun OTP kodini qayta yuborish (parol tekshiruvi o'tgan urinish uchun) */
+  async resendSignInOtp(phone: string) {
+    await this.otp.assertPending(phone, 'signin');
+    const data = await this.otp.sendOtp(phone, 'signin');
+    // Muddat cho'zilganda urinish belgisi ham yangilanadi
+    await this.otp.markPending(phone, 'signin');
+    return successRes(data, 200);
+  }
+
+  /**
+   * Parolni tiklash uchun OTP.
+   * Raqam bazada bor-yo'qligidan qat'i nazar javob bir xil bo'ladi.
+   */
+  async forgotPassword(phone: string) {
+    const data = await this.otp.sendOtp(phone, 'reset');
+    return successRes(
+      {
+        phone: data.phone,
+        message:
+          "Agar bu raqam tizimda mavjud bo'lsa, tasdiqlash kodi yuborildi",
+        ...(data.code ? { code: data.code } : {}),
+        expiresAt: data.expiresAt,
+        resendAvailableAt: data.resendAvailableAt,
+      },
+      200,
+    );
+  }
+
+  /** OTP bilan parolni tiklash: barcha sessiyalar bekor qilinadi */
+  async resetPassword(dto: ResetPasswordDto) {
+    await this.otp.verifyOtp(dto.phone, dto.code, 'reset');
+
+    const user = await this.db.user.findUnique({
+      where: { phone: dto.phone },
+    });
+    if (!user) {
+      // Mavjud bo'lmagan raqam uchun ham bir xil umumiy xatolik
+      throw new BadRequestException(
+        'Kod yaroqsiz yoki muddati tugagan',
+      );
+    }
+
+    await this.db.$transaction([
+      this.db.user.update({
+        where: { id: user.id },
+        data: { password: await Crypt.hash(dto.password) },
+      }),
+      this.db.devices.deleteMany({ where: { userId: user.id } }),
+    ]);
+
+    return successRes({
+      message: "Parol yangilandi, barcha sessiyalar bekor qilindi",
+    });
   }
 
   async signOut(refreshToken: string, res: Response) {
