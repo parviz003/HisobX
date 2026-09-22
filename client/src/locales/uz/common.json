@@ -1,0 +1,42 @@
+{
+  "appName": "HisobX",
+  "actions": {
+    "save": "Saqlash",
+    "cancel": "Bekor qilish",
+    "delete": "O'chirish",
+    "edit": "Tahrirlash",
+    "add": "Qo'shish",
+    "search": "Qidirish",
+    "retry": "Qayta urinish",
+    "close": "Yopish",
+    "back": "Orqaga",
+    "confirm": "Tasdiqlash",
+    "loadMore": "Ko'proq yuklash",
+    "signOut": "Chiqish",
+    "install": "Ilovani o'rnatish",
+    "update": "Yangilash",
+    "later": "Keyinroq"
+  },
+  "state": {
+    "loading": "Yuklanmoqda...",
+    "empty": "Hozircha ma'lumot yo'q",
+    "emptyHint": "Bu yerda ma'lumot paydo bo'lishi uchun avval qo'shing.",
+    "errorTitle": "Ma'lumotni yuklab bo'lmadi",
+    "offline": "Internet aloqasi yo'q. Ilova faqat onlayn ishlaydi.",
+    "comingSoon": "Tez orada qo'shiladi"
+  },
+  "theme": {
+    "label": "Ko'rinish",
+    "light": "Yorug'",
+    "dark": "Qorong'i",
+    "system": "Tizim bo'yicha"
+  },
+  "language": { "label": "Til", "uz": "O'zbekcha", "ru": "Ruscha" },
+  "pwa": {
+    "installTitle": "HisobX ni telefoningizga o'rnating",
+    "installBody": "Ilovani bosh ekranga qo'shsangiz, brauzersiz, tez ochiladi.",
+    "iosHint": "Safari'da pastdagi «Ulashish» tugmasini bosing, so'ng «Bosh ekranga qo'shish» ni tanlang.",
+    "updateTitle": "Yangi versiya tayyor",
+    "updateBody": "Yangilash uchun ilovani qayta yuklang."
+  }
+}

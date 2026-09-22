@@ -1,0 +1,17 @@
+{
+  "generic": "Xatolik yuz berdi, qayta urinib ko'ring",
+  "network": "Internetga ulanib bo'lmadi. Aloqani tekshiring.",
+  "canceled": "So'rov bekor qilindi",
+  "forbidden": "Bu amal uchun ruxsat yo'q",
+  "notFound": "Ma'lumot topilmadi",
+  "tooManyRequests": "Juda ko'p urinish. {{time}} dan keyin qayta urinib ko'ring.",
+  "sessionExpired": "Sessiya muddati tugadi. Qaytadan kiring.",
+  "readOnly": "Ko'rish rejimida o'zgartirish mumkin emas",
+  "pageNotFoundTitle": "Sahifa topilmadi",
+  "pageNotFoundBody": "Siz izlagan sahifa mavjud emas yoki ko'chirilgan.",
+  "forbiddenTitle": "Ruxsat yo'q",
+  "forbiddenBody": "Bu bo'limga kirish uchun sizda ruxsat yo'q. Kerak bo'lsa rahbaringizga murojaat qiling.",
+  "crashTitle": "Ilovada kutilmagan xatolik",
+  "crashBody": "Uzr, nimadir noto'g'ri ketdi. Sahifani qayta yuklab ko'ring.",
+  "goHome": "Bosh sahifaga"
+}

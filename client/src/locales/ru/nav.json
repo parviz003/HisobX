@@ -1,0 +1,22 @@
+{
+  "dashboard": "Главная",
+  "pos": "Продажа",
+  "sales": "Продажи",
+  "products": "Товары",
+  "categories": "Категории",
+  "inventory": "Склад",
+  "customers": "Клиенты",
+  "debts": "Долги",
+  "cash": "Касса",
+  "expenses": "Расходы",
+  "reports": "Отчёты",
+  "staff": "Сотрудники",
+  "settings": "Настройки",
+  "notifications": "Уведомления",
+  "devices": "Устройства",
+  "profile": "Профиль",
+  "stores": "Магазины",
+  "more": "Ещё",
+  "menu": "Меню",
+  "openMenu": "Открыть меню"
+}

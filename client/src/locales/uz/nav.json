@@ -1,0 +1,22 @@
+{
+  "dashboard": "Bosh sahifa",
+  "pos": "Savdo",
+  "sales": "Savdolar",
+  "products": "Mahsulotlar",
+  "categories": "Kategoriyalar",
+  "inventory": "Ombor",
+  "customers": "Mijozlar",
+  "debts": "Qarzlar",
+  "cash": "Kassa",
+  "expenses": "Xarajatlar",
+  "reports": "Hisobotlar",
+  "staff": "Xodimlar",
+  "settings": "Sozlamalar",
+  "notifications": "Bildirishnomalar",
+  "devices": "Qurilmalar",
+  "profile": "Profil",
+  "stores": "Do'konlar",
+  "more": "Ko'proq",
+  "menu": "Menyu",
+  "openMenu": "Menyuni ochish"
+}
