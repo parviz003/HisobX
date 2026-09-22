@@ -10,6 +10,12 @@ export type ApiError = {
   retryAfter?: number;
   /** Backend bergan mashina o'qiydigan kod, bo'lsa. */
   code?: string;
+  /**
+   * Javobning xom tanasi. Ba'zi xatolar qo'shimcha ma'lumot olib keladi
+   * (masalan qurilma limiti to'lganda mavjud qurilmalar ro'yxati), lekin
+   * ularning shakli Swagger'da hujjatlashtirilmagan.
+   */
+  details?: unknown;
 };
 
 /** i18n kaliti — xabar UI'da shu kalit orqali tarjima qilinadi. */
@@ -86,20 +92,25 @@ export function toApiError(error: unknown): ApiError {
       message: 'errors.tooManyRequests',
       retryAfter: Number.isFinite(seconds) && seconds > 0 ? seconds : 60,
       code: body.code,
+      details: body,
     };
   }
 
-  if (status === 403) return { status, message: 'errors.forbidden', code: body.code };
-  if (status === 404) return { status, message: 'errors.notFound', code: body.code };
+  if (status === 403)
+    return { status, message: 'errors.forbidden', code: body.code, details: body };
+  if (status === 404)
+    return { status, message: 'errors.notFound', code: body.code, details: body };
 
   // 500+ da texnik tafsilot foydalanuvchiga ko'rsatilmaydi.
-  if (status >= 500) return { status, message: GENERIC_ERROR_KEY, code: body.code };
+  if (status >= 500)
+    return { status, message: GENERIC_ERROR_KEY, code: body.code, details: body };
 
   return {
     status,
     message: firstMessage(body) ?? GENERIC_ERROR_KEY,
     fieldErrors: status === 400 ? extractFieldErrors(body) : undefined,
     code: body.code,
+    details: body,
   };
 }
 
