@@ -1,5 +1,7 @@
 import {
   HttpException,
+  Logger,
+  UnauthorizedException,
   HttpStatus,
   NotFoundException,
   BadRequestException,
@@ -26,6 +28,8 @@ const MAX_DEVICES = 3;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly db: PrismaService,
     private readonly otp: OtpService,
@@ -220,7 +224,12 @@ export class AuthService {
 
     device = await this.db.devices.update({
       where: { deviceId: device.deviceId },
-      data: { hashedRefreshToken },
+      data: {
+        hashedRefreshToken,
+        prevHashedRefreshToken: null,
+        prevTokenExpiresAt: null,
+        prevTokenUsed: false,
+      },
     });
 
     Token.setCookie(res, accessToken, refreshToken);
@@ -238,25 +247,60 @@ export class AuthService {
     );
   }
 
+  /**
+   * Refresh token rotatsiyasi.
+   * Oldingi token rotatsiyadan keyin REFRESH_GRACE_SECONDS davomida bir marta
+   * qabul qilinadi (bir nechta tab bir vaqtda refresh qilganda chiqib ketmaslik uchun).
+   * Grace oynasidan tashqari eski token ishlatilsa — o'g'irlik belgisi:
+   * shu qurilma sessiyasi bekor qilinadi.
+   */
   async refreshToken(refreshToken: string, res: Response) {
     if (!refreshToken) {
-      throw new BadRequestException('Refresh token topilmadi');
+      // Sessiya yo'q — frontend uchun 401 yagona "qaytadan kiring" signali
+      throw new UnauthorizedException('Refresh token topilmadi');
     }
     const verifiedData = await Token.verifyToken(refreshToken, 'refresh');
     const device = await this.db.devices.findUnique({
       where: { deviceId: verifiedData.deviceId },
     });
     if (!device) {
-      throw new BadRequestException(
-        'Tizimda bunday foydalanuvchi yoki qurilma topilmadi',
+      throw new UnauthorizedException(
+        'Sessiya topilmadi. Qaytadan tizimga kiring',
       );
     }
-    const isMatchToken = Crypt.compareToken(
+
+    const isCurrent = Crypt.compareToken(
       refreshToken,
       device.hashedRefreshToken,
     );
-    if (!isMatchToken) {
-      throw new BadRequestException("Qurilma tizimda ro'yxatdan o'tmagan");
+    const isPrevious =
+      !isCurrent &&
+      !!device.prevHashedRefreshToken &&
+      Crypt.compareToken(refreshToken, device.prevHashedRefreshToken);
+
+    if (!isCurrent && !isPrevious) {
+      // Notanish token: sessiyani bekor qilamiz
+      await this.db.devices.delete({ where: { deviceId: device.deviceId } });
+      Token.clearCookie(res);
+      throw new UnauthorizedException(
+        "Sessiya bekor qilindi. Qaytadan tizimga kiring",
+      );
+    }
+
+    if (isPrevious) {
+      const graceValid =
+        !!device.prevTokenExpiresAt && device.prevTokenExpiresAt > new Date();
+      if (!graceValid || device.prevTokenUsed) {
+        // Eski token qayta ishlatildi — o'g'irlik belgisi
+        await this.db.devices.delete({ where: { deviceId: device.deviceId } });
+        Token.clearCookie(res);
+        this.logger.warn(
+          `Refresh token qayta ishlatildi (grace tashqarisida): deviceId=${device.deviceId} userId=${device.userId}`,
+        );
+        throw new UnauthorizedException(
+          "Sessiya xavfsizlik sababli bekor qilindi. Qaytadan tizimga kiring",
+        );
+      }
     }
 
     const user = await this.db.user.findUnique({ where: { id: device.userId } });
@@ -277,11 +321,25 @@ export class AuthService {
     };
 
     const tokens = await Token.getToken(payload);
+    const graceUntil = new Date(
+      Date.now() + env.TOKEN.REFRESH_GRACE_SECONDS * 1000,
+    );
 
-    // Refresh token rotatsiyasi: eski token bekor qilinadi
     await this.db.devices.update({
       where: { deviceId: device.deviceId },
-      data: { hashedRefreshToken: Crypt.hashToken(tokens.refreshToken) },
+      data: {
+        hashedRefreshToken: Crypt.hashToken(tokens.refreshToken),
+        /*
+         * Har qanday rotatsiyada joriy token "oldingi" bo'lib grace oynasiga
+         * o'tadi. Shu sabab bir vaqtda refresh qilgan ikkinchi tab ham
+         * (u joriy tokenni ushlab turgan bo'lsa) ishlashda davom etadi,
+         * allaqachon almashtirilgan eski token esa endi hech qayerda saqlanmaydi
+         * va ishlatilsa — sessiya bekor qilinadi.
+         */
+        prevHashedRefreshToken: device.hashedRefreshToken,
+        prevTokenExpiresAt: graceUntil,
+        prevTokenUsed: false,
+      },
     });
 
     Token.setCookie(res, tokens.accessToken, tokens.refreshToken);

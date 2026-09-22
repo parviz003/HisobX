@@ -43,7 +43,17 @@ export class App {
 
     app.use(cookieParser());
 
-    app.enableCors({ origin: true, credentials: true });
+    /*
+     * CORS faqat .env dagi aniq origin(lar)ga ochiladi (CORS_ORIGINS).
+     * Ro'yxat bo'sh bo'lsa, cross-origin so'rovlar rad etiladi.
+     */
+    app.enableCors({
+      origin: env.CORS_ORIGINS.length ? env.CORS_ORIGINS : false,
+      credentials: true,
+      methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'x-store-id'],
+      exposedHeaders: ['Retry-After'],
+    });
 
     app.setGlobalPrefix(url);
 

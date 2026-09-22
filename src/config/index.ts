@@ -41,12 +41,22 @@ export const env = {
 
   TOKEN: {
     ACCESS_KEY: String(process.env.JWT_ACCESS_SECRET),
-    ACCESS_TIME: String(process.env.ACCESS_TOKEN_TIME),
-    REFRESH_KEY: String(
-      process.env.JWT_REFRESH_SECRET,
+    // "15m", "1h", "7d" ko'rinishida
+    ACCESS_TTL: String(
+      process.env.ACCESS_TOKEN_TTL ?? process.env.ACCESS_TOKEN_TIME ?? '15m',
     ),
-    REFRESH_TIME: String(process.env.REFRESH_TOKEN_TIME),
+    REFRESH_KEY: String(process.env.JWT_REFRESH_SECRET),
+    REFRESH_TTL: String(
+      process.env.REFRESH_TOKEN_TTL ?? process.env.REFRESH_TOKEN_TIME ?? '7d',
+    ),
+    /** Rotatsiyadan keyin eski refresh token qabul qilinadigan oyna (sekund) */
+    REFRESH_GRACE_SECONDS: Number(process.env.REFRESH_GRACE_SECONDS ?? 30),
   },
+  /** CORS: faqat aniq ko'rsatilgan frontend origin(lar)i */
+  CORS_ORIGINS: String(process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   /** Rate limiting (@nestjs/throttler, storage: Redis) */
   RATE_LIMIT: {
     // Umumiy oyna (sekund)

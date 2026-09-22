@@ -3,33 +3,54 @@ import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { env } from '../../config';
 import { UnauthorizedException } from '@nestjs/common';
 import type { CookieOptions, Response } from 'express';
-
-const ACCESS_MAX_AGE = 24 * 60 * 60 * 1000; // 1 kun
-const REFRESH_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 kun
+import ms, { type StringValue } from 'ms';
+import { randomUUID } from 'crypto';
 
 export class Token {
   private static readonly jwt = new JwtService();
 
+  /** "15m" / "7d" ko'rinishidagi TTL'ni millisekundga o'giradi */
+  static ttlToMs(ttl: string, fallbackMs: number): number {
+    try {
+      const value = ms(ttl as StringValue);
+      return typeof value === 'number' && value > 0 ? value : fallbackMs;
+    } catch (e) {
+      return fallbackMs;
+    }
+  }
+
+  static get accessMaxAge(): number {
+    return this.ttlToMs(env.TOKEN.ACCESS_TTL, 15 * 60 * 1000);
+  }
+
+  static get refreshMaxAge(): number {
+    return this.ttlToMs(env.TOKEN.REFRESH_TTL, 7 * 24 * 60 * 60 * 1000);
+  }
+
   private static cookieOptions(maxAge: number): CookieOptions {
-    const isProd = process.env.NODE_ENV === 'production';
     return {
       httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? 'none' : 'lax',
+      secure: !env.IS_DEV,
+      sameSite: 'lax',
       path: '/',
       maxAge,
     };
   }
 
   static async getToken(payload: IPayload): Promise<IToken> {
+    /*
+     * Har bir token noyob `jti` oladi: aks holda bir soniya ichida
+     * qayta imzolangan tokenlar bayt-ma-bayt bir xil bo'lib qoladi
+     * va rotatsiya/qayta ishlatishni aniqlab bo'lmaydi.
+     */
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwt.signAsync(payload, {
+      this.jwt.signAsync({ ...payload, jti: randomUUID(), typ: 'access' }, {
         secret: env.TOKEN.ACCESS_KEY,
-        expiresIn: env.TOKEN.ACCESS_TIME as JwtSignOptions['expiresIn'],
+        expiresIn: env.TOKEN.ACCESS_TTL as JwtSignOptions['expiresIn'],
       }),
-      this.jwt.signAsync(payload, {
+      this.jwt.signAsync({ ...payload, jti: randomUUID(), typ: 'refresh' }, {
         secret: env.TOKEN.REFRESH_KEY,
-        expiresIn: env.TOKEN.REFRESH_TIME as JwtSignOptions['expiresIn'],
+        expiresIn: env.TOKEN.REFRESH_TTL as JwtSignOptions['expiresIn'],
       }),
     ]);
     return { accessToken, refreshToken };
@@ -53,12 +74,12 @@ export class Token {
     accessToken: string,
     refreshToken?: string,
   ): void {
-    res.cookie('accessToken', accessToken, this.cookieOptions(ACCESS_MAX_AGE));
+    res.cookie('accessToken', accessToken, this.cookieOptions(this.accessMaxAge));
     if (refreshToken) {
       res.cookie(
         'refreshToken',
         refreshToken,
-        this.cookieOptions(REFRESH_MAX_AGE),
+        this.cookieOptions(this.refreshMaxAge),
       );
     }
   }

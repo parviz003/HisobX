@@ -107,6 +107,10 @@ model Devices {
   deviceId           String   @id @default(uuid())
   device             String
   hashedRefreshToken String
+  // Rotatsiyadan keyingi qisqa "grace" oynasi uchun oldingi token
+  prevHashedRefreshToken String?
+  prevTokenExpiresAt     DateTime?
+  prevTokenUsed          Boolean   @default(false)
   userId             String
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt          DateTime @default(now())
