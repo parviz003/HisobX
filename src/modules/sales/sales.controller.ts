@@ -16,13 +16,16 @@ import {
 } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Sales')
 @Controller('sales')
 export class SalesController {
   constructor(private readonly salesService: SalesService) {}
 
   @Roles(Role.ADMIN, Role.SELLER)
   @Post()
+  @ApiOperation({ summary: "Savdo yaratish (naqd yoki nasiya)" })
   create(
     @StoreId() storeId: string,
     @UserId() userId: string,
@@ -33,18 +36,21 @@ export class SalesController {
 
   @Roles(Role.ADMIN, Role.SELLER)
   @Get()
+  @ApiOperation({ summary: "Savdolar ro'yxati (filtrlar bilan)" })
   findAll(@StoreId() storeId: string, @Query() query: QuerySaleDto) {
     return this.salesService.findAll(storeId, query);
   }
 
   @Roles(Role.ADMIN, Role.SELLER)
   @Get(':id')
+  @ApiOperation({ summary: "Savdo tafsilotlari" })
   findOne(@StoreId() storeId: string, @Param('id') id: string) {
     return this.salesService.findOne(storeId, id);
   }
 
   @Roles(Role.ADMIN, Role.SELLER)
   @Patch(':id/cancel')
+  @ApiOperation({ summary: "Savdoni bekor qilish (zaxira va kassa qaytariladi)" })
   cancel(
     @StoreId() storeId: string,
     @UserId() userId: string,

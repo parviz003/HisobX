@@ -59,13 +59,50 @@ export class App {
 
     const config = new DocumentBuilder()
       .setTitle('HisobX Mini Store Management SaaS API')
-      .setDescription('Marketplace-style modular monolith API')
+      .setDescription(
+        [
+          'Marketplace uslubidagi modular monolit API.',
+          '',
+          '**Autentifikatsiya:** cookie-based JWT. `POST /auth/signin` -> OTP -> ',
+          '`POST /auth/confirm` so\'ng `accessToken` va `refreshToken` httpOnly ',
+          'cookie sifatida yoziladi. So\'rovlarni `credentials: "include"` bilan yuboring.',
+          '',
+          '**Rollar:** SUPERADMIN (platforma), ADMIN (do\'kon egasi), SELLER (sotuvchi).',
+          '',
+          '**x-store-id:** faqat SUPERADMIN uchun — do\'kon kontekstida O\'QISH (GET). ',
+          'ADMIN/SELLER yuborsa e\'tiborsiz qoldiriladi.',
+          '',
+          '**Rate limiting:** sign-in/OTP/parol tiklash — 3 so\'rov/daqiqa (IP + telefon); ',
+          'autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP). ',
+          '429 javobida `Retry-After` header qaytariladi.',
+        ].join('\n'),
+      )
       .setVersion('1.0')
-      .addBearerAuth()
+      .addCookieAuth('accessToken', {
+        type: 'apiKey',
+        in: 'cookie',
+        name: 'accessToken',
+        description: 'Sign-in oqimida avtomatik o\'rnatiladigan httpOnly cookie',
+      })
+      .addGlobalParameters({
+        name: 'x-store-id',
+        in: 'header',
+        required: false,
+        description:
+          "Faqat SUPERADMIN uchun: do'kon konteksti (GET amallari uchun)",
+        schema: { type: 'string', format: 'uuid' },
+      })
+      .addTag('Auth', 'Kirish, OTP, refresh, parolni tiklash')
+      .addTag('Users', "Profil va xodimlar boshqaruvi")
+      .addTag('Stores', "Do'konlar")
+      .addTag('Devices', 'Qurilmalar va sessiyalar')
       .build();
 
     const documentFactory = () => SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup(`${url}/docs`, app, documentFactory);
+    // Swagger UI: {url}/docs, JSON: {url}/docs-json
+    SwaggerModule.setup(`${url}/docs`, app, documentFactory, {
+      swaggerOptions: { persistAuthorization: true },
+    });
 
     await app.listen(PORT, () =>
       console.log('HisobX Server running on port', PORT),

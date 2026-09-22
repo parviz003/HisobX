@@ -51,7 +51,11 @@ export class AppThrottlerGuard extends ThrottlerGuard {
     return userId ? `user:${userId}` : `ip:${this.clientIp(req)}`;
   }
 
-  /** Qattiq limit kaliti: IP + telefon raqami */
+  /*
+   * Qattiq limit kaliti: IP + telefon raqami, har bir endpoint uchun alohida.
+   * Endpointlar bitta chelakni bo'lishsa, bitta sign-in oqimi
+   * (signin + 3 ta OTP urinishi) limitga urilib qolar edi.
+   */
   protected generateKey(
     context: ExecutionContext,
     tracker: string,
@@ -60,7 +64,10 @@ export class AppThrottlerGuard extends ThrottlerGuard {
     if (name === STRICT_THROTTLER) {
       const req = context.switchToHttp().getRequest();
       const phone = String(req.body?.phone ?? 'unknown').replace(/\D/g, '');
-      return `throttle:${STRICT_THROTTLER}:${this.clientIp(req)}:${phone}`;
+      const route = `${context.getClass().name}.${context.getHandler().name}`;
+      return `throttle:${STRICT_THROTTLER}:${route}:${this.clientIp(
+        req,
+      )}:${phone}`;
     }
     return super.generateKey(context, tracker, name);
   }

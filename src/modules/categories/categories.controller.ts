@@ -12,13 +12,16 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Categories')
 @Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Roles('ADMIN')
   @Post()
+  @ApiOperation({ summary: "Yangi toifa yaratish" })
   create(
     @CurrentUser('storeId') storeId: string,
     @Body() createCategoryDto: CreateCategoryDto,
@@ -28,12 +31,14 @@ export class CategoriesController {
 
   @Roles('ADMIN', 'SELLER')
   @Get()
+  @ApiOperation({ summary: "Toifalar ro'yxati" })
   findAll(@CurrentUser('storeId') storeId: string) {
     return this.categoriesService.findAll(storeId);
   }
 
   @Roles('ADMIN')
   @Patch(':id')
+  @ApiOperation({ summary: "Toifani tahrirlash" })
   update(
     @CurrentUser('storeId') storeId: string,
     @Param('id') id: string,
@@ -44,6 +49,7 @@ export class CategoriesController {
 
   @Roles('ADMIN')
   @Delete(':id')
+  @ApiOperation({ summary: "Toifani o'chirish" })
   remove(@CurrentUser('storeId') storeId: string, @Param('id') id: string) {
     return this.categoriesService.remove(storeId, id);
   }
