@@ -8,6 +8,10 @@ import { FullPageSpinner } from './pages/full-page-spinner';
 import { HomeRedirect } from './home-redirect';
 
 const LoginPage = lazy(() => import('@/features/auth/pages/login-page'));
+const TelegramLinkPage = lazy(() => import('@/features/auth/pages/telegram-link-page'));
+const OtpPage = lazy(() => import('@/features/auth/pages/otp-page'));
+const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/forgot-password-page'));
+const ResetPasswordPage = lazy(() => import('@/features/auth/pages/reset-password-page'));
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/dashboard-page'));
 const PosPage = lazy(() => import('@/features/pos/pages/pos-page'));
 const SalesPage = lazy(() => import('@/features/sales/pages/sales-page'));
@@ -48,7 +52,13 @@ export const router = createBrowserRouter([
     children: [
       {
         element: <AuthLayout />,
-        children: [{ path: '/login', element: <LoginPage /> }],
+        children: [
+          { path: '/login', element: <LoginPage /> },
+          { path: '/login/telegram', element: <TelegramLinkPage /> },
+          { path: '/login/otp', element: <OtpPage /> },
+          { path: '/login/forgot-password', element: <ForgotPasswordPage /> },
+          { path: '/login/reset-password', element: <ResetPasswordPage /> },
+        ],
       },
 
       {
