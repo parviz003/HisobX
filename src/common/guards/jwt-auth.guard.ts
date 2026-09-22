@@ -2,6 +2,7 @@ import {
   Injectable,
   CanActivate,
   ExecutionContext,
+  Logger,
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -13,6 +14,8 @@ import { PrismaService } from '../../config/database/prisma.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
+  private readonly storeContextLogger = new Logger('StoreContext');
+
   constructor(
     private readonly reflector: Reflector,
     private readonly db: PrismaService,
@@ -71,9 +74,30 @@ export class AuthGuard implements CanActivate {
       }
     }
 
+    /*
+     * Multi-tenant himoya:
+     * ADMIN va SELLER uchun storeId FAQAT bazadagi hisobdan olinadi —
+     * ular yuborgan `x-store-id` header butunlay e'tiborsiz qoldiriladi.
+     * SUPERADMIN `x-store-id` bilan do'kon kontekstiga kirishi mumkin,
+     * ammo u kontekstda faqat o'qish (GET) amallari ruxsat etiladi.
+     */
     let storeId: string | null = user.storeId;
-    if (user.role === Role.SUPERADMIN && req.headers['x-store-id']) {
-      storeId = String(req.headers['x-store-id']);
+    const storeIdHeader = req.headers['x-store-id'];
+
+    if (storeIdHeader && user.role === Role.SUPERADMIN) {
+      storeId = String(storeIdHeader);
+      const method = String(req.method).toUpperCase();
+
+      this.storeContextLogger.log(
+        `userId=${user.id} storeId=${storeId} ${method} ` +
+          `${req.originalUrl ?? req.url} ip=${req.ip} at=${new Date().toISOString()}`,
+      );
+
+      if (method !== 'GET') {
+        throw new ForbiddenException(
+          "Do'kon kontekstida (x-store-id) faqat o'qish amallari ruxsat etiladi",
+        );
+      }
     }
 
     req.user = {
