@@ -47,6 +47,25 @@ export const env = {
     ),
     REFRESH_TIME: String(process.env.REFRESH_TOKEN_TIME),
   },
+  /** Rate limiting (@nestjs/throttler, storage: Redis) */
+  RATE_LIMIT: {
+    // Umumiy oyna (sekund)
+    TTL_SECONDS: Number(process.env.RATE_LIMIT_TTL_SECONDS ?? 60),
+    // Autentifikatsiyalangan foydalanuvchi (userId) uchun limit
+    USER_LIMIT: Number(process.env.RATE_LIMIT_USER_LIMIT ?? 120),
+    // Anonim so'rovlar uchun IP boshiga limit
+    ANON_LIMIT: Number(process.env.RATE_LIMIT_ANON_LIMIT ?? 30),
+    // Qattiq limit (sign-in, OTP, parol tiklash): IP + telefon
+    STRICT_TTL_SECONDS: Number(process.env.RATE_LIMIT_STRICT_TTL_SECONDS ?? 60),
+    STRICT_LIMIT: Number(process.env.RATE_LIMIT_STRICT_LIMIT ?? 3),
+  },
+  /** Sign-in'dagi ketma-ket xato parollar uchun blok */
+  LOGIN: {
+    MAX_FAILED_ATTEMPTS: Number(process.env.LOGIN_MAX_FAILED_ATTEMPTS ?? 5),
+    BLOCK_MINUTES: Number(process.env.LOGIN_BLOCK_MINUTES ?? 15),
+  },
+  /** Proxy ortida haqiqiy IP olish uchun (0 = o'chirilgan) */
+  TRUST_PROXY: process.env.TRUST_PROXY ?? '1',
   SMTP: {
     PORT: Number(process.env.SMTP_PORT),
     HOST: String(process.env.SMTP_HOST),

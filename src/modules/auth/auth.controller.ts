@@ -16,6 +16,7 @@ import { VerifyOTPDto } from '../otp/dto/verify-otp.dto';
 import type { Response, Request } from 'express';
 import { RefreshToken } from '../../common/decorators/get-cookie.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { StrictRateLimit } from '../../common/decorators/throttle.decorator';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Auth')
@@ -33,6 +34,7 @@ export class AuthController {
   }
 
   @Public()
+  @StrictRateLimit()
   @Post('signin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Tizimga kirish (OTP yuboriladi)' })
@@ -41,6 +43,7 @@ export class AuthController {
   }
 
   @Public()
+  @StrictRateLimit()
   @Post('confirm')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -55,6 +58,7 @@ export class AuthController {
   }
 
   @Public()
+  @StrictRateLimit()
   @Post('resend-otp')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -66,6 +70,7 @@ export class AuthController {
   }
 
   @Public()
+  @StrictRateLimit()
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -77,6 +82,7 @@ export class AuthController {
   }
 
   @Public()
+  @StrictRateLimit()
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

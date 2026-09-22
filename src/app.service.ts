@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { env } from './config';
 import express from 'express';
@@ -11,7 +12,15 @@ import cookieParser from 'cookie-parser';
 
 export class App {
   static async main() {
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+    // Proxy/balanser ortida haqiqiy mijoz IP'si (rate limiting va loglar uchun)
+    const trustProxy = Number.isNaN(Number(env.TRUST_PROXY))
+      ? env.TRUST_PROXY
+      : Number(env.TRUST_PROXY);
+    if (trustProxy !== 0) {
+      app.set('trust proxy', trustProxy);
+    }
     const PORT = env.PORT;
     const url = '/api/v1';
 

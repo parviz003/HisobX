@@ -1,4 +1,6 @@
 import {
+  HttpException,
+  HttpStatus,
   NotFoundException,
   BadRequestException,
   Injectable,
@@ -17,6 +19,8 @@ import { Token } from '../../infrastructure/lib/Token';
 import type { Response, Request } from 'express';
 import { getDeviceInfo } from '../../common/helper/device-info';
 import { Role, Status } from '@prisma/client';
+import { RedisService } from '../../config/redis/redis.service';
+import { env } from '../../config';
 
 const MAX_DEVICES = 3;
 
@@ -25,6 +29,7 @@ export class AuthService {
   constructor(
     private readonly db: PrismaService,
     private readonly otp: OtpService,
+    private readonly redis: RedisService,
   ) {}
 
   async signUp(dto: SignUpDto) {
@@ -69,6 +74,8 @@ export class AuthService {
   }
 
   async signIn(dto: SignInDto) {
+    await this.assertNotLockedOut(dto.phone);
+
     const user = await this.db.user.findUnique({
       where: { phone: dto.phone },
     });
@@ -77,8 +84,10 @@ export class AuthService {
       user ? user.password : '',
     );
     if (!isMatchPass || !user) {
+      await this.registerFailedLogin(dto.phone);
       throw new BadRequestException('Telefon raqam yoki parol xato');
     }
+    await this.clearFailedLogins(dto.phone);
     if (!user.isActive || user.status !== Status.ACTIVE) {
       throw new ForbiddenException('Hisobingiz faol emas');
     }
@@ -86,6 +95,77 @@ export class AuthService {
     const data = await this.otp.sendOtp(user.phone, 'signin');
     await this.otp.markPending(user.phone, 'signin');
     return successRes(data, 200);
+  }
+
+  /* ----------------- Ketma-ket xato parollardan himoya (Redis) ---------------- */
+
+  private loginKeys(phone: string) {
+    const normalized = phone.replace(/\D/g, '');
+    return {
+      failKey: `login:fail:${normalized}`,
+      blockKey: `login:block:${normalized}`,
+    };
+  }
+
+  /** Raqam bloklangan bo'lsa 429 (Retry-After bilan) qaytaradi */
+  private async assertNotLockedOut(phone: string) {
+    const { blockKey } = this.loginKeys(phone);
+    let ttl = -2;
+    try {
+      ttl = await this.redis.client.ttl(blockKey);
+    } catch (e) {
+      return; // Redis ishlamasa, kirishni to'sib qo'ymaymiz
+    }
+    if (ttl > 0) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          message: `Ketma-ket xato urinishlar sababli bu raqam vaqtincha bloklangan. ${Math.ceil(
+            ttl / 60,
+          )} daqiqadan so'ng urinib ko'ring`,
+          details: { retryAfter: ttl },
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
+
+  private async registerFailedLogin(phone: string) {
+    const { failKey, blockKey } = this.loginKeys(phone);
+    const blockSeconds = env.LOGIN.BLOCK_MINUTES * 60;
+    try {
+      const attempts = await this.redis.client.incr(failKey);
+      if (attempts === 1) {
+        await this.redis.client.expire(failKey, blockSeconds);
+      }
+      if (attempts >= env.LOGIN.MAX_FAILED_ATTEMPTS) {
+        await this.redis.client
+          .multi()
+          .set(blockKey, '1', 'EX', blockSeconds)
+          .del(failKey)
+          .exec();
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.TOO_MANY_REQUESTS,
+            message: `Ketma-ket ${env.LOGIN.MAX_FAILED_ATTEMPTS} ta xato urinish. Raqam ${env.LOGIN.BLOCK_MINUTES} daqiqaga bloklandi`,
+            details: { retryAfter: blockSeconds },
+          },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+    } catch (e) {
+      if (e instanceof HttpException) throw e;
+      // Redis ishlamasa hisoblagich yuritilmaydi
+    }
+  }
+
+  private async clearFailedLogins(phone: string) {
+    const { failKey, blockKey } = this.loginKeys(phone);
+    try {
+      await this.redis.client.del(failKey, blockKey);
+    } catch (e) {
+      // e'tiborsiz
+    }
   }
 
   async confirmSignIn(dto: VerifyOTPDto, req: Request, res: Response) {

@@ -112,6 +112,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       LoggerBot.sendMessage(telegramMessage).catch(() => {});
     }
 
+    // 429 javoblarida standart Retry-After header (OTP cooldown va boshqalar uchun)
+    if (statusCode === HttpStatus.TOO_MANY_REQUESTS) {
+      const retryAfter = (details as { retryAfter?: number })?.retryAfter;
+      if (retryAfter && !response.getHeader('Retry-After')) {
+        response.setHeader('Retry-After', String(Math.ceil(retryAfter)));
+      }
+    }
+
     response.status(statusCode).json({
       statusCode,
       code,
