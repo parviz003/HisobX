@@ -202,13 +202,38 @@ cash, expenses, reports (daily/monthly), telegram.
    `/reports/top-products?days=&limit=`, `/reports/seller-today`.
 10. **Kutishga qo'yilgan savdolar** — faqat lokal (localStorage), backend kerak emas.
 
-### Kontraktdagi ma'lum bo'shliqlar (1-bosqichda aniqlangan)
+### Kontraktdagi ma'lum bo'shliqlar
 
 - Swagger'da **javob (response) sxemalari umuman yo'q** — orval barcha hooklar uchun `unknown`
   qaytaradi. Javob tiplari vaqtincha qo'lda e'lon qilingan (`TODO(backend)` bilan).
 - Bir qancha DTO bo'sh: `CreateSaleDto`, `CreateCustomerDto`, `CreateInventoryDto`,
   `MakePaymentDto`, `UpdateProductDto`, `CreateCategoryDto`, `UpdateCategoryDto`, `UpdateStoreDto`.
 - `role` enum'ida `MANAGER` yo'q (faqat `ADMIN`, `SELLER`).
+
+### Haqiqiy javob shakllari (2-bosqichda kuzatilgan)
+
+Swagger'da hujjatlashtirilmagani uchun quyidagilar ishlayotgan backend javoblaridan olingan.
+Kontrakt to'ldirilgach orval tiplari bilan solishtirib chiqiladi.
+
+- `POST /auth/signin` → `{ phone, message, code, expiresAt, resendAvailableAt }`.
+  `telegramLinked` maydoni **yo'q** — kod uning yo'qligini "ulangan" deb qabul qiladi.
+- `POST /auth/confirm` → `{ userId, deviceId, device, role, storeId, createdAt }`,
+  cookie'lar (`accessToken`, `refreshToken`) `HttpOnly` sifatida o'rnatiladi.
+- `GET /users/me` → `{ id, fullName, name, phone, role, status, isActive, imageUrl,
+  storeId, store, createdAt, updatedAt }`. **`image` emas, `imageUrl`.**
+  `telegramLinked` **yo'q** (TODO(backend) 5.2-3).
+- `GET /device` → `[{ deviceId, device, createdAt }]`. **`id` emas, `deviceId`.**
+  `lastActiveAt`, `ip` va `isCurrent` **yo'q** — "Joriy qurilma" belgisini ko'rsatib
+  bo'lmaydi (TODO(backend)).
+- **429:** `Retry-After` header va `{ statusCode: 429, code: 'TOO_MANY_REQUESTS',
+  message, details: { retryAfter } }`. Sign-in uchun OTP qayta yuborish oynasi ~60 soniya.
+
+### Mock rejimlari
+
+- `VITE_USE_MOCKS=true` — faqat 5.2 dagi endpoint'lar mock'dan, qolgani haqiqiy backend'dan.
+- `VITE_MOCK_AUTH=true` — qo'shimcha: butun kirish oqimi ham mock'lanadi (backendsiz sinash
+  uchun). Sinov raqamlari: `+998900000001` Telegram ulanmagan, `...011` MANAGER,
+  `...012` ADMIN, `...013` SELLER, `...014` SUPERADMIN. Kod har doim `111111`.
 
 ---
 
