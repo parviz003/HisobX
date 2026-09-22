@@ -16,6 +16,21 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
+// jsdom'da yo'q, lekin input-otp shunga tayanadi.
+if (!document.elementFromPoint) {
+  document.elementFromPoint = () => null;
+}
+
+// Radix komponentlari jsdom'da mavjud bo'lmagan API'larni chaqiradi.
+if (!window.HTMLElement.prototype.scrollIntoView) {
+  window.HTMLElement.prototype.scrollIntoView = vi.fn();
+}
+if (!window.HTMLElement.prototype.hasPointerCapture) {
+  window.HTMLElement.prototype.hasPointerCapture = () => false;
+  window.HTMLElement.prototype.setPointerCapture = vi.fn();
+  window.HTMLElement.prototype.releasePointerCapture = vi.fn();
+}
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => {
   cleanup();
