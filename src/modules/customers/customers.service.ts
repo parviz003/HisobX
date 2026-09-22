@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../config/database/prisma.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
@@ -80,6 +84,24 @@ export class CustomersService {
     });
     if (!customer) {
       throw new NotFoundException(`Customer with ID ${id} not found`);
+    }
+
+    const activeDebts = await this.prisma.debt.count({
+      where: { customerId: id, isPaid: false, deletedAt: null },
+    });
+    if (activeDebts > 0) {
+      throw new BadRequestException(
+        "Mijozda to'lanmagan qarz mavjud, o'chirib bo'lmaydi",
+      );
+    }
+
+    const salesCount = await this.prisma.sale.count({
+      where: { customerId: id },
+    });
+    if (salesCount > 0) {
+      throw new BadRequestException(
+        "Mijozga bog'langan savdolar mavjud, o'chirib bo'lmaydi",
+      );
     }
 
     return this.prisma.customer.delete({

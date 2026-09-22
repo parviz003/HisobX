@@ -8,6 +8,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import { LoggerBot } from '../bot/logger-bot';
 
 @Catch()
@@ -52,6 +53,42 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
         details = data.details;
       }
+    }
+
+    // Prisma xatoliklari tushunarli HTTP statuslarga o'giriladi
+    if (
+      !(exception instanceof HttpException) &&
+      exception instanceof Prisma.PrismaClientKnownRequestError
+    ) {
+      switch (exception.code) {
+        case 'P2002':
+          statusCode = HttpStatus.CONFLICT;
+          code = 'CONFLICT';
+          message = "Bunday ma'lumot allaqachon mavjud";
+          details = exception.meta?.target;
+          break;
+        case 'P2025':
+          statusCode = HttpStatus.NOT_FOUND;
+          code = 'NOT_FOUND';
+          message = "Ma'lumot topilmadi";
+          break;
+        case 'P2003':
+          statusCode = HttpStatus.BAD_REQUEST;
+          code = 'BAD_REQUEST';
+          message = "Bog'liq ma'lumot noto'g'ri yoki mavjud emas";
+          break;
+        default:
+          break;
+      }
+    }
+
+    if (
+      !(exception instanceof HttpException) &&
+      exception instanceof Prisma.PrismaClientValidationError
+    ) {
+      statusCode = HttpStatus.BAD_REQUEST;
+      code = 'BAD_REQUEST';
+      message = "So'rov ma'lumotlari noto'g'ri";
     }
 
     const errorStack =

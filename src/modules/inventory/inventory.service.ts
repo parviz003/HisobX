@@ -81,7 +81,11 @@ export class InventoryService {
 
       const updatedProduct = await tx.product.update({
         where: { id: dto.productId },
-        data: { stock: { increment: dto.quantity } },
+        data: {
+          stock: { increment: dto.quantity },
+          // Boshlang'ich qoldiq narxi tannarx (COGS) uchun snapshot bo'lib qoladi
+          lastPurchasePrice: dto.unitPrice ?? product.lastPurchasePrice,
+        },
       });
 
       const transaction = await tx.inventoryTransaction.create({
@@ -90,6 +94,7 @@ export class InventoryService {
           productId: dto.productId,
           type: 'OPENING',
           quantity: dto.quantity,
+          unitPrice: dto.unitPrice,
           note: dto.note,
         },
       });

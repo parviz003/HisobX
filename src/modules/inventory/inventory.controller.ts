@@ -38,6 +38,7 @@ export class InventoryController {
   }
 
   @Get('transactions')
+  @Roles(Role.ADMIN, Role.SELLER)
   getTransactions(
     @CurrentUser('storeId') storeId: string,
     @Query() query: QueryInventoryDto,
@@ -46,6 +47,7 @@ export class InventoryController {
   }
 
   @Get('stock')
+  @Roles(Role.ADMIN, Role.SELLER)
   getStockLevels(@CurrentUser('storeId') storeId: string) {
     return this.inventoryService.getStockLevels(storeId);
   }

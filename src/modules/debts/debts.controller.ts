@@ -9,7 +9,10 @@ import {
 import { DebtsService } from './debts.service';
 import { MakePaymentDto } from './dto/make-payment.dto';
 import { QueryDebtDto } from './dto/query-debt.dto';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import {
+  StoreId,
+  UserId,
+} from '../../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../../common/types/jwt-payload.interface';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
@@ -20,26 +23,27 @@ export class DebtsController {
   constructor(private readonly debtsService: DebtsService) {}
 
   @Get()
-  findAll(@Query() query: QueryDebtDto, @CurrentUser() user: JwtPayload) {
-    return this.debtsService.findAll(query, user.storeId);
+  findAll(@Query() query: QueryDebtDto, @StoreId() storeId: string) {
+    return this.debtsService.findAll(query, storeId);
   }
 
   @Get('overdue')
-  getOverdue(@CurrentUser() user: JwtPayload) {
-    return this.debtsService.getOverdue(user.storeId);
+  getOverdue(@StoreId() storeId: string) {
+    return this.debtsService.getOverdue(storeId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.debtsService.findOne(id, user.storeId);
+  findOne(@Param('id') id: string, @StoreId() storeId: string) {
+    return this.debtsService.findOne(id, storeId);
   }
 
   @Post(':id/pay')
   makePayment(
     @Param('id') id: string,
     @Body() dto: MakePaymentDto,
-    @CurrentUser() user: JwtPayload,
+    @StoreId() storeId: string,
+    @UserId() userId: string,
   ) {
-    return this.debtsService.makePayment(id, dto, user);
+    return this.debtsService.makePayment(id, dto, storeId, userId);
   }
 }

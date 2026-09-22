@@ -4,7 +4,7 @@ import { IsNotEmpty, IsPhoneNumber, IsString } from 'class-validator';
 export class SignInDto {
   @ApiProperty({
     type: String,
-    example: '+998901234567',
+    example: '+998917328078',
   })
   @IsPhoneNumber('UZ')
   @IsNotEmpty()
@@ -12,7 +12,7 @@ export class SignInDto {
 
   @ApiProperty({
     type: String,
-    example: 'Secret123!',
+    example: 'Superadmin1!',
   })
   @IsString()
   @IsNotEmpty()

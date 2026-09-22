@@ -19,6 +19,7 @@ export class SalesService {
       customerId,
       discountPercent = 0,
       note,
+      dueDate,
     } = createSaleDto;
 
     if (items.length === 0) {
@@ -151,6 +152,7 @@ export class SalesService {
             saleId: sale.id,
             amount: totalAmount,
             remainingAmount: totalAmount,
+            dueDate: dueDate ? new Date(dueDate) : null,
           },
         });
       }

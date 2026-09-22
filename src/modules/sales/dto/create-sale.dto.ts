@@ -1,4 +1,5 @@
 import {
+  IsDateString,
   IsEnum,
   IsNumber,
   IsOptional,
@@ -35,6 +36,11 @@ export class CreateSaleDto {
   @IsString()
   @IsOptional()
   note?: string;
+
+  /** Nasiya savdo uchun qarz muddati (ixtiyoriy) */
+  @IsDateString()
+  @IsOptional()
+  dueDate?: string;
 
   @IsArray()
   @ValidateNested({ each: true })

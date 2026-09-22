@@ -1,8 +1,4 @@
-import { Role } from '@prisma/client';
+import { IPayload } from '../interface';
 
-export interface JwtPayload {
-  userId: string;
-  storeId: string;
-  role: Role;
-  type: 'access' | 'refresh';
-}
+/** Token payloadi yagona manbadan olinadi (common/interface -> IPayload) */
+export type JwtPayload = IPayload;

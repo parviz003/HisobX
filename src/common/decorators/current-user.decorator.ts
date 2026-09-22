@@ -1,4 +1,8 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import {
+  BadRequestException,
+  createParamDecorator,
+  ExecutionContext,
+} from '@nestjs/common';
 import { IPayload } from '../interface';
 
 export const CurrentUser = createParamDecorator(
@@ -13,5 +17,22 @@ export const UserId = createParamDecorator(
   (data: unknown, ctx: ExecutionContext) => {
     const request = ctx.switchToHttp().getRequest();
     return request.user?.sub;
+  },
+);
+
+/**
+ * Joriy do'kon IDsi. SUPERADMIN uchun `x-store-id` headeridan olinadi,
+ * ko'rsatilmasa tushunarli xatolik qaytariladi.
+ */
+export const StoreId = createParamDecorator(
+  (data: unknown, ctx: ExecutionContext): string => {
+    const request = ctx.switchToHttp().getRequest();
+    const storeId = request.user?.storeId;
+    if (!storeId) {
+      throw new BadRequestException(
+        "Do'kon aniqlanmadi. SUPERADMIN uchun 'x-store-id' headerini yuboring",
+      );
+    }
+    return storeId;
   },
 );

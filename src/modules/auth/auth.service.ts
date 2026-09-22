@@ -15,7 +15,9 @@ import { VerifyOTPDto } from '../otp/dto/verify-otp.dto';
 import { Token } from '../../infrastructure/lib/Token';
 import type { Response, Request } from 'express';
 import { getDeviceInfo } from '../../common/helper/device-info';
-import { Role } from '@prisma/client';
+import { Role, Status } from '@prisma/client';
+
+const MAX_DEVICES = 3;
 
 @Injectable()
 export class AuthService {
@@ -76,11 +78,12 @@ export class AuthService {
     if (!isMatchPass || !user) {
       throw new BadRequestException('Telefon raqam yoki parol xato');
     }
-    if (!user.isActive) {
+    if (!user.isActive || user.status !== Status.ACTIVE) {
       throw new ForbiddenException('Hisobingiz faol emas');
     }
 
     const data = await this.otp.sendOtp(user.phone);
+    await this.otp.markSignInPending(user.phone);
     return successRes(data, 200);
   }
 
@@ -89,25 +92,39 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('Foydalanuvchi topilmadi');
     }
-    await this.otp.verifyOtp(user.phone, dto.code);
-
-    const devices = await this.db.devices.findMany({
-      where: { userId: user.id },
-    });
-    if (devices.length >= 3) {
-      throw new ForbiddenException(
-        'Qurilmalar soni 3 tadan oshishi taqiqlanadi. Avval eski qurilmalarni o‘chiring.',
-      );
+    if (!user.isActive || user.status !== Status.ACTIVE) {
+      throw new ForbiddenException('Hisobingiz faol emas');
     }
 
+    // OTP faqat parol tekshiruvidan o'tgan signIn urinishi uchun tasdiqlanadi
+    await this.otp.consumeSignInPending(user.phone);
+    await this.otp.verifyOtp(user.phone, dto.code);
+
     const { client, os } = getDeviceInfo(req);
-    const device = await this.db.devices.create({
-      data: {
-        userId: user.id,
-        device: `${client?.name || 'Browser'} ${os?.name || 'Device'}`,
-        hashedRefreshToken: '',
-      },
+    const deviceName = `${client?.name || 'Browser'} ${os?.name || 'Device'}`;
+
+    // Bir xil qurilmadan qayta kirilsa yangi sessiya ochilmaydi, eskisi yangilanadi
+    let device = await this.db.devices.findFirst({
+      where: { userId: user.id, device: deviceName },
     });
+
+    if (!device) {
+      const deviceCount = await this.db.devices.count({
+        where: { userId: user.id },
+      });
+      if (deviceCount >= MAX_DEVICES) {
+        throw new ForbiddenException(
+          `Qurilmalar soni ${MAX_DEVICES} tadan oshishi taqiqlanadi. Avval eski qurilmalarni o\u2018chiring.`,
+        );
+      }
+      device = await this.db.devices.create({
+        data: {
+          userId: user.id,
+          device: deviceName,
+          hashedRefreshToken: '',
+        },
+      });
+    }
 
     const payload = {
       sub: user.id,
@@ -118,9 +135,9 @@ export class AuthService {
     };
 
     const { accessToken, refreshToken } = await Token.getToken(payload);
-    const hashedRefreshToken = await Crypt.hash(refreshToken);
+    const hashedRefreshToken = Crypt.hashToken(refreshToken);
 
-    await this.db.devices.update({
+    device = await this.db.devices.update({
       where: { deviceId: device.deviceId },
       data: { hashedRefreshToken },
     });
@@ -153,7 +170,7 @@ export class AuthService {
         'Tizimda bunday foydalanuvchi yoki qurilma topilmadi',
       );
     }
-    const isMatchToken = await Crypt.compare(
+    const isMatchToken = Crypt.compareToken(
       refreshToken,
       device.hashedRefreshToken,
     );
@@ -161,11 +178,32 @@ export class AuthService {
       throw new BadRequestException("Qurilma tizimda ro'yxatdan o'tmagan");
     }
 
-    delete verifiedData.iat;
-    delete verifiedData.exp;
+    const user = await this.db.user.findUnique({ where: { id: device.userId } });
+    if (!user) {
+      throw new NotFoundException('Foydalanuvchi topilmadi');
+    }
+    if (!user.isActive || user.status !== Status.ACTIVE) {
+      throw new ForbiddenException('Hisobingiz faol emas');
+    }
 
-    const { accessToken } = await Token.getToken(verifiedData);
-    Token.setCookie(res, accessToken);
+    // Token payloadi bazadagi dolzarb ma'lumot asosida qayta quriladi
+    const payload = {
+      sub: user.id,
+      role: user.role,
+      status: user.status,
+      deviceId: device.deviceId,
+      storeId: user.storeId,
+    };
+
+    const tokens = await Token.getToken(payload);
+
+    // Refresh token rotatsiyasi: eski token bekor qilinadi
+    await this.db.devices.update({
+      where: { deviceId: device.deviceId },
+      data: { hashedRefreshToken: Crypt.hashToken(tokens.refreshToken) },
+    });
+
+    Token.setCookie(res, tokens.accessToken, tokens.refreshToken);
 
     return successRes(
       {

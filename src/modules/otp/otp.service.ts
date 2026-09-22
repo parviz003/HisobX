@@ -4,6 +4,7 @@ import {
   HttpStatus,
   Injectable,
   Logger,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { createHmac, randomInt } from 'crypto';
 import { RedisService } from '../../config/redis/redis.service';
@@ -54,32 +55,28 @@ export class OtpService {
     const attemptsKey = this.attemptsKey(phone);
     const resendKey = this.resendKey(phone);
 
+    let cooldown: string | null = null;
     try {
-      const cooldown = await redis.set(
-        resendKey,
-        '1',
-        'EX',
-        env.OTP.RESEND,
-        'NX',
-      );
-
-      if (cooldown !== 'OK') {
-        const remaining = await redis.ttl(resendKey);
-        throw new HttpException(
-          {
-            statusCode: HttpStatus.TOO_MANY_REQUESTS,
-            message: `OTP qayta yuborish uchun ${Math.max(
-              remaining,
-              1,
-            )} sekund kuting`,
-            retryAfter: Math.max(remaining, 1),
-          },
-          HttpStatus.TOO_MANY_REQUESTS,
-        );
-      }
+      cooldown = await redis.set(resendKey, '1', 'EX', env.OTP.RESEND, 'NX');
     } catch (e) {
-      if (e instanceof HttpException) throw e;
-      // Redis offline bo'lsa xavfsiz davom etish
+      throw new ServiceUnavailableException(
+        'OTP xizmati vaqtincha ishlamayapti. Keyinroq urinib ko\u2018ring',
+      );
+    }
+
+    if (cooldown !== 'OK') {
+      const remaining = await redis.ttl(resendKey);
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          message: `OTP qayta yuborish uchun ${Math.max(
+            remaining,
+            1,
+          )} sekund kuting`,
+          retryAfter: Math.max(remaining, 1),
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
 
     const code = this.generateOtp();
@@ -92,7 +89,9 @@ export class OtpService {
         .set(attemptsKey, '0', 'EX', env.OTP.TTL)
         .exec();
     } catch (error) {
-      // Redis offline bo'lsa xabar bermasdan o'tkazish
+      throw new ServiceUnavailableException(
+        'OTP saqlashda xatolik. Keyinroq urinib ko\u2018ring',
+      );
     }
 
     this.logger.log(`[LOCAL SMS] Qabul qiluvchi: ${phone} -> Kod: ${code}`);
@@ -158,8 +157,9 @@ export class OtpService {
       return 0
     `;
 
+    let result: number;
     try {
-      const result = Number(
+      result = Number(
         await redis.eval(
           script,
           2,
@@ -169,32 +169,29 @@ export class OtpService {
           String(env.OTP.ATTEMPTS),
         ),
       );
-
-      if (result === -2) {
-        throw new BadRequestException(
-          'OTP kodi mavjud emas yoki muddati tugagan',
-        );
-      }
-
-      if (result === -1) {
-        throw new HttpException(
-          {
-            statusCode: HttpStatus.TOO_MANY_REQUESTS,
-            message: 'OTP kiritish urinishlari soni tugadi. Yangi kod so‘rang.',
-          },
-          HttpStatus.TOO_MANY_REQUESTS,
-        );
-      }
-
-      if (result === 0) {
-        throw new BadRequestException('OTP kodi noto‘g‘ri');
-      }
     } catch (e: any) {
       if (e instanceof HttpException) throw e;
-      // Redis ulana olmasa ham test/demo kodini tekshirish
-      if (code !== '123456' && !code.startsWith('99')) {
-        // fallback
-      }
+      throw new ServiceUnavailableException(
+        'OTP tekshirish xizmati ishlamayapti. Keyinroq urinib ko\u2018ring',
+      );
+    }
+
+    if (result === -2) {
+      throw new BadRequestException('OTP kodi mavjud emas yoki muddati tugagan');
+    }
+
+    if (result === -1) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          message: 'OTP kiritish urinishlari soni tugadi. Yangi kod so\u2018rang.',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    if (result !== 1) {
+      throw new BadRequestException('OTP kodi noto\u2018g\u2018ri');
     }
 
     return {
@@ -202,5 +199,40 @@ export class OtpService {
       verified: true,
       phone,
     };
+  }
+
+  private signInKey(phone: string) {
+    return `otp:signin:${phone}`;
+  }
+
+  /** Parol tekshiruvidan o'tgan signIn urinishini belgilab qo'yadi */
+  async markSignInPending(phoneInput: string): Promise<void> {
+    const phone = this.normalizePhone(phoneInput);
+    try {
+      await this.redisService.client.set(
+        this.signInKey(phone),
+        '1',
+        'EX',
+        env.OTP.TTL,
+      );
+    } catch (e) {
+      throw new ServiceUnavailableException('Sessiya saqlashda xatolik');
+    }
+  }
+
+  /** OTP tasdiqlashdan oldin signIn urinishi bor-yo'qligini tekshiradi */
+  async consumeSignInPending(phoneInput: string): Promise<void> {
+    const phone = this.normalizePhone(phoneInput);
+    let exists = 0;
+    try {
+      exists = await this.redisService.client.del(this.signInKey(phone));
+    } catch (e) {
+      throw new ServiceUnavailableException('Sessiya tekshirishda xatolik');
+    }
+    if (!exists) {
+      throw new BadRequestException(
+        'Avval telefon raqam va parol bilan tizimga kiring',
+      );
+    }
   }
 }

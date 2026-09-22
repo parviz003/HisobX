@@ -4,9 +4,9 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  
 }
 
-// Enums
 
 enum Role {
   SUPERADMIN
@@ -54,7 +54,6 @@ enum NotificationType {
   DAILY_REPORT
 }
 
-// Models
 
 model Store {
   id             String   @id @default(uuid())

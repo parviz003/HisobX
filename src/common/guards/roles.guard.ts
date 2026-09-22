@@ -10,13 +10,13 @@ import { Role } from '@prisma/client';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) { }
+  constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<string[]>(
-      ROLES_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     if (!requiredRoles || requiredRoles.length === 0) {
       return true;
     }
@@ -25,17 +25,16 @@ export class RolesGuard implements CanActivate {
     if (!user) {
       throw new ForbiddenException('Foydalanuvchi topilmadi');
     }
-    if (user.role === Role.ADMIN) {
+
+    if (user.role === Role.SUPERADMIN) {
       return true;
     }
-    if (
-      requiredRoles.includes('ID') &&
-      (req.params?.id === user.sub || req.params?.id === user.userId)
-    ) {
+    
+    if (requiredRoles.includes('ID') && req.params?.id === user.sub) {
       return true;
     }
-    const hasRole = requiredRoles.includes(user.role);
-    if (!hasRole) {
+
+    if (!requiredRoles.includes(user.role)) {
       throw new ForbiddenException('Ruxsat etilmagan foydalanuvchi');
     }
     return true;

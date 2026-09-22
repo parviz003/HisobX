@@ -1,8 +1,15 @@
-import { IsNotEmpty, IsString, Length } from 'class-validator';
-import { SendOTPDto } from './send-otp.dto';
+import { IsNotEmpty, IsPhoneNumber, IsString, Length } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class VerifyOTPDto extends SendOTPDto {
+export class VerifyOTPDto {
+  @ApiProperty({
+    type: String,
+    example: '+998901234567',
+  })
+  @IsPhoneNumber('UZ')
+  @IsNotEmpty()
+  phone!: string;
+
   @ApiProperty({
     type: String,
     example: '123456',

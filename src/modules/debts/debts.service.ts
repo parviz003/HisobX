@@ -111,7 +111,12 @@ export class DebtsService {
     return Object.values(grouped);
   }
 
-  async makePayment(id: string, dto: MakePaymentDto, user: JwtPayload) {
+  async makePayment(
+    id: string,
+    dto: MakePaymentDto,
+    storeId: string,
+    userId: string,
+  ) {
     const { amount, note } = dto;
     const paymentAmount = new Prisma.Decimal(amount);
 
@@ -121,7 +126,7 @@ export class DebtsService {
         include: { sale: true },
       });
 
-      if (!debt || debt.storeId !== user.storeId || debt.deletedAt) {
+      if (!debt || debt.storeId !== storeId || debt.deletedAt) {
         throw new NotFoundException('Qarz topilmadi');
       }
 
@@ -147,7 +152,7 @@ export class DebtsService {
             create: {
               amount: paymentAmount,
               note,
-              storeId: user.storeId,
+              storeId: storeId,
             },
           },
         },
@@ -158,7 +163,7 @@ export class DebtsService {
 
       // Get last cash transaction for balance calculation
       const lastCashTransaction = await tx.cashTransaction.findFirst({
-        where: { storeId: user.storeId },
+        where: { storeId: storeId },
         orderBy: { createdAt: 'desc' },
       });
 
@@ -174,8 +179,8 @@ export class DebtsService {
           amount: paymentAmount,
           balance: newBalance,
           note: `Sale #${debt.sale.saleNumber} uchun qarz to'lovi${note ? ` - ${note}` : ''}`,
-          storeId: user.storeId,
-          userId: user.userId,
+          storeId: storeId,
+          userId: userId,
           saleId: debt.saleId,
         },
       });

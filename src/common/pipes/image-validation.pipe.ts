@@ -23,7 +23,7 @@ export class ImageValidationPipe implements PipeTransform<
     'image/heic',
   ];
 
-  private readonly maxFileSize = 20 * 1024 * 1024;
+  private readonly maxFileSize = 10 * 1024 * 1024;
 
   async transform(file: Express.Multer.File | undefined) {
     if (!file) {

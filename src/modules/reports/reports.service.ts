@@ -68,7 +68,11 @@ export class ReportsService {
     const totalOutstandingDebt = Number(totalDebts._sum.remainingAmount || 0);
 
     return successRes({
-      date: startOfDay.toISOString().split('T')[0],
+      date: [
+        startOfDay.getFullYear(),
+        String(startOfDay.getMonth() + 1).padStart(2, '0'),
+        String(startOfDay.getDate()).padStart(2, '0'),
+      ].join('-'),
       salesCount: sales.length,
       revenue: totalRevenue,
       cogs: totalCogs,

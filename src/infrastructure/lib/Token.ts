@@ -2,10 +2,24 @@ import { IPayload, IToken } from '../../common/interface';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { env } from '../../config';
 import { UnauthorizedException } from '@nestjs/common';
-import type { Response } from 'express';
+import type { CookieOptions, Response } from 'express';
+
+const ACCESS_MAX_AGE = 24 * 60 * 60 * 1000; // 1 kun
+const REFRESH_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 kun
 
 export class Token {
   private static readonly jwt = new JwtService();
+
+  private static cookieOptions(maxAge: number): CookieOptions {
+    const isProd = process.env.NODE_ENV === 'production';
+    return {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
+      path: '/',
+      maxAge,
+    };
+  }
 
   static async getToken(payload: IPayload): Promise<IToken> {
     const [accessToken, refreshToken] = await Promise.all([
@@ -26,11 +40,9 @@ export class Token {
     type: 'access' | 'refresh',
   ): Promise<any> {
     try {
-      const verifiedData = await this.jwt.verifyAsync(token, {
-        secret:
-          type === 'access' ? env.TOKEN.ACCESS_KEY : env.TOKEN.REFRESH_KEY,
+      return await this.jwt.verifyAsync(token, {
+        secret: type === 'access' ? env.TOKEN.ACCESS_KEY : env.TOKEN.REFRESH_KEY,
       });
-      return verifiedData;
     } catch (error) {
       throw new UnauthorizedException('Tizimga kirishda nosozlik');
     }
@@ -41,22 +53,19 @@ export class Token {
     accessToken: string,
     refreshToken?: string,
   ): void {
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: false,
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+    res.cookie('accessToken', accessToken, this.cookieOptions(ACCESS_MAX_AGE));
     if (refreshToken) {
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: false,
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
+      res.cookie(
+        'refreshToken',
+        refreshToken,
+        this.cookieOptions(REFRESH_MAX_AGE),
+      );
     }
   }
 
   static clearCookie(res: Response): void {
-    res.clearCookie('refreshToken');
-    res.clearCookie('accessToken');
+    const { maxAge, ...options } = this.cookieOptions(0);
+    res.clearCookie('accessToken', options);
+    res.clearCookie('refreshToken', options);
   }
 }
