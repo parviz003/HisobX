@@ -18,9 +18,15 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { QueryUserDto } from './dto/query-user.dto';
+import { ResetUserPasswordDto } from './dto/reset-password.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { UserId } from '../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  UserId,
+} from '../../common/decorators/current-user.decorator';
 import { ImageValidationPipe } from '../../common/pipes/image-validation.pipe';
+import type { IPayload } from '../../common/interface';
 import 'multer';
 
 @ApiTags('Users')
@@ -61,43 +67,69 @@ export class UsersController {
     return this.usersService.removeProfileImage(userId);
   }
 
-  /* ------------------------------- SUPERADMIN ------------------------------- */
+  /* ----------------------------- XODIMLAR BOSHQARUVI ----------------------------- */
 
-  @Roles(Role.SUPERADMIN)
+  @Roles(Role.SUPERADMIN, Role.ADMIN)
   @Get()
-  @ApiOperation({ summary: 'Barcha foydalanuvchilar (faqat SUPERADMIN)' })
-  findAll(@Query('storeId') storeId?: string, @Query('role') role?: Role) {
-    return this.usersService.findAll(storeId, role);
+  @ApiOperation({
+    summary:
+      "Xodimlar ro'yxati (ADMIN — faqat o'z do'koni SELLER'lari, SUPERADMIN — barchasi)",
+  })
+  findAll(@CurrentUser() actor: IPayload, @Query() query: QueryUserDto) {
+    return this.usersService.findAll(actor, query);
   }
 
-  @Roles(Role.SUPERADMIN)
+  @Roles(Role.SUPERADMIN, Role.ADMIN)
   @Post()
-  @ApiOperation({ summary: 'Admin/sotuvchi yaratish (faqat SUPERADMIN)' })
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
+  @ApiOperation({
+    summary:
+      "Xodim yaratish (ADMIN — o'z do'koniga SELLER, SUPERADMIN — ADMIN/SELLER)",
+  })
+  create(@CurrentUser() actor: IPayload, @Body() dto: CreateUserDto) {
+    return this.usersService.create(actor, dto);
   }
 
-  @Roles(Role.SUPERADMIN)
+  @Roles(Role.SUPERADMIN, Role.ADMIN)
   @Get(':id')
-  @ApiOperation({ summary: "Foydalanuvchi ma'lumoti (faqat SUPERADMIN)" })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.usersService.findOne(id);
+  @ApiOperation({ summary: "Xodim ma'lumoti" })
+  findOne(
+    @CurrentUser() actor: IPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.usersService.findOne(actor, id);
   }
 
-  @Roles(Role.SUPERADMIN)
+  @Roles(Role.SUPERADMIN, Role.ADMIN)
   @Patch(':id')
-  @ApiOperation({ summary: 'Foydalanuvchini tahrirlash (faqat SUPERADMIN)' })
+  @ApiOperation({ summary: 'Xodimni tahrirlash / bloklash (status)' })
   update(
+    @CurrentUser() actor: IPayload,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateUserDto,
   ) {
-    return this.usersService.update(id, dto);
+    return this.usersService.update(actor, id, dto);
+  }
+
+  @Roles(Role.SUPERADMIN, Role.ADMIN)
+  @Patch(':id/password')
+  @ApiOperation({
+    summary: "Xodim parolini tiklash (barcha sessiyalari bekor qilinadi)",
+  })
+  resetPassword(
+    @CurrentUser() actor: IPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ResetUserPasswordDto,
+  ) {
+    return this.usersService.resetPassword(actor, id, dto.password);
   }
 
   @Roles(Role.SUPERADMIN)
   @Delete(':id')
   @ApiOperation({ summary: "Foydalanuvchini o'chirish (faqat SUPERADMIN)" })
-  remove(@Param('id', ParseUUIDPipe) id: string, @UserId() currentUserId: string) {
-    return this.usersService.remove(id, currentUserId);
+  remove(
+    @CurrentUser() actor: IPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.usersService.remove(actor, id);
   }
 }

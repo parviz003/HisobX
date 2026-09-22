@@ -1,11 +1,4 @@
-import {
-  IsBoolean,
-  IsEnum,
-  IsOptional,
-  IsPhoneNumber,
-  IsString,
-  MinLength,
-} from 'class-validator';
+import { IsEnum, IsOptional, IsPhoneNumber, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Role, Status } from '@prisma/client';
 
@@ -20,24 +13,18 @@ export class UpdateUserDto {
   @IsPhoneNumber('UZ')
   phone?: string;
 
-  @ApiPropertyOptional({ example: 'Password123!' })
-  @IsOptional()
-  @IsString()
-  @MinLength(6)
-  password?: string;
-
+  /**
+   * ADMIN faqat SELLER rolini bera oladi.
+   * ADMIN yoki SUPERADMIN roliga ko'tarish faqat SUPERADMIN qo'lida.
+   */
   @ApiPropertyOptional({ enum: [Role.ADMIN, Role.SELLER] })
   @IsOptional()
   @IsEnum(Role)
   role?: Role;
 
+  /** Bloklash/faollashtirish. isActive avtomatik shu qiymatga moslashtiriladi. */
   @ApiPropertyOptional({ enum: Status })
   @IsOptional()
   @IsEnum(Status)
   status?: Status;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
 }

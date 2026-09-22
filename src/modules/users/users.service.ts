@@ -5,14 +5,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Role } from '@prisma/client';
+import { Prisma, Role, Status } from '@prisma/client';
 import { PrismaService } from '../../config/database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { QueryUserDto } from './dto/query-user.dto';
 import { Crypt } from '../../infrastructure/lib/Crypt';
 import { File } from '../../infrastructure/lib/File';
 import { successRes } from '../../common/helper/success-response';
+import { IPayload } from '../../common/interface';
 import 'multer';
 
 const userSelect = {
@@ -102,51 +104,81 @@ export class UsersService {
     return successRes(updated);
   }
 
-  /* --------------------------- SUPERADMIN boshqaruvi --------------------------- */
+  /* --------------------------- XODIMLAR BOSHQARUVI --------------------------- */
+  /*
+   * ADMIN  — faqat o'z do'konidagi SELLER'lar (boshqa do'kon xodimi ko'rinmaydi: 404,
+   *          ADMIN/SUPERADMIN hisobiga tegish taqiqlanadi: 403)
+   * SUPERADMIN — barcha do'konlar va ADMIN'lar
+   */
 
-  async findAll(storeId?: string, role?: Role) {
+  async findAll(actor: IPayload, query: QueryUserDto) {
+    const where: Prisma.UserWhereInput =
+      actor.role === Role.SUPERADMIN
+        ? {
+            ...(query.storeId ? { storeId: query.storeId } : {}),
+            ...(query.role ? { role: query.role } : {}),
+            ...(query.status ? { status: query.status } : {}),
+          }
+        : {
+            // ADMIN uchun storeId har doim o'z do'koni, role har doim SELLER
+            storeId: actor.storeId,
+            role: Role.SELLER,
+            ...(query.status ? { status: query.status } : {}),
+          };
+
     const users = await this.prisma.user.findMany({
-      where: {
-        ...(storeId ? { storeId } : {}),
-        ...(role ? { role } : {}),
-      },
+      where,
       select: userSelect,
       orderBy: { createdAt: 'desc' },
     });
     return successRes(users);
   }
 
-  async findOne(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      select: { ...userSelect, store: { select: { id: true, name: true } } },
+  async findOne(actor: IPayload, id: string) {
+    const user = await this.loadManageableUser(actor, id, {
+      store: { select: { id: true, name: true } },
     });
-    if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
     return successRes(user);
   }
 
-  async create(dto: CreateUserDto) {
+  async create(actor: IPayload, dto: CreateUserDto) {
     if (dto.role === Role.SUPERADMIN) {
       throw new ForbiddenException('SUPERADMIN yaratish taqiqlanadi');
     }
-    await this.ensurePhoneFree(dto.phone);
 
-    let storeId = dto.storeId;
-    if (storeId) {
-      const store = await this.prisma.store.findUnique({
-        where: { id: storeId },
-      });
-      if (!store) throw new NotFoundException("Do'kon topilmadi");
-    } else if (dto.role === Role.ADMIN && dto.storeName) {
-      const store = await this.prisma.store.create({
-        data: { name: dto.storeName, phone: dto.phone },
-      });
-      storeId = store.id;
+    let storeId: string | undefined;
+
+    if (actor.role === Role.SUPERADMIN) {
+      if (dto.storeId) {
+        const store = await this.prisma.store.findUnique({
+          where: { id: dto.storeId },
+        });
+        if (!store) throw new NotFoundException("Do'kon topilmadi");
+        storeId = store.id;
+      } else if (dto.role === Role.ADMIN && dto.storeName) {
+        const store = await this.prisma.store.create({
+          data: { name: dto.storeName, phone: dto.phone },
+        });
+        storeId = store.id;
+      } else {
+        throw new BadRequestException(
+          "storeId yoki (ADMIN uchun) storeName ko'rsatilishi shart",
+        );
+      }
     } else {
-      throw new BadRequestException(
-        "storeId yoki (ADMIN uchun) storeName ko'rsatilishi shart",
-      );
+      // ADMIN: faqat o'z do'koni va faqat SELLER
+      if (dto.role !== Role.SELLER) {
+        throw new ForbiddenException(
+          'ADMIN faqat SELLER rolidagi xodim qo‘sha oladi',
+        );
+      }
+      if (!actor.storeId) {
+        throw new BadRequestException("Do'kon aniqlanmadi");
+      }
+      storeId = actor.storeId;
     }
+
+    await this.ensurePhoneFree(dto.phone);
 
     const user = await this.prisma.user.create({
       data: {
@@ -161,17 +193,24 @@ export class UsersService {
     return successRes(user, 201);
   }
 
-  async update(id: string, dto: UpdateUserDto) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
-    if (user.role === Role.SUPERADMIN) {
-      throw new ForbiddenException(
-        "SUPERADMIN hisobini bu endpoint orqali o'zgartirib bo'lmaydi",
-      );
+  async update(actor: IPayload, id: string, dto: UpdateUserDto) {
+    const user = await this.loadManageableUser(actor, id);
+
+    if (dto.role) {
+      if (dto.role === Role.SUPERADMIN) {
+        throw new ForbiddenException('SUPERADMIN roli berilishi taqiqlanadi');
+      }
+      if (actor.role !== Role.SUPERADMIN && dto.role !== Role.SELLER) {
+        throw new ForbiddenException(
+          'ADMIN rolni faqat SELLER qilib belgilashi mumkin',
+        );
+      }
     }
-    if (dto.role === Role.SUPERADMIN) {
-      throw new ForbiddenException('SUPERADMIN roli berilishi taqiqlanadi');
+
+    if (dto.status && id === actor.sub) {
+      throw new ForbiddenException("O'z hisobingiz holatini o'zgartira olmaysiz");
     }
+
     await this.ensurePhoneFree(dto.phone, id);
 
     const updated = await this.prisma.user.update({
@@ -180,28 +219,41 @@ export class UsersService {
         fullName: dto.fullName,
         phone: dto.phone,
         role: dto.role,
-        status: dto.status,
-        isActive: dto.isActive,
-        ...(dto.password ? { password: await Crypt.hash(dto.password) } : {}),
+        ...(dto.status
+          ? { status: dto.status, isActive: dto.status === Status.ACTIVE }
+          : {}),
       },
       select: userSelect,
     });
 
-    // Bloklangan foydalanuvchining barcha sessiyalari yopiladi
-    if (dto.isActive === false || dto.status === 'INACTIVE') {
+    // Bloklangan xodimning barcha qurilma sessiyalari darhol bekor qilinadi
+    if (dto.status === Status.INACTIVE) {
       await this.prisma.devices.deleteMany({ where: { userId: id } });
     }
 
     return successRes(updated);
   }
 
-  async remove(id: string, currentUserId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
-    if (user.role === Role.SUPERADMIN) {
-      throw new ForbiddenException("SUPERADMIN hisobini o'chirib bo'lmaydi");
-    }
-    if (id === currentUserId) {
+  /** Xodim parolini tiklash — barcha sessiyalari bekor qilinadi */
+  async resetPassword(actor: IPayload, id: string, password: string) {
+    await this.loadManageableUser(actor, id);
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { password: await Crypt.hash(password) },
+      select: userSelect,
+    });
+    await this.prisma.devices.deleteMany({ where: { userId: id } });
+
+    return successRes({
+      ...updated,
+      message: "Parol tiklandi, barcha sessiyalar bekor qilindi",
+    });
+  }
+
+  async remove(actor: IPayload, id: string) {
+    const user = await this.loadManageableUser(actor, id);
+    if (id === actor.sub) {
       throw new ForbiddenException("O'z hisobingizni o'chira olmaysiz");
     }
 
@@ -211,6 +263,43 @@ export class UsersService {
     }
 
     return successRes({ message: "Foydalanuvchi o'chirildi", id });
+  }
+
+  /**
+   * Aktyor boshqarishi mumkin bo'lgan foydalanuvchini yuklaydi.
+   * Ko'rinmasligi kerak bo'lgan hisob — 404, ko'rinsa-yu huquq yetmasa — 403.
+   */
+  private async loadManageableUser(
+    actor: IPayload,
+    id: string,
+    include: Prisma.UserSelect = {},
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { ...userSelect, ...include },
+    });
+    if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
+
+    if (actor.role === Role.SUPERADMIN) {
+      if (user.role === Role.SUPERADMIN) {
+        throw new ForbiddenException(
+          "SUPERADMIN hisobini bu endpoint orqali boshqarib bo'lmaydi",
+        );
+      }
+      return user;
+    }
+
+    // ADMIN: boshqa do'kon xodimi umuman ko'rinmaydi
+    if (!actor.storeId || user.storeId !== actor.storeId) {
+      throw new NotFoundException('Foydalanuvchi topilmadi');
+    }
+    // O'z do'konidagi ADMIN/SUPERADMIN hisobiga tegib bo'lmaydi
+    if (user.role !== Role.SELLER) {
+      throw new ForbiddenException(
+        'Faqat SELLER rolidagi xodimlarni boshqarish mumkin',
+      );
+    }
+    return user;
   }
 
   private async ensurePhoneFree(phone?: string, exceptUserId?: string) {

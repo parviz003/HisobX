@@ -26,19 +26,22 @@ export class CreateUserDto {
   @MinLength(6)
   password!: string;
 
-  @ApiProperty({ enum: [Role.ADMIN, Role.SELLER], example: Role.ADMIN })
+  /** ADMIN faqat SELLER yaratadi; ADMIN yaratish SUPERADMIN huquqida */
+  @ApiProperty({ enum: [Role.ADMIN, Role.SELLER], example: Role.SELLER })
   @IsEnum(Role)
   role!: Role;
 
   @ApiPropertyOptional({
-    description: "Mavjud do'kon IDsi (ADMIN/SELLER uchun majburiy)",
+    description:
+      "Faqat SUPERADMIN uchun. ADMIN uchun e'tiborsiz qoldiriladi (o'z do'koni)",
   })
   @IsOptional()
   @IsUUID()
   storeId?: string;
 
   @ApiPropertyOptional({
-    description: "storeId berilmasa, ADMIN uchun shu nomda yangi do'kon ochiladi",
+    description:
+      "SUPERADMIN ADMIN yaratganda storeId o'rniga yangi do'kon nomi berilishi mumkin",
   })
   @IsOptional()
   @IsString()
