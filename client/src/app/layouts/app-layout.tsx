@@ -1,13 +1,21 @@
 import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, MoreHorizontal } from 'lucide-react';
+import { Bell, MoreHorizontal, Sun, Moon, Laptop, Languages, CheckIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { BrandLogo } from '@/components/common/brand-logo';
 import { OfflineBanner } from '@/components/common/offline-banner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { notificationsApi, notificationKeys } from '@/features/notifications/api/notifications-api';
+import { useTheme } from '@/hooks/use-theme';
+import { useLanguage } from '@/hooks/use-language';
 import { api } from '@/lib/api/client';
 import { emitSessionEvent, setImpersonatedStoreId } from '@/lib/api/session';
 import { AppSidebar } from './app-sidebar';
@@ -24,6 +32,8 @@ export function AppLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { theme, resolvedTheme, setTheme } = useTheme();
+  const { language, languages, setLanguage } = useLanguage();
 
   const signOut = async () => {
     try {
@@ -86,18 +96,98 @@ export function AppLayout() {
           </div>
           <div className="flex-1" />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="min-h-touch relative"
-            aria-label={t('nav:notifications')}
-            onClick={() => void navigate('/notifications')}
-          >
-            <Bell className="size-5" aria-hidden />
-            {unreadCount > 0 && (
-              <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-destructive ring-2 ring-card" />
-            )}
-          </Button>
+          <div className="flex items-center gap-1 sm:gap-2">
+            {/* Tilni tanlash */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="min-h-touch h-9 px-2 gap-1.5 text-xs font-semibold"
+                  aria-label={t('common:language.label')}
+                >
+                  <Languages className="size-4 text-muted-foreground" aria-hidden />
+                  <span className="uppercase tracking-wide">{language}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-36 rounded-xl">
+                {languages.map((code) => (
+                  <DropdownMenuItem
+                    key={code}
+                    onClick={() => setLanguage(code)}
+                    className="flex items-center justify-between text-xs cursor-pointer font-medium"
+                  >
+                    <span>{t(`common:language.${code}`)}</span>
+                    {language === code && <CheckIcon className="size-3.5 text-primary" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Qorong'ulik / Yorug'lik rejimi */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="min-h-touch relative"
+                  aria-label={t('common:theme.label')}
+                >
+                  {resolvedTheme === 'dark' ? (
+                    <Moon className="size-5" aria-hidden />
+                  ) : (
+                    <Sun className="size-5" aria-hidden />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-36 rounded-xl">
+                <DropdownMenuItem
+                  onClick={() => setTheme('light')}
+                  className="flex items-center justify-between text-xs cursor-pointer font-medium"
+                >
+                  <div className="flex items-center gap-2">
+                    <Sun className="size-4" />
+                    <span>{t('common:theme.light')}</span>
+                  </div>
+                  {theme === 'light' && <CheckIcon className="size-3.5 text-primary" />}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setTheme('dark')}
+                  className="flex items-center justify-between text-xs cursor-pointer font-medium"
+                >
+                  <div className="flex items-center gap-2">
+                    <Moon className="size-4" />
+                    <span>{t('common:theme.dark')}</span>
+                  </div>
+                  {theme === 'dark' && <CheckIcon className="size-3.5 text-primary" />}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setTheme('system')}
+                  className="flex items-center justify-between text-xs cursor-pointer font-medium"
+                >
+                  <div className="flex items-center gap-2">
+                    <Laptop className="size-4" />
+                    <span>{t('common:theme.system')}</span>
+                  </div>
+                  {theme === 'system' && <CheckIcon className="size-3.5 text-primary" />}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Bildirishnomalar */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="min-h-touch relative"
+              aria-label={t('nav:notifications')}
+              onClick={() => void navigate('/notifications')}
+            >
+              <Bell className="size-5" aria-hidden />
+              {unreadCount > 0 && (
+                <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-destructive ring-2 ring-card" />
+              )}
+            </Button>
+          </div>
         </header>
 
         {/* pb-28: pastki tab bar kontentni to'sib qolmasligi uchun */}
