@@ -25,6 +25,12 @@ export const env = {
     ID: Number(process.env.CHAT_ID),
     /** Hisobni ulash tokeni qancha yashaydi (sekund) */
     LINK_TTL_SECONDS: Number(process.env.TELEGRAM_LINK_TTL_SECONDS ?? 600),
+    /*
+     * Development'da bot tokeni umuman sozlanmagan bo'lsa, ulash talabini
+     * chetlab o'tadi — aks holda localhost'da kirish butunlay to'silardi.
+     * `false` qilinsa, dev'da ham qat'iy oqim ishlaydi (e2e testlar shunday).
+     */
+    DEV_FALLBACK: process.env.TELEGRAM_DEV_FALLBACK !== 'false',
   },
   OTP: {
     // Amal qilish muddati (sekund)

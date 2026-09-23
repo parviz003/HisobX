@@ -42,4 +42,6 @@ process.env.BOT_TOKEN = '';
 process.env.TELEGRAM_BOT_TOKEN = '';
 process.env.TELEGRAM_BOT_USERNAME = 'hisobx_test_bot';
 process.env.TELEGRAM_MODE = 'off';
+// Testlar qat'iy oqimni sinaydi — dev zaxira yo'li o'chiriladi
+process.env.TELEGRAM_DEV_FALLBACK = 'false';
 process.env.CHAT_ID = '';

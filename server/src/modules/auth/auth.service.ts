@@ -18,6 +18,7 @@ import { ErrorCode } from '../../common/errors/error-codes';
 import { Phone } from '../../common/helper/phone';
 import { DeviceService } from './device.service';
 import { TelegramLinkService } from '../telegram/telegram-link.service';
+import { TelegramApi } from '../../infrastructure/lib/TelegramApi';
 
 @Injectable()
 export class AuthService {
@@ -53,8 +54,16 @@ export class AuthService {
     /*
      * Kodlar faqat Telegram orqali boradi. Hisob hali botga ulanmagan bo'lsa,
      * kod yuborilmaydi — foydalanuvchiga bir martalik ulash havolasi beriladi.
+     *
+     * ISTISNO: development'da bot tokeni umuman sozlanmagan bo'lsa, ulash
+     * oqimini talab qilish localhost'da kirishni butunlay to'sib qo'yardi
+     * (bot yo'q -> ulab bo'lmaydi -> kod kelmaydi). Bunday holatda kod
+     * odatdagidek beriladi va logga yoziladi. Production'da bu yo'l yopiq.
      */
-    if (!user.telegramChatId) {
+    const telegramRequired =
+      TelegramApi.isConfigured || !env.IS_DEV || !env.TELEGRAM.DEV_FALLBACK;
+
+    if (!user.telegramChatId && telegramRequired) {
       const invite = await this.telegramLinks.createInvite(user);
       return successRes(
         { telegramLinked: false, phone: user.phone, ...invite },

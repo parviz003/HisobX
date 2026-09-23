@@ -197,6 +197,23 @@ describe('B — Telegram ulash va OTP (e2e)', () => {
     expect(notLinked.telegramChatId).toBeNull();
   });
 
+  /* ------------------------- Dev zaxira yo'li (bot yo'q) --------------------- */
+
+  it("bot sozlanmaganda dev zaxira yo'li ulashni talab qilmaydi", async () => {
+    const { env } = await import('../../src/config');
+    const original = env.TELEGRAM.DEV_FALLBACK;
+    env.TELEGRAM.DEV_FALLBACK = true;
+
+    try {
+      const res = await signIn().expect(200);
+      // Bot yo'q — localhost'da kirish to'silmaydi, kod odatdagidek beriladi
+      expect(res.body.data.telegramLinked).toBe(true);
+      expect(res.body.data.code).toEqual(expect.any(String));
+    } finally {
+      env.TELEGRAM.DEV_FALLBACK = original;
+    }
+  });
+
   /* ---------------------------- Parolni tiklash oqimi ------------------------ */
 
   it('forgot-password javobi raqam mavjudligini oshkor qilmaydi', async () => {
