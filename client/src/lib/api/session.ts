@@ -54,6 +54,16 @@ try {
   impersonatedStoreId = null;
 }
 
+export type StoreListener = (storeId: number | null) => void;
+const storeListeners = new Set<StoreListener>();
+
+export function onImpersonatedStoreChange(listener: StoreListener): () => void {
+  storeListeners.add(listener);
+  return () => {
+    storeListeners.delete(listener);
+  };
+}
+
 export function getImpersonatedStoreId(): number | null {
   return impersonatedStoreId;
 }
@@ -66,4 +76,8 @@ export function setImpersonatedStoreId(storeId: number | null) {
   } catch {
     // sessionStorage yopiq bo'lsa, kontekst faqat shu sahifa umri davomida saqlanadi.
   }
+  for (const listener of storeListeners) {
+    listener(storeId);
+  }
 }
+

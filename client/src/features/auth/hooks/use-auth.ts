@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { isApiError } from '@/lib/api/errors';
-import { getImpersonatedStoreId } from '@/lib/api/session';
+import { getImpersonatedStoreId, onImpersonatedStoreChange } from '@/lib/api/session';
 import type { Role } from '@/lib/permissions';
 import { authApi } from '../api/auth-api';
 import { authKeys } from '../api/queryKeys';
@@ -10,6 +11,12 @@ import { authKeys } from '../api/queryKeys';
  * savolga yagona javob — `GET /users/me` ning natijasi.
  */
 export function useAuth() {
+  const [impersonatedStoreId, setImpersonated] = useState<number | null>(getImpersonatedStoreId);
+
+  useEffect(() => {
+    return onImpersonatedStoreChange((id) => setImpersonated(id));
+  }, []);
+
   const query = useQuery({
     queryKey: authKeys.me(),
     queryFn: ({ signal }) => authApi.me(signal),
@@ -23,7 +30,6 @@ export function useAuth() {
 
   const user = query.data ?? null;
   const role: Role | null = user?.role ?? null;
-  const impersonatedStoreId = getImpersonatedStoreId();
 
   return {
     user,

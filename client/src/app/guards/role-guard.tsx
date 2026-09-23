@@ -4,10 +4,15 @@ import type { Role } from '@/lib/permissions';
 
 /** Sahifani faqat ruxsat etilgan rollarga ochadi, aks holda 403. */
 export function RoleGuard({ roles }: { roles: readonly Role[] }) {
-  const { role, isLoading } = useAuth();
+  const { role, isLoading, impersonatedStoreId } = useAuth();
 
   if (isLoading) return null;
-  if (!role || !roles.includes(role)) return <Navigate to="/403" replace />;
+  // SUPERADMIN do'konni ko'rish rejimida bo'lsa, do'kon sahifalarini ochishga ruxsat beriladi
+  const isSuperadminViewing = role === 'SUPERADMIN' && Boolean(impersonatedStoreId);
+  if (!role || (!roles.includes(role) && !isSuperadminViewing)) {
+    return <Navigate to="/403" replace />;
+  }
 
   return <Outlet />;
 }
+

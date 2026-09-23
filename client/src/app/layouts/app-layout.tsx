@@ -19,7 +19,7 @@ import { MoreSheet } from './more-sheet';
  */
 export function AppLayout() {
   const { t } = useTranslation(['nav', 'common']);
-  const { role } = useAuth();
+  const { role, impersonatedStoreId } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -39,12 +39,36 @@ export function AppLayout() {
 
   if (!role) return null;
 
+  const effectiveRole = role === 'SUPERADMIN' && Boolean(impersonatedStoreId) ? 'MANAGER' : role;
+
   return (
     <div className="bg-background flex min-h-dvh">
-      <AppSidebar role={role} />
+      <AppSidebar role={effectiveRole} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <OfflineBanner />
+
+        {role === 'SUPERADMIN' && Boolean(impersonatedStoreId) && (
+          <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2.5 flex items-center justify-between text-xs text-amber-950 dark:text-amber-200">
+            <div className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
+              <span>
+                Siz hozir <strong>#{impersonatedStoreId}</strong>-sonli do&apos;konni ko&apos;rish rejimidasiz (Faqat ko&apos;rish)
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs bg-background text-foreground hover:bg-muted"
+              onClick={() => {
+                setImpersonatedStoreId(null);
+                void navigate('/stores');
+              }}
+            >
+              Do&apos;konlar ro&apos;yxatiga qaytish
+            </Button>
+          </div>
+        )}
 
         <header className="bg-card pt-safe sticky top-0 z-30 flex h-16 items-center gap-2 border-b px-4 md:h-16">
           <div className="md:hidden">
@@ -78,15 +102,16 @@ export function AppLayout() {
           <Outlet />
         </main>
 
-        <BottomTabBar role={role} onOpenMore={() => setMoreOpen(true)} />
+        <BottomTabBar role={effectiveRole} onOpenMore={() => setMoreOpen(true)} />
       </div>
 
       <MoreSheet
         open={moreOpen}
         onOpenChange={setMoreOpen}
-        role={role}
+        role={effectiveRole}
         onSignOut={() => void signOut()}
       />
     </div>
   );
 }
+
