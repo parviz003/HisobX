@@ -1,0 +1,105 @@
+{
+  "products": {
+    "title": "Mahsulotlar",
+    "subtitle": "Do'kondagi barcha mahsulotlar",
+    "add": "Yangi mahsulot",
+    "searchPlaceholder": "Nom bo'yicha qidirish",
+    "scan": "Barcode skanerlash",
+    "empty": "Hozircha mahsulot yo'q",
+    "emptyHint": "Birinchi mahsulotni qo'shing — keyin savdo qilish mumkin bo'ladi.",
+    "notFoundByBarcode": "Bu barcode bo'yicha mahsulot topilmadi",
+    "filters": {
+      "all": "Hammasi",
+      "active": "Faol",
+      "inactive": "Nofaol",
+      "lowStock": "Kam qolgan",
+      "category": "Kategoriya",
+      "clear": "Filtrlarni tozalash"
+    },
+    "badges": {
+      "low": "Kam qolgan",
+      "out": "Tugagan",
+      "inactive": "Nofaol"
+    },
+    "fields": {
+      "name": "Nomi",
+      "barcode": "Barcode",
+      "category": "Kategoriya",
+      "unit": "O'lchov birligi",
+      "sellingPrice": "Sotish narxi",
+      "minStock": "Minimal qoldiq",
+      "image": "Rasm",
+      "stock": "Qoldiq",
+      "lastPurchasePrice": "Oxirgi kirim narxi",
+      "markup": "Ustama",
+      "noCategory": "Kategoriyasiz"
+    },
+    "opening": {
+      "title": "Boshlang'ich qoldiq",
+      "hint": "Ixtiyoriy: mahsulot yaratilgach omborga boshlang'ich qoldiq kiritiladi.",
+      "quantity": "Miqdor",
+      "unitPrice": "Tannarx (dona uchun)",
+      "failed": "Mahsulot yaratildi, lekin boshlang'ich qoldiqni kiritib bo'lmadi"
+    },
+    "created": "Mahsulot qo'shildi",
+    "updated": "Mahsulot yangilandi",
+    "deleted": "Mahsulot o'chirildi",
+    "deleteTitle": "Mahsulot o'chirilsinmi?",
+    "deleteBody": "Bu amalni qaytarib bo'lmaydi. Mahsulot savdolar tarixida qoladi.",
+    "detailTitle": "Mahsulot",
+    "history": "Harakatlar tarixi",
+    "inactiveNotice": "Faol/nofaol holatini o'zgartirish backend'da hali qo'llab-quvvatlanmaydi."
+  },
+  "categories": {
+    "title": "Kategoriyalar",
+    "subtitle": "Mahsulotlarni guruhlash uchun",
+    "add": "Yangi kategoriya",
+    "name": "Nomi",
+    "empty": "Hozircha kategoriya yo'q",
+    "emptyHint": "Kategoriya qo'shsangiz, mahsulotlarni guruhlab qo'yish oson bo'ladi.",
+    "created": "Kategoriya qo'shildi",
+    "updated": "Kategoriya yangilandi",
+    "deleted": "Kategoriya o'chirildi",
+    "deleteTitle": "Kategoriya o'chirilsinmi?",
+    "deleteBody": "Bu kategoriyadagi mahsulotlar o'chmaydi, lekin kategoriyasiz qolib ketadi."
+  },
+  "inventory": {
+    "title": "Ombor",
+    "subtitle": "Qoldiqlar va harakatlar",
+    "tabs": {
+      "stock": "Qoldiqlar",
+      "history": "Harakatlar"
+    },
+    "purchase": "Kirim",
+    "writeOff": "Hisobdan chiqarish",
+    "addRow": "Yana qator qo'shish",
+    "removeRow": "Qatorni olib tashlash",
+    "product": "Mahsulot",
+    "selectProduct": "Mahsulotni tanlang",
+    "quantity": "Miqdor",
+    "unitPrice": "Kirim narxi",
+    "note": "Izoh",
+    "reason": "Sabab",
+    "total": "Jami summa",
+    "currentStock": "Joriy qoldiq: {{value}}",
+    "submitPurchase": "Kirimni saqlash",
+    "submitWriteOff": "Hisobdan chiqarish",
+    "purchaseDone": "{{count}} ta qator saqlandi",
+    "purchasePartial": "{{done}} ta saqlandi, {{failed}} tasida xato",
+    "writeOffDone": "Hisobdan chiqarildi",
+    "emptyStock": "Ombor bo'sh",
+    "emptyHistory": "Harakatlar yo'q",
+    "integerOnly": "Backend hozir faqat butun son qabul qiladi",
+    "types": {
+      "PURCHASE": "Kirim",
+      "SALE": "Savdo",
+      "WRITE_OFF": "Chiqim",
+      "OPENING": "Boshlang'ich",
+      "ADJUSTMENT": "Tuzatish"
+    },
+    "filters": {
+      "allTypes": "Barcha turlar",
+      "period": "Davr"
+    }
+  }
+}

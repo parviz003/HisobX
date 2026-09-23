@@ -16,6 +16,9 @@ const DashboardPage = lazy(() => import('@/features/dashboard/pages/dashboard-pa
 const PosPage = lazy(() => import('@/features/pos/pages/pos-page'));
 const SalesPage = lazy(() => import('@/features/sales/pages/sales-page'));
 const ProductsPage = lazy(() => import('@/features/products/pages/products-page'));
+const ProductDetailPage = lazy(
+  () => import('@/features/products/pages/product-detail-page'),
+);
 const CategoriesPage = lazy(() => import('@/features/categories/pages/categories-page'));
 const InventoryPage = lazy(() => import('@/features/inventory/pages/inventory-page'));
 const CustomersPage = lazy(() => import('@/features/customers/pages/customers-page'));
@@ -77,6 +80,7 @@ export const router = createBrowserRouter([
                   { path: '/pos', element: <PosPage /> },
                   { path: '/sales', element: <SalesPage /> },
                   { path: '/products', element: <ProductsPage /> },
+                  { path: '/products/:id', element: <ProductDetailPage /> },
                   { path: '/customers', element: <CustomersPage /> },
                   { path: '/debts', element: <DebtsPage /> },
                   { path: '/notifications', element: <NotificationsPage /> },
