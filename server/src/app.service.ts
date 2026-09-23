@@ -33,15 +33,24 @@ export class App {
     app.use(helmet());
 
     /*
-     * CORS faqat .env dagi aniq origin(lar)ga ochiladi (CORS_ORIGINS).
-     * Ro'yxat bo'sh bo'lsa, cross-origin so'rovlar rad etiladi.
+     * CORS: barcha IP-manzillar va domenlardan kirishga ruxsat berish.
+     * origin: true (so'rov yuborgan origin'ni dinamik aks ettiradi) va credentials: true
+     * har qanday IP-manzil (lokal tarmoq, mobil, domenlar) bilan to'liq xatosiz ishlashini ta'minlaydi.
+     * (Eslatma: credentials: true bo'lganda origin: '*' yozilsa, brauzerlar xavfsizlik sababli bloklaydi).
      */
     app.enableCors({
-      origin: env.CORS_ORIGINS.length ? env.CORS_ORIGINS : false,
+      origin: true,
       credentials: true,
       methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Accept', 'Authorization', 'x-store-id'],
-      exposedHeaders: ['Retry-After'],
+      allowedHeaders: [
+        'Content-Type',
+        'Accept',
+        'Authorization',
+        'x-store-id',
+        'X-Requested-With',
+        'Origin',
+      ],
+      exposedHeaders: ['Retry-After', 'Set-Cookie'],
     });
 
     // Pipe'lar, filtr, cookie-parser va prefiks — e2e testlar bilan bir manbadan
