@@ -190,6 +190,7 @@ export default function CashPage() {
       <CashTransactionDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        currentBalance={balanceData?.balance ?? 0}
       />
     </div>
   );

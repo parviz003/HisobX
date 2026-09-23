@@ -55,6 +55,26 @@ export class CashController {
     return this.cashService.create(storeId, userId, dto);
   }
 
+  @Roles(Role.MANAGER, Role.ADMIN)
+  @Post('transactions')
+  @ApiOperation({
+    summary: 'Kassaga pul kiritish / chiqarish (transactions)',
+  })
+  @ApiSuccess(CashTransactionResponseDto, {
+    status: 201,
+    description: 'Kassa harakati yozildi',
+  })
+  @ApiValidationError()
+  @ApiError(400, 'BAD_REQUEST', "Kassada yetarli mablag' yo'q")
+  @ApiAuthErrors()
+  createPlural(
+    @CurrentUser('storeId') storeId: number,
+    @UserId() userId: number,
+    @Body() dto: CreateCashTransactionDto,
+  ) {
+    return this.cashService.create(storeId, userId, dto);
+  }
+
   @Roles(Role.MANAGER, Role.ADMIN, Role.SELLER)
   @Get('transactions')
   @ApiOperation({
