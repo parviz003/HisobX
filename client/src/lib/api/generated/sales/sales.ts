@@ -16,9 +16,26 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -31,22 +48,42 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
-import type { CreateSaleDto } from "../model";
+import type {
+  CreateSaleDto,
+  SalesControllerCancel200,
+  SalesControllerCancel400,
+  SalesControllerCancel401,
+  SalesControllerCancel403,
+  SalesControllerCancel404,
+  SalesControllerCreate201,
+  SalesControllerCreate400,
+  SalesControllerCreate401,
+  SalesControllerCreate403,
+  SalesControllerFindAll200,
+  SalesControllerFindAll400,
+  SalesControllerFindAll401,
+  SalesControllerFindAll403,
+  SalesControllerFindAllParams,
+  SalesControllerFindOne200,
+  SalesControllerFindOne401,
+  SalesControllerFindOne403,
+  SalesControllerFindOne404
+} from '../model';
 
-import { apiMutator } from "../../client";
+import { apiMutator } from '../../client';
 
-const withQueryKey = <T extends object, K>(
-  query: T,
-  queryKey: K,
-): T & { queryKey: K } => {
+
+
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === "queryKey") continue;
+    if (key === 'queryKey') continue;
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
@@ -60,476 +97,316 @@ const withQueryKey = <T extends object, K>(
  * @summary Savdo yaratish (naqd yoki nasiya)
  */
 export const salesControllerCreate = (
-  createSaleDto: CreateSaleDto,
-  signal?: AbortSignal,
+    createSaleDto: CreateSaleDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/sales`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: createSaleDto,
-    signal,
-  });
-};
 
-export const getSalesControllerCreateQueryKey = (
-  createSaleDto?: CreateSaleDto,
+
+      return apiMutator<SalesControllerCreate201>(
+      {url: `/api/v1/sales`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createSaleDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getSalesControllerCreateQueryKey = (createSaleDto?: CreateSaleDto,) => {
+    return [
+    'POST', `/api/v1/sales`, createSaleDto
+    ] as const;
+    }
+
+
+export const getSalesControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof salesControllerCreate>>, TError = SalesControllerCreate400 | SalesControllerCreate401 | SalesControllerCreate403>(createSaleDto: CreateSaleDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerCreate>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/sales`, createSaleDto] as const;
-};
 
-export const getSalesControllerCreateQueryOptions = <
-  TData = Awaited<ReturnType<typeof salesControllerCreate>>,
-  TError = unknown,
->(
-  createSaleDto: CreateSaleDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof salesControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getSalesControllerCreateQueryKey(createSaleDto);
+  const queryKey =  queryOptions?.queryKey ?? getSalesControllerCreateQueryKey(createSaleDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof salesControllerCreate>>
-  > = ({ signal }) => salesControllerCreate(createSaleDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof salesControllerCreate>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type SalesControllerCreateQueryResult = NonNullable<
-  Awaited<ReturnType<typeof salesControllerCreate>>
->;
-export type SalesControllerCreateQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof salesControllerCreate>>> = ({ signal }) => salesControllerCreate(createSaleDto, signal);
 
-export function useSalesControllerCreate<
-  TData = Awaited<ReturnType<typeof salesControllerCreate>>,
-  TError = unknown,
->(
-  createSaleDto: CreateSaleDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof salesControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof salesControllerCreate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type SalesControllerCreateQueryResult = NonNullable<Awaited<ReturnType<typeof salesControllerCreate>>>
+export type SalesControllerCreateQueryError = SalesControllerCreate400 | SalesControllerCreate401 | SalesControllerCreate403
+
+
+export function useSalesControllerCreate<TData = Awaited<ReturnType<typeof salesControllerCreate>>, TError = SalesControllerCreate400 | SalesControllerCreate401 | SalesControllerCreate403>(
+ createSaleDto: CreateSaleDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerCreate>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof salesControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof salesControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useSalesControllerCreate<
-  TData = Awaited<ReturnType<typeof salesControllerCreate>>,
-  TError = unknown,
->(
-  createSaleDto: CreateSaleDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof salesControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSalesControllerCreate<TData = Awaited<ReturnType<typeof salesControllerCreate>>, TError = SalesControllerCreate400 | SalesControllerCreate401 | SalesControllerCreate403>(
+ createSaleDto: CreateSaleDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerCreate>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof salesControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof salesControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useSalesControllerCreate<
-  TData = Awaited<ReturnType<typeof salesControllerCreate>>,
-  TError = unknown,
->(
-  createSaleDto: CreateSaleDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof salesControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSalesControllerCreate<TData = Awaited<ReturnType<typeof salesControllerCreate>>, TError = SalesControllerCreate400 | SalesControllerCreate401 | SalesControllerCreate403>(
+ createSaleDto: CreateSaleDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Savdo yaratish (naqd yoki nasiya)
  */
 
-export function useSalesControllerCreate<
-  TData = Awaited<ReturnType<typeof salesControllerCreate>>,
-  TError = unknown,
->(
-  createSaleDto: CreateSaleDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof salesControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getSalesControllerCreateQueryOptions(
-    createSaleDto,
-    options,
-  );
+export function useSalesControllerCreate<TData = Awaited<ReturnType<typeof salesControllerCreate>>, TError = SalesControllerCreate400 | SalesControllerCreate401 | SalesControllerCreate403>(
+ createSaleDto: CreateSaleDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getSalesControllerCreateQueryOptions(createSaleDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * @summary Savdolar ro'yxati (filtrlar bilan)
- */
-export const salesControllerFindAll = (signal?: AbortSignal) => {
-  return apiMutator<void>({ url: `/api/v1/sales`, method: "GET", signal });
-};
 
-export const getSalesControllerFindAllMutationKey = () =>
-  ["salesControllerFindAll"] as const;
 
-export const getSalesControllerFindAllMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof salesControllerFindAll>>,
-    TError,
-    void,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof salesControllerFindAll>>,
-  TError,
-  void,
-  TContext
-> => {
-  const mutationKey = getSalesControllerFindAllMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof salesControllerFindAll>>,
-    void
-  > = () => {
-    return salesControllerFindAll();
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
-
-export type SalesControllerFindAllMutationResult = NonNullable<
-  Awaited<ReturnType<typeof salesControllerFindAll>>
->;
-
-export type SalesControllerFindAllMutationError = unknown;
 
 /**
  * @summary Savdolar ro'yxati (filtrlar bilan)
  */
-export const useSalesControllerFindAll = <TError = unknown, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof salesControllerFindAll>>,
-      TError,
-      void,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof salesControllerFindAll>>,
-  TError,
-  void,
-  TContext
-> => {
-  return useMutation(
-    getSalesControllerFindAllMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const salesControllerFindAll = (
+    params?: SalesControllerFindAllParams,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<SalesControllerFindAll200>(
+      {url: `/api/v1/sales`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+
+
+
+
+export const getSalesControllerFindAllMutationKey = () => ['salesControllerFindAll'] as const;
+
+export const getSalesControllerFindAllMutationOptions = <TError = SalesControllerFindAll400 | SalesControllerFindAll401 | SalesControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerFindAll>>, TError,SalesControllerFindAllMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof salesControllerFindAll>>, TError,SalesControllerFindAllMutationVariables, TContext> => {
+
+const mutationKey = getSalesControllerFindAllMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salesControllerFindAll>>, SalesControllerFindAllMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  salesControllerFindAll(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SalesControllerFindAllMutationResult = NonNullable<Awaited<ReturnType<typeof salesControllerFindAll>>>
+
+    export type SalesControllerFindAllMutationError = SalesControllerFindAll400 | SalesControllerFindAll401 | SalesControllerFindAll403
+    export type SalesControllerFindAllMutationVariables = {params?: SalesControllerFindAllParams}
+
+    /**
+ * @summary Savdolar ro'yxati (filtrlar bilan)
+ */
+export const useSalesControllerFindAll = <TError = SalesControllerFindAll400 | SalesControllerFindAll401 | SalesControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerFindAll>>, TError,SalesControllerFindAllMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof salesControllerFindAll>>,
+        TError,
+        SalesControllerFindAllMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSalesControllerFindAllMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Savdo tafsilotlari
  */
-export const salesControllerFindOne = (id: number, signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/sales/${id}`,
-    method: "GET",
-    signal,
-  });
-};
+export const salesControllerFindOne = (
+    id: number,
+ signal?: AbortSignal
+) => {
 
-export const getSalesControllerFindOneMutationKey = () =>
-  ["salesControllerFindOne"] as const;
 
-export const getSalesControllerFindOneMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof salesControllerFindOne>>,
-    TError,
-    SalesControllerFindOneMutationVariables,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof salesControllerFindOne>>,
-  TError,
-  SalesControllerFindOneMutationVariables,
-  TContext
-> => {
-  const mutationKey = getSalesControllerFindOneMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<SalesControllerFindOne200>(
+      {url: `/api/v1/sales/${id}`, method: 'GET', signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof salesControllerFindOne>>,
-    SalesControllerFindOneMutationVariables
-  > = (props) => {
-    const { id } = props ?? {};
 
-    return salesControllerFindOne(id);
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type SalesControllerFindOneMutationResult = NonNullable<
-  Awaited<ReturnType<typeof salesControllerFindOne>>
->;
+export const getSalesControllerFindOneMutationKey = () => ['salesControllerFindOne'] as const;
 
-export type SalesControllerFindOneMutationError = unknown;
-export type SalesControllerFindOneMutationVariables = { id: number };
+export const getSalesControllerFindOneMutationOptions = <TError = SalesControllerFindOne401 | SalesControllerFindOne403 | SalesControllerFindOne404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerFindOne>>, TError,SalesControllerFindOneMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof salesControllerFindOne>>, TError,SalesControllerFindOneMutationVariables, TContext> => {
 
-/**
+const mutationKey = getSalesControllerFindOneMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof salesControllerFindOne>>, SalesControllerFindOneMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  salesControllerFindOne(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SalesControllerFindOneMutationResult = NonNullable<Awaited<ReturnType<typeof salesControllerFindOne>>>
+
+    export type SalesControllerFindOneMutationError = SalesControllerFindOne401 | SalesControllerFindOne403 | SalesControllerFindOne404
+    export type SalesControllerFindOneMutationVariables = {id: number}
+
+    /**
  * @summary Savdo tafsilotlari
  */
-export const useSalesControllerFindOne = <TError = unknown, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof salesControllerFindOne>>,
-      TError,
-      SalesControllerFindOneMutationVariables,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof salesControllerFindOne>>,
-  TError,
-  SalesControllerFindOneMutationVariables,
-  TContext
-> => {
-  return useMutation(
-    getSalesControllerFindOneMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useSalesControllerFindOne = <TError = SalesControllerFindOne401 | SalesControllerFindOne403 | SalesControllerFindOne404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof salesControllerFindOne>>, TError,SalesControllerFindOneMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof salesControllerFindOne>>,
+        TError,
+        SalesControllerFindOneMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSalesControllerFindOneMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Savdoni bekor qilish (zaxira va kassa qaytariladi)
  */
-export const salesControllerCancel = (id: number, signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/sales/${id}/cancel`,
-    method: "PATCH",
-    signal,
-  });
-};
-
-export const getSalesControllerCancelQueryKey = (id: number) => {
-  return ["PATCH", `/api/v1/sales/${id}/cancel`] as const;
-};
-
-export const getSalesControllerCancelQueryOptions = <
-  TData = Awaited<ReturnType<typeof salesControllerCancel>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof salesControllerCancel>>,
-        TError,
-        TData
-      >
-    >;
-  },
+export const salesControllerCancel = (
+    id: number,
+ signal?: AbortSignal
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getSalesControllerCancelQueryKey(id);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof salesControllerCancel>>
-  > = ({ signal }) => salesControllerCancel(id, signal);
+      return apiMutator<SalesControllerCancel200>(
+      {url: `/api/v1/sales/${id}/cancel`, method: 'PATCH', signal
+    },
+      );
+    }
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof salesControllerCancel>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type SalesControllerCancelQueryResult = NonNullable<
-  Awaited<ReturnType<typeof salesControllerCancel>>
->;
-export type SalesControllerCancelQueryError = unknown;
 
-export function useSalesControllerCancel<
-  TData = Awaited<ReturnType<typeof salesControllerCancel>>,
-  TError = unknown,
->(
-  id: number,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof salesControllerCancel>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+export const getSalesControllerCancelQueryKey = (id: number,) => {
+    return [
+    'PATCH', `/api/v1/sales/${id}/cancel`
+    ] as const;
+    }
+
+
+export const getSalesControllerCancelQueryOptions = <TData = Awaited<ReturnType<typeof salesControllerCancel>>, TError = SalesControllerCancel400 | SalesControllerCancel401 | SalesControllerCancel403 | SalesControllerCancel404>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerCancel>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSalesControllerCancelQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof salesControllerCancel>>> = ({ signal }) => salesControllerCancel(id, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof salesControllerCancel>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type SalesControllerCancelQueryResult = NonNullable<Awaited<ReturnType<typeof salesControllerCancel>>>
+export type SalesControllerCancelQueryError = SalesControllerCancel400 | SalesControllerCancel401 | SalesControllerCancel403 | SalesControllerCancel404
+
+
+export function useSalesControllerCancel<TData = Awaited<ReturnType<typeof salesControllerCancel>>, TError = SalesControllerCancel400 | SalesControllerCancel401 | SalesControllerCancel403 | SalesControllerCancel404>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerCancel>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof salesControllerCancel>>,
           TError,
           Awaited<ReturnType<typeof salesControllerCancel>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useSalesControllerCancel<
-  TData = Awaited<ReturnType<typeof salesControllerCancel>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof salesControllerCancel>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSalesControllerCancel<TData = Awaited<ReturnType<typeof salesControllerCancel>>, TError = SalesControllerCancel400 | SalesControllerCancel401 | SalesControllerCancel403 | SalesControllerCancel404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerCancel>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof salesControllerCancel>>,
           TError,
           Awaited<ReturnType<typeof salesControllerCancel>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useSalesControllerCancel<
-  TData = Awaited<ReturnType<typeof salesControllerCancel>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof salesControllerCancel>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSalesControllerCancel<TData = Awaited<ReturnType<typeof salesControllerCancel>>, TError = SalesControllerCancel400 | SalesControllerCancel401 | SalesControllerCancel403 | SalesControllerCancel404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerCancel>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Savdoni bekor qilish (zaxira va kassa qaytariladi)
  */
 
-export function useSalesControllerCancel<
-  TData = Awaited<ReturnType<typeof salesControllerCancel>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof salesControllerCancel>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getSalesControllerCancelQueryOptions(id, options);
+export function useSalesControllerCancel<TData = Awaited<ReturnType<typeof salesControllerCancel>>, TError = SalesControllerCancel400 | SalesControllerCancel401 | SalesControllerCancel403 | SalesControllerCancel404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof salesControllerCancel>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getSalesControllerCancelQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+

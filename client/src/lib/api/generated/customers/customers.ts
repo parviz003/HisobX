@@ -16,9 +16,26 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -31,26 +48,48 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
 import type {
   CreateCustomerDto,
+  CustomersControllerCreate201,
+  CustomersControllerCreate400,
+  CustomersControllerCreate401,
+  CustomersControllerCreate403,
+  CustomersControllerFindAll200,
+  CustomersControllerFindAll400,
+  CustomersControllerFindAll401,
+  CustomersControllerFindAll403,
   CustomersControllerFindAllParams,
-  UpdateCustomerDto,
-} from "../model";
+  CustomersControllerFindOne200,
+  CustomersControllerFindOne401,
+  CustomersControllerFindOne403,
+  CustomersControllerFindOne404,
+  CustomersControllerRemove200,
+  CustomersControllerRemove400,
+  CustomersControllerRemove401,
+  CustomersControllerRemove403,
+  CustomersControllerRemove404,
+  CustomersControllerUpdate200,
+  CustomersControllerUpdate400,
+  CustomersControllerUpdate401,
+  CustomersControllerUpdate403,
+  CustomersControllerUpdate404,
+  UpdateCustomerDto
+} from '../model';
 
-import { apiMutator } from "../../client";
+import { apiMutator } from '../../client';
 
-const withQueryKey = <T extends object, K>(
-  query: T,
-  queryKey: K,
-): T & { queryKey: K } => {
+
+
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === "queryKey") continue;
+    if (key === 'queryKey') continue;
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
@@ -64,676 +103,418 @@ const withQueryKey = <T extends object, K>(
  * @summary Yangi mijoz qo'shish
  */
 export const customersControllerCreate = (
-  createCustomerDto: CreateCustomerDto,
-  signal?: AbortSignal,
+    createCustomerDto: CreateCustomerDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/customers`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: createCustomerDto,
-    signal,
-  });
-};
 
-export const getCustomersControllerCreateQueryKey = (
-  createCustomerDto?: CreateCustomerDto,
+
+      return apiMutator<CustomersControllerCreate201>(
+      {url: `/api/v1/customers`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createCustomerDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getCustomersControllerCreateQueryKey = (createCustomerDto?: CreateCustomerDto,) => {
+    return [
+    'POST', `/api/v1/customers`, createCustomerDto
+    ] as const;
+    }
+
+
+export const getCustomersControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof customersControllerCreate>>, TError = CustomersControllerCreate400 | CustomersControllerCreate401 | CustomersControllerCreate403>(createCustomerDto: CreateCustomerDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerCreate>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/customers`, createCustomerDto] as const;
-};
 
-export const getCustomersControllerCreateQueryOptions = <
-  TData = Awaited<ReturnType<typeof customersControllerCreate>>,
-  TError = unknown,
->(
-  createCustomerDto: CreateCustomerDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getCustomersControllerCreateQueryKey(createCustomerDto);
+  const queryKey =  queryOptions?.queryKey ?? getCustomersControllerCreateQueryKey(createCustomerDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof customersControllerCreate>>
-  > = ({ signal }) => customersControllerCreate(createCustomerDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof customersControllerCreate>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type CustomersControllerCreateQueryResult = NonNullable<
-  Awaited<ReturnType<typeof customersControllerCreate>>
->;
-export type CustomersControllerCreateQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof customersControllerCreate>>> = ({ signal }) => customersControllerCreate(createCustomerDto, signal);
 
-export function useCustomersControllerCreate<
-  TData = Awaited<ReturnType<typeof customersControllerCreate>>,
-  TError = unknown,
->(
-  createCustomerDto: CreateCustomerDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof customersControllerCreate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CustomersControllerCreateQueryResult = NonNullable<Awaited<ReturnType<typeof customersControllerCreate>>>
+export type CustomersControllerCreateQueryError = CustomersControllerCreate400 | CustomersControllerCreate401 | CustomersControllerCreate403
+
+
+export function useCustomersControllerCreate<TData = Awaited<ReturnType<typeof customersControllerCreate>>, TError = CustomersControllerCreate400 | CustomersControllerCreate401 | CustomersControllerCreate403>(
+ createCustomerDto: CreateCustomerDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerCreate>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof customersControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof customersControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCustomersControllerCreate<
-  TData = Awaited<ReturnType<typeof customersControllerCreate>>,
-  TError = unknown,
->(
-  createCustomerDto: CreateCustomerDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCustomersControllerCreate<TData = Awaited<ReturnType<typeof customersControllerCreate>>, TError = CustomersControllerCreate400 | CustomersControllerCreate401 | CustomersControllerCreate403>(
+ createCustomerDto: CreateCustomerDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerCreate>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof customersControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof customersControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCustomersControllerCreate<
-  TData = Awaited<ReturnType<typeof customersControllerCreate>>,
-  TError = unknown,
->(
-  createCustomerDto: CreateCustomerDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCustomersControllerCreate<TData = Awaited<ReturnType<typeof customersControllerCreate>>, TError = CustomersControllerCreate400 | CustomersControllerCreate401 | CustomersControllerCreate403>(
+ createCustomerDto: CreateCustomerDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Yangi mijoz qo'shish
  */
 
-export function useCustomersControllerCreate<
-  TData = Awaited<ReturnType<typeof customersControllerCreate>>,
-  TError = unknown,
->(
-  createCustomerDto: CreateCustomerDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getCustomersControllerCreateQueryOptions(
-    createCustomerDto,
-    options,
-  );
+export function useCustomersControllerCreate<TData = Awaited<ReturnType<typeof customersControllerCreate>>, TError = CustomersControllerCreate400 | CustomersControllerCreate401 | CustomersControllerCreate403>(
+ createCustomerDto: CreateCustomerDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getCustomersControllerCreateQueryOptions(createCustomerDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
 /**
- * @summary Mijozlar ro'yxati (qidiruv bilan)
+ * @summary Mijozlar ro'yxati (qidiruv va sahifalash bilan)
  */
 export const customersControllerFindAll = (
-  params: CustomersControllerFindAllParams,
-  signal?: AbortSignal,
+    params?: CustomersControllerFindAllParams,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/customers`,
-    method: "GET",
-    params,
-    signal,
-  });
-};
 
-export const getCustomersControllerFindAllMutationKey = () =>
-  ["customersControllerFindAll"] as const;
 
-export const getCustomersControllerFindAllMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof customersControllerFindAll>>,
-    TError,
-    CustomersControllerFindAllMutationVariables,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof customersControllerFindAll>>,
-  TError,
-  CustomersControllerFindAllMutationVariables,
-  TContext
-> => {
-  const mutationKey = getCustomersControllerFindAllMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<CustomersControllerFindAll200>(
+      {url: `/api/v1/customers`, method: 'GET',
+        params, signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof customersControllerFindAll>>,
-    CustomersControllerFindAllMutationVariables
-  > = (props) => {
-    const { params } = props ?? {};
 
-    return customersControllerFindAll(params);
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type CustomersControllerFindAllMutationResult = NonNullable<
-  Awaited<ReturnType<typeof customersControllerFindAll>>
->;
+export const getCustomersControllerFindAllMutationKey = () => ['customersControllerFindAll'] as const;
 
-export type CustomersControllerFindAllMutationError = unknown;
-export type CustomersControllerFindAllMutationVariables = {
-  params: CustomersControllerFindAllParams;
-};
+export const getCustomersControllerFindAllMutationOptions = <TError = CustomersControllerFindAll400 | CustomersControllerFindAll401 | CustomersControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customersControllerFindAll>>, TError,CustomersControllerFindAllMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof customersControllerFindAll>>, TError,CustomersControllerFindAllMutationVariables, TContext> => {
 
-/**
- * @summary Mijozlar ro'yxati (qidiruv bilan)
+const mutationKey = getCustomersControllerFindAllMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof customersControllerFindAll>>, CustomersControllerFindAllMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  customersControllerFindAll(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CustomersControllerFindAllMutationResult = NonNullable<Awaited<ReturnType<typeof customersControllerFindAll>>>
+
+    export type CustomersControllerFindAllMutationError = CustomersControllerFindAll400 | CustomersControllerFindAll401 | CustomersControllerFindAll403
+    export type CustomersControllerFindAllMutationVariables = {params?: CustomersControllerFindAllParams}
+
+    /**
+ * @summary Mijozlar ro'yxati (qidiruv va sahifalash bilan)
  */
-export const useCustomersControllerFindAll = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof customersControllerFindAll>>,
-      TError,
-      CustomersControllerFindAllMutationVariables,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof customersControllerFindAll>>,
-  TError,
-  CustomersControllerFindAllMutationVariables,
-  TContext
-> => {
-  return useMutation(
-    getCustomersControllerFindAllMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useCustomersControllerFindAll = <TError = CustomersControllerFindAll400 | CustomersControllerFindAll401 | CustomersControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customersControllerFindAll>>, TError,CustomersControllerFindAllMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof customersControllerFindAll>>,
+        TError,
+        CustomersControllerFindAllMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCustomersControllerFindAllMutationOptions(options), queryClient);
+    }
+    /**
+ * To'lanmagan qarzlar va ularning jami summasi bilan
  * @summary Mijoz tafsilotlari
  */
 export const customersControllerFindOne = (
-  id: number,
-  signal?: AbortSignal,
+    id: number,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/customers/${id}`,
-    method: "GET",
-    signal,
-  });
-};
 
-export const getCustomersControllerFindOneMutationKey = () =>
-  ["customersControllerFindOne"] as const;
 
-export const getCustomersControllerFindOneMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof customersControllerFindOne>>,
-    TError,
-    CustomersControllerFindOneMutationVariables,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof customersControllerFindOne>>,
-  TError,
-  CustomersControllerFindOneMutationVariables,
-  TContext
-> => {
-  const mutationKey = getCustomersControllerFindOneMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<CustomersControllerFindOne200>(
+      {url: `/api/v1/customers/${id}`, method: 'GET', signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof customersControllerFindOne>>,
-    CustomersControllerFindOneMutationVariables
-  > = (props) => {
-    const { id } = props ?? {};
 
-    return customersControllerFindOne(id);
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type CustomersControllerFindOneMutationResult = NonNullable<
-  Awaited<ReturnType<typeof customersControllerFindOne>>
->;
+export const getCustomersControllerFindOneMutationKey = () => ['customersControllerFindOne'] as const;
 
-export type CustomersControllerFindOneMutationError = unknown;
-export type CustomersControllerFindOneMutationVariables = { id: number };
+export const getCustomersControllerFindOneMutationOptions = <TError = CustomersControllerFindOne401 | CustomersControllerFindOne403 | CustomersControllerFindOne404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customersControllerFindOne>>, TError,CustomersControllerFindOneMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof customersControllerFindOne>>, TError,CustomersControllerFindOneMutationVariables, TContext> => {
 
-/**
+const mutationKey = getCustomersControllerFindOneMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof customersControllerFindOne>>, CustomersControllerFindOneMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  customersControllerFindOne(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CustomersControllerFindOneMutationResult = NonNullable<Awaited<ReturnType<typeof customersControllerFindOne>>>
+
+    export type CustomersControllerFindOneMutationError = CustomersControllerFindOne401 | CustomersControllerFindOne403 | CustomersControllerFindOne404
+    export type CustomersControllerFindOneMutationVariables = {id: number}
+
+    /**
  * @summary Mijoz tafsilotlari
  */
-export const useCustomersControllerFindOne = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof customersControllerFindOne>>,
-      TError,
-      CustomersControllerFindOneMutationVariables,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof customersControllerFindOne>>,
-  TError,
-  CustomersControllerFindOneMutationVariables,
-  TContext
-> => {
-  return useMutation(
-    getCustomersControllerFindOneMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useCustomersControllerFindOne = <TError = CustomersControllerFindOne401 | CustomersControllerFindOne403 | CustomersControllerFindOne404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof customersControllerFindOne>>, TError,CustomersControllerFindOneMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof customersControllerFindOne>>,
+        TError,
+        CustomersControllerFindOneMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCustomersControllerFindOneMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Mijozni tahrirlash
  */
 export const customersControllerUpdate = (
-  id: number,
-  updateCustomerDto: UpdateCustomerDto,
-  signal?: AbortSignal,
+    id: number,
+    updateCustomerDto: UpdateCustomerDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/customers/${id}`,
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    data: updateCustomerDto,
-    signal,
-  });
-};
 
-export const getCustomersControllerUpdateQueryKey = (
-  id: number,
-  updateCustomerDto?: UpdateCustomerDto,
+
+      return apiMutator<CustomersControllerUpdate200>(
+      {url: `/api/v1/customers/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateCustomerDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getCustomersControllerUpdateQueryKey = (id: number,
+    updateCustomerDto?: UpdateCustomerDto,) => {
+    return [
+    'PATCH', `/api/v1/customers/${id}`, updateCustomerDto
+    ] as const;
+    }
+
+
+export const getCustomersControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof customersControllerUpdate>>, TError = CustomersControllerUpdate400 | CustomersControllerUpdate401 | CustomersControllerUpdate403 | CustomersControllerUpdate404>(id: number,
+    updateCustomerDto: UpdateCustomerDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerUpdate>>, TError, TData>>, }
 ) => {
-  return ["PATCH", `/api/v1/customers/${id}`, updateCustomerDto] as const;
-};
 
-export const getCustomersControllerUpdateQueryOptions = <
-  TData = Awaited<ReturnType<typeof customersControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateCustomerDto: UpdateCustomerDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerUpdate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getCustomersControllerUpdateQueryKey(id, updateCustomerDto);
+  const queryKey =  queryOptions?.queryKey ?? getCustomersControllerUpdateQueryKey(id,updateCustomerDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof customersControllerUpdate>>
-  > = ({ signal }) => customersControllerUpdate(id, updateCustomerDto, signal);
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof customersControllerUpdate>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type CustomersControllerUpdateQueryResult = NonNullable<
-  Awaited<ReturnType<typeof customersControllerUpdate>>
->;
-export type CustomersControllerUpdateQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof customersControllerUpdate>>> = ({ signal }) => customersControllerUpdate(id,updateCustomerDto, signal);
 
-export function useCustomersControllerUpdate<
-  TData = Awaited<ReturnType<typeof customersControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateCustomerDto: UpdateCustomerDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerUpdate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof customersControllerUpdate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CustomersControllerUpdateQueryResult = NonNullable<Awaited<ReturnType<typeof customersControllerUpdate>>>
+export type CustomersControllerUpdateQueryError = CustomersControllerUpdate400 | CustomersControllerUpdate401 | CustomersControllerUpdate403 | CustomersControllerUpdate404
+
+
+export function useCustomersControllerUpdate<TData = Awaited<ReturnType<typeof customersControllerUpdate>>, TError = CustomersControllerUpdate400 | CustomersControllerUpdate401 | CustomersControllerUpdate403 | CustomersControllerUpdate404>(
+ id: number,
+    updateCustomerDto: UpdateCustomerDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerUpdate>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof customersControllerUpdate>>,
           TError,
           Awaited<ReturnType<typeof customersControllerUpdate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCustomersControllerUpdate<
-  TData = Awaited<ReturnType<typeof customersControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateCustomerDto: UpdateCustomerDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerUpdate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCustomersControllerUpdate<TData = Awaited<ReturnType<typeof customersControllerUpdate>>, TError = CustomersControllerUpdate400 | CustomersControllerUpdate401 | CustomersControllerUpdate403 | CustomersControllerUpdate404>(
+ id: number,
+    updateCustomerDto: UpdateCustomerDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerUpdate>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof customersControllerUpdate>>,
           TError,
           Awaited<ReturnType<typeof customersControllerUpdate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCustomersControllerUpdate<
-  TData = Awaited<ReturnType<typeof customersControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateCustomerDto: UpdateCustomerDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerUpdate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCustomersControllerUpdate<TData = Awaited<ReturnType<typeof customersControllerUpdate>>, TError = CustomersControllerUpdate400 | CustomersControllerUpdate401 | CustomersControllerUpdate403 | CustomersControllerUpdate404>(
+ id: number,
+    updateCustomerDto: UpdateCustomerDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerUpdate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Mijozni tahrirlash
  */
 
-export function useCustomersControllerUpdate<
-  TData = Awaited<ReturnType<typeof customersControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateCustomerDto: UpdateCustomerDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerUpdate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getCustomersControllerUpdateQueryOptions(
-    id,
-    updateCustomerDto,
-    options,
-  );
+export function useCustomersControllerUpdate<TData = Awaited<ReturnType<typeof customersControllerUpdate>>, TError = CustomersControllerUpdate400 | CustomersControllerUpdate401 | CustomersControllerUpdate403 | CustomersControllerUpdate404>(
+ id: number,
+    updateCustomerDto: UpdateCustomerDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerUpdate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getCustomersControllerUpdateQueryOptions(id,updateCustomerDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
 /**
  * @summary Mijozni o'chirish (qarzi/savdosi bo'lmasa)
  */
-export const customersControllerRemove = (id: number, signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/customers/${id}`,
-    method: "DELETE",
-    signal,
-  });
-};
-
-export const getCustomersControllerRemoveQueryKey = (id: number) => {
-  return ["DELETE", `/api/v1/customers/${id}`] as const;
-};
-
-export const getCustomersControllerRemoveQueryOptions = <
-  TData = Awaited<ReturnType<typeof customersControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
+export const customersControllerRemove = (
+    id: number,
+ signal?: AbortSignal
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getCustomersControllerRemoveQueryKey(id);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof customersControllerRemove>>
-  > = ({ signal }) => customersControllerRemove(id, signal);
+      return apiMutator<CustomersControllerRemove200>(
+      {url: `/api/v1/customers/${id}`, method: 'DELETE', signal
+    },
+      );
+    }
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof customersControllerRemove>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type CustomersControllerRemoveQueryResult = NonNullable<
-  Awaited<ReturnType<typeof customersControllerRemove>>
->;
-export type CustomersControllerRemoveQueryError = unknown;
 
-export function useCustomersControllerRemove<
-  TData = Awaited<ReturnType<typeof customersControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerRemove>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+export const getCustomersControllerRemoveQueryKey = (id: number,) => {
+    return [
+    'DELETE', `/api/v1/customers/${id}`
+    ] as const;
+    }
+
+
+export const getCustomersControllerRemoveQueryOptions = <TData = Awaited<ReturnType<typeof customersControllerRemove>>, TError = CustomersControllerRemove400 | CustomersControllerRemove401 | CustomersControllerRemove403 | CustomersControllerRemove404>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerRemove>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCustomersControllerRemoveQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof customersControllerRemove>>> = ({ signal }) => customersControllerRemove(id, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof customersControllerRemove>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CustomersControllerRemoveQueryResult = NonNullable<Awaited<ReturnType<typeof customersControllerRemove>>>
+export type CustomersControllerRemoveQueryError = CustomersControllerRemove400 | CustomersControllerRemove401 | CustomersControllerRemove403 | CustomersControllerRemove404
+
+
+export function useCustomersControllerRemove<TData = Awaited<ReturnType<typeof customersControllerRemove>>, TError = CustomersControllerRemove400 | CustomersControllerRemove401 | CustomersControllerRemove403 | CustomersControllerRemove404>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerRemove>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof customersControllerRemove>>,
           TError,
           Awaited<ReturnType<typeof customersControllerRemove>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCustomersControllerRemove<
-  TData = Awaited<ReturnType<typeof customersControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerRemove>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCustomersControllerRemove<TData = Awaited<ReturnType<typeof customersControllerRemove>>, TError = CustomersControllerRemove400 | CustomersControllerRemove401 | CustomersControllerRemove403 | CustomersControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerRemove>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof customersControllerRemove>>,
           TError,
           Awaited<ReturnType<typeof customersControllerRemove>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCustomersControllerRemove<
-  TData = Awaited<ReturnType<typeof customersControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCustomersControllerRemove<TData = Awaited<ReturnType<typeof customersControllerRemove>>, TError = CustomersControllerRemove400 | CustomersControllerRemove401 | CustomersControllerRemove403 | CustomersControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerRemove>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Mijozni o'chirish (qarzi/savdosi bo'lmasa)
  */
 
-export function useCustomersControllerRemove<
-  TData = Awaited<ReturnType<typeof customersControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof customersControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getCustomersControllerRemoveQueryOptions(id, options);
+export function useCustomersControllerRemove<TData = Awaited<ReturnType<typeof customersControllerRemove>>, TError = CustomersControllerRemove400 | CustomersControllerRemove401 | CustomersControllerRemove403 | CustomersControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof customersControllerRemove>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getCustomersControllerRemoveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+

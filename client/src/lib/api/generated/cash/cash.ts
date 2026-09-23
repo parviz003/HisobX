@@ -16,9 +16,26 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -31,25 +48,36 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
 import type {
+  CashControllerCreate201,
+  CashControllerCreate400,
+  CashControllerCreate401,
+  CashControllerCreate403,
+  CashControllerFindAll200,
+  CashControllerFindAll400,
+  CashControllerFindAll401,
+  CashControllerFindAll403,
   CashControllerFindAllParams,
-  CreateCashTransactionDto,
-} from "../model";
+  CashControllerGetBalance200,
+  CashControllerGetBalance401,
+  CashControllerGetBalance403,
+  CreateCashTransactionDto
+} from '../model';
 
-import { apiMutator } from "../../client";
+import { apiMutator } from '../../client';
 
-const withQueryKey = <T extends object, K>(
-  query: T,
-  queryKey: K,
-): T & { queryKey: K } => {
+
+
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === "queryKey") continue;
+    if (key === 'queryKey') continue;
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
@@ -62,338 +90,225 @@ const withQueryKey = <T extends object, K>(
 /**
  * @summary Joriy kassa balansini ko'rish
  */
-export const cashControllerGetBalance = (signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/cash/balance`,
-    method: "GET",
-    signal,
-  });
-};
+export const cashControllerGetBalance = (
 
-export const getCashControllerGetBalanceMutationKey = () =>
-  ["cashControllerGetBalance"] as const;
+ signal?: AbortSignal
+) => {
 
-export const getCashControllerGetBalanceMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof cashControllerGetBalance>>,
-    TError,
-    void,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof cashControllerGetBalance>>,
-  TError,
-  void,
-  TContext
-> => {
-  const mutationKey = getCashControllerGetBalanceMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof cashControllerGetBalance>>,
-    void
-  > = () => {
-    return cashControllerGetBalance();
-  };
+      return apiMutator<CashControllerGetBalance200>(
+      {url: `/api/v1/cash/balance`, method: 'GET', signal
+    },
+      );
+    }
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type CashControllerGetBalanceMutationResult = NonNullable<
-  Awaited<ReturnType<typeof cashControllerGetBalance>>
->;
 
-export type CashControllerGetBalanceMutationError = unknown;
 
-/**
+export const getCashControllerGetBalanceMutationKey = () => ['cashControllerGetBalance'] as const;
+
+export const getCashControllerGetBalanceMutationOptions = <TError = CashControllerGetBalance401 | CashControllerGetBalance403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cashControllerGetBalance>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof cashControllerGetBalance>>, TError,void, TContext> => {
+
+const mutationKey = getCashControllerGetBalanceMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cashControllerGetBalance>>, void> = () => {
+
+
+          return  cashControllerGetBalance()
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CashControllerGetBalanceMutationResult = NonNullable<Awaited<ReturnType<typeof cashControllerGetBalance>>>
+
+    export type CashControllerGetBalanceMutationError = CashControllerGetBalance401 | CashControllerGetBalance403
+
+
+    /**
  * @summary Joriy kassa balansini ko'rish
  */
-export const useCashControllerGetBalance = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof cashControllerGetBalance>>,
-      TError,
-      void,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof cashControllerGetBalance>>,
-  TError,
-  void,
-  TContext
-> => {
-  return useMutation(
-    getCashControllerGetBalanceMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useCashControllerGetBalance = <TError = CashControllerGetBalance401 | CashControllerGetBalance403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cashControllerGetBalance>>, TError,void, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof cashControllerGetBalance>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCashControllerGetBalanceMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Kassaga pul kiritish / chiqarish (Opening, Adjustment, Expense)
  */
 export const cashControllerCreate = (
-  createCashTransactionDto: CreateCashTransactionDto,
-  signal?: AbortSignal,
+    createCashTransactionDto: CreateCashTransactionDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/cash/transaction`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: createCashTransactionDto,
-    signal,
-  });
-};
 
-export const getCashControllerCreateQueryKey = (
-  createCashTransactionDto?: CreateCashTransactionDto,
+
+      return apiMutator<CashControllerCreate201>(
+      {url: `/api/v1/cash/transaction`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createCashTransactionDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getCashControllerCreateQueryKey = (createCashTransactionDto?: CreateCashTransactionDto,) => {
+    return [
+    'POST', `/api/v1/cash/transaction`, createCashTransactionDto
+    ] as const;
+    }
+
+
+export const getCashControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof cashControllerCreate>>, TError = CashControllerCreate400 | CashControllerCreate401 | CashControllerCreate403>(createCashTransactionDto: CreateCashTransactionDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cashControllerCreate>>, TError, TData>>, }
 ) => {
-  return [
-    "POST",
-    `/api/v1/cash/transaction`,
-    createCashTransactionDto,
-  ] as const;
-};
 
-export const getCashControllerCreateQueryOptions = <
-  TData = Awaited<ReturnType<typeof cashControllerCreate>>,
-  TError = unknown,
->(
-  createCashTransactionDto: CreateCashTransactionDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof cashControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getCashControllerCreateQueryKey(createCashTransactionDto);
+  const queryKey =  queryOptions?.queryKey ?? getCashControllerCreateQueryKey(createCashTransactionDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof cashControllerCreate>>
-  > = ({ signal }) => cashControllerCreate(createCashTransactionDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof cashControllerCreate>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type CashControllerCreateQueryResult = NonNullable<
-  Awaited<ReturnType<typeof cashControllerCreate>>
->;
-export type CashControllerCreateQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof cashControllerCreate>>> = ({ signal }) => cashControllerCreate(createCashTransactionDto, signal);
 
-export function useCashControllerCreate<
-  TData = Awaited<ReturnType<typeof cashControllerCreate>>,
-  TError = unknown,
->(
-  createCashTransactionDto: CreateCashTransactionDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof cashControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof cashControllerCreate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CashControllerCreateQueryResult = NonNullable<Awaited<ReturnType<typeof cashControllerCreate>>>
+export type CashControllerCreateQueryError = CashControllerCreate400 | CashControllerCreate401 | CashControllerCreate403
+
+
+export function useCashControllerCreate<TData = Awaited<ReturnType<typeof cashControllerCreate>>, TError = CashControllerCreate400 | CashControllerCreate401 | CashControllerCreate403>(
+ createCashTransactionDto: CreateCashTransactionDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof cashControllerCreate>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof cashControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof cashControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCashControllerCreate<
-  TData = Awaited<ReturnType<typeof cashControllerCreate>>,
-  TError = unknown,
->(
-  createCashTransactionDto: CreateCashTransactionDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof cashControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCashControllerCreate<TData = Awaited<ReturnType<typeof cashControllerCreate>>, TError = CashControllerCreate400 | CashControllerCreate401 | CashControllerCreate403>(
+ createCashTransactionDto: CreateCashTransactionDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cashControllerCreate>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof cashControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof cashControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCashControllerCreate<
-  TData = Awaited<ReturnType<typeof cashControllerCreate>>,
-  TError = unknown,
->(
-  createCashTransactionDto: CreateCashTransactionDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof cashControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCashControllerCreate<TData = Awaited<ReturnType<typeof cashControllerCreate>>, TError = CashControllerCreate400 | CashControllerCreate401 | CashControllerCreate403>(
+ createCashTransactionDto: CreateCashTransactionDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cashControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Kassaga pul kiritish / chiqarish (Opening, Adjustment, Expense)
  */
 
-export function useCashControllerCreate<
-  TData = Awaited<ReturnType<typeof cashControllerCreate>>,
-  TError = unknown,
->(
-  createCashTransactionDto: CreateCashTransactionDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof cashControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getCashControllerCreateQueryOptions(
-    createCashTransactionDto,
-    options,
-  );
+export function useCashControllerCreate<TData = Awaited<ReturnType<typeof cashControllerCreate>>, TError = CashControllerCreate400 | CashControllerCreate401 | CashControllerCreate403>(
+ createCashTransactionDto: CreateCashTransactionDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof cashControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getCashControllerCreateQueryOptions(createCashTransactionDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * @summary Kassa operatsiyalari tarixini sahifalash va filtrlash
  */
 export const cashControllerFindAll = (
-  params?: CashControllerFindAllParams,
-  signal?: AbortSignal,
+    params?: CashControllerFindAllParams,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/cash/transactions`,
-    method: "GET",
-    params,
-    signal,
-  });
-};
 
-export const getCashControllerFindAllMutationKey = () =>
-  ["cashControllerFindAll"] as const;
 
-export const getCashControllerFindAllMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof cashControllerFindAll>>,
-    TError,
-    CashControllerFindAllMutationVariables,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof cashControllerFindAll>>,
-  TError,
-  CashControllerFindAllMutationVariables,
-  TContext
-> => {
-  const mutationKey = getCashControllerFindAllMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<CashControllerFindAll200>(
+      {url: `/api/v1/cash/transactions`, method: 'GET',
+        params, signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof cashControllerFindAll>>,
-    CashControllerFindAllMutationVariables
-  > = (props) => {
-    const { params } = props ?? {};
 
-    return cashControllerFindAll(params);
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type CashControllerFindAllMutationResult = NonNullable<
-  Awaited<ReturnType<typeof cashControllerFindAll>>
->;
+export const getCashControllerFindAllMutationKey = () => ['cashControllerFindAll'] as const;
 
-export type CashControllerFindAllMutationError = unknown;
-export type CashControllerFindAllMutationVariables = {
-  params?: CashControllerFindAllParams;
-};
+export const getCashControllerFindAllMutationOptions = <TError = CashControllerFindAll400 | CashControllerFindAll401 | CashControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cashControllerFindAll>>, TError,CashControllerFindAllMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof cashControllerFindAll>>, TError,CashControllerFindAllMutationVariables, TContext> => {
 
-/**
+const mutationKey = getCashControllerFindAllMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cashControllerFindAll>>, CashControllerFindAllMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  cashControllerFindAll(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CashControllerFindAllMutationResult = NonNullable<Awaited<ReturnType<typeof cashControllerFindAll>>>
+
+    export type CashControllerFindAllMutationError = CashControllerFindAll400 | CashControllerFindAll401 | CashControllerFindAll403
+    export type CashControllerFindAllMutationVariables = {params?: CashControllerFindAllParams}
+
+    /**
  * @summary Kassa operatsiyalari tarixini sahifalash va filtrlash
  */
-export const useCashControllerFindAll = <TError = unknown, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof cashControllerFindAll>>,
-      TError,
-      CashControllerFindAllMutationVariables,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof cashControllerFindAll>>,
-  TError,
-  CashControllerFindAllMutationVariables,
-  TContext
-> => {
-  return useMutation(
-    getCashControllerFindAllMutationOptions(options),
-    queryClient,
-  );
-};
+export const useCashControllerFindAll = <TError = CashControllerFindAll400 | CashControllerFindAll401 | CashControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cashControllerFindAll>>, TError,CashControllerFindAllMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof cashControllerFindAll>>,
+        TError,
+        CashControllerFindAllMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCashControllerFindAllMutationOptions(options), queryClient);
+    }

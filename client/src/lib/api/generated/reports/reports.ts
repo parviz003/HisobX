@@ -16,202 +16,179 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import { useMutation } from "@tanstack/react-query";
+import {
+  useMutation
+} from '@tanstack/react-query';
 import type {
   MutationFunction,
   QueryClient,
   UseMutationOptions,
-  UseMutationResult,
-} from "@tanstack/react-query";
+  UseMutationResult
+} from '@tanstack/react-query';
 
 import type {
+  ReportsControllerGetDaily200,
+  ReportsControllerGetDaily400,
+  ReportsControllerGetDaily401,
+  ReportsControllerGetDaily403,
   ReportsControllerGetDailyParams,
-  ReportsControllerGetMonthlyParams,
-} from "../model";
+  ReportsControllerGetMonthly200,
+  ReportsControllerGetMonthly400,
+  ReportsControllerGetMonthly401,
+  ReportsControllerGetMonthly403,
+  ReportsControllerGetMonthlyParams
+} from '../model';
 
-import { apiMutator } from "../../client";
+import { apiMutator } from '../../client';
+
+
+
 
 /**
  * @summary Kunlik hisobot (Savdo, Foyda, Xarajat, Kassa, Qarzlar)
  */
 export const reportsControllerGetDaily = (
-  params?: ReportsControllerGetDailyParams,
-  signal?: AbortSignal,
+    params?: ReportsControllerGetDailyParams,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/reports/daily`,
-    method: "GET",
-    params,
-    signal,
-  });
-};
 
-export const getReportsControllerGetDailyMutationKey = () =>
-  ["reportsControllerGetDaily"] as const;
 
-export const getReportsControllerGetDailyMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof reportsControllerGetDaily>>,
-    TError,
-    ReportsControllerGetDailyMutationVariables,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof reportsControllerGetDaily>>,
-  TError,
-  ReportsControllerGetDailyMutationVariables,
-  TContext
-> => {
-  const mutationKey = getReportsControllerGetDailyMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<ReportsControllerGetDaily200>(
+      {url: `/api/v1/reports/daily`, method: 'GET',
+        params, signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof reportsControllerGetDaily>>,
-    ReportsControllerGetDailyMutationVariables
-  > = (props) => {
-    const { params } = props ?? {};
 
-    return reportsControllerGetDaily(params);
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type ReportsControllerGetDailyMutationResult = NonNullable<
-  Awaited<ReturnType<typeof reportsControllerGetDaily>>
->;
+export const getReportsControllerGetDailyMutationKey = () => ['reportsControllerGetDaily'] as const;
 
-export type ReportsControllerGetDailyMutationError = unknown;
-export type ReportsControllerGetDailyMutationVariables = {
-  params?: ReportsControllerGetDailyParams;
-};
+export const getReportsControllerGetDailyMutationOptions = <TError = ReportsControllerGetDaily400 | ReportsControllerGetDaily401 | ReportsControllerGetDaily403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportsControllerGetDaily>>, TError,ReportsControllerGetDailyMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof reportsControllerGetDaily>>, TError,ReportsControllerGetDailyMutationVariables, TContext> => {
 
-/**
+const mutationKey = getReportsControllerGetDailyMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportsControllerGetDaily>>, ReportsControllerGetDailyMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  reportsControllerGetDaily(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportsControllerGetDailyMutationResult = NonNullable<Awaited<ReturnType<typeof reportsControllerGetDaily>>>
+
+    export type ReportsControllerGetDailyMutationError = ReportsControllerGetDaily400 | ReportsControllerGetDaily401 | ReportsControllerGetDaily403
+    export type ReportsControllerGetDailyMutationVariables = {params?: ReportsControllerGetDailyParams}
+
+    /**
  * @summary Kunlik hisobot (Savdo, Foyda, Xarajat, Kassa, Qarzlar)
  */
-export const useReportsControllerGetDaily = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof reportsControllerGetDaily>>,
-      TError,
-      ReportsControllerGetDailyMutationVariables,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof reportsControllerGetDaily>>,
-  TError,
-  ReportsControllerGetDailyMutationVariables,
-  TContext
-> => {
-  return useMutation(
-    getReportsControllerGetDailyMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useReportsControllerGetDaily = <TError = ReportsControllerGetDaily400 | ReportsControllerGetDaily401 | ReportsControllerGetDaily403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportsControllerGetDaily>>, TError,ReportsControllerGetDailyMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reportsControllerGetDaily>>,
+        TError,
+        ReportsControllerGetDailyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReportsControllerGetDailyMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Oylik hisobot (Savdo, Tannarx, Foyda, Xarajat)
  */
 export const reportsControllerGetMonthly = (
-  params?: ReportsControllerGetMonthlyParams,
-  signal?: AbortSignal,
+    params?: ReportsControllerGetMonthlyParams,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/reports/monthly`,
-    method: "GET",
-    params,
-    signal,
-  });
-};
 
-export const getReportsControllerGetMonthlyMutationKey = () =>
-  ["reportsControllerGetMonthly"] as const;
 
-export const getReportsControllerGetMonthlyMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof reportsControllerGetMonthly>>,
-    TError,
-    ReportsControllerGetMonthlyMutationVariables,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof reportsControllerGetMonthly>>,
-  TError,
-  ReportsControllerGetMonthlyMutationVariables,
-  TContext
-> => {
-  const mutationKey = getReportsControllerGetMonthlyMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<ReportsControllerGetMonthly200>(
+      {url: `/api/v1/reports/monthly`, method: 'GET',
+        params, signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof reportsControllerGetMonthly>>,
-    ReportsControllerGetMonthlyMutationVariables
-  > = (props) => {
-    const { params } = props ?? {};
 
-    return reportsControllerGetMonthly(params);
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type ReportsControllerGetMonthlyMutationResult = NonNullable<
-  Awaited<ReturnType<typeof reportsControllerGetMonthly>>
->;
+export const getReportsControllerGetMonthlyMutationKey = () => ['reportsControllerGetMonthly'] as const;
 
-export type ReportsControllerGetMonthlyMutationError = unknown;
-export type ReportsControllerGetMonthlyMutationVariables = {
-  params?: ReportsControllerGetMonthlyParams;
-};
+export const getReportsControllerGetMonthlyMutationOptions = <TError = ReportsControllerGetMonthly400 | ReportsControllerGetMonthly401 | ReportsControllerGetMonthly403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportsControllerGetMonthly>>, TError,ReportsControllerGetMonthlyMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof reportsControllerGetMonthly>>, TError,ReportsControllerGetMonthlyMutationVariables, TContext> => {
 
-/**
+const mutationKey = getReportsControllerGetMonthlyMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportsControllerGetMonthly>>, ReportsControllerGetMonthlyMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  reportsControllerGetMonthly(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportsControllerGetMonthlyMutationResult = NonNullable<Awaited<ReturnType<typeof reportsControllerGetMonthly>>>
+
+    export type ReportsControllerGetMonthlyMutationError = ReportsControllerGetMonthly400 | ReportsControllerGetMonthly401 | ReportsControllerGetMonthly403
+    export type ReportsControllerGetMonthlyMutationVariables = {params?: ReportsControllerGetMonthlyParams}
+
+    /**
  * @summary Oylik hisobot (Savdo, Tannarx, Foyda, Xarajat)
  */
-export const useReportsControllerGetMonthly = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof reportsControllerGetMonthly>>,
-      TError,
-      ReportsControllerGetMonthlyMutationVariables,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof reportsControllerGetMonthly>>,
-  TError,
-  ReportsControllerGetMonthlyMutationVariables,
-  TContext
-> => {
-  return useMutation(
-    getReportsControllerGetMonthlyMutationOptions(options),
-    queryClient,
-  );
-};
+export const useReportsControllerGetMonthly = <TError = ReportsControllerGetMonthly400 | ReportsControllerGetMonthly401 | ReportsControllerGetMonthly403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportsControllerGetMonthly>>, TError,ReportsControllerGetMonthlyMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reportsControllerGetMonthly>>,
+        TError,
+        ReportsControllerGetMonthlyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReportsControllerGetMonthlyMutationOptions(options), queryClient);
+    }

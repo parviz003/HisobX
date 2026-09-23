@@ -16,14 +16,36 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import type { CashControllerFindAllType } from "./cashControllerFindAllType";
+import type { CashControllerFindAllType } from './cashControllerFindAllType';
 
 export type CashControllerFindAllParams = {
-  type?: CashControllerFindAllType;
-  page?: number;
-  limit?: number;
-  startDate?: string;
-  endDate?: string;
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * Bir sahifadagi yozuvlar soni (ko'pi bilan 100)
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+type?: CashControllerFindAllType;
+startDate?: string;
+endDate?: string;
 };

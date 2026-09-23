@@ -16,9 +16,26 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -31,22 +48,45 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
-import type { CreateCategoryDto, UpdateCategoryDto } from "../model";
+import type {
+  CategoriesControllerCreate201,
+  CategoriesControllerCreate400,
+  CategoriesControllerCreate401,
+  CategoriesControllerCreate403,
+  CategoriesControllerCreate409,
+  CategoriesControllerFindAll200,
+  CategoriesControllerFindAll400,
+  CategoriesControllerFindAll401,
+  CategoriesControllerFindAll403,
+  CategoriesControllerFindAllParams,
+  CategoriesControllerRemove200,
+  CategoriesControllerRemove401,
+  CategoriesControllerRemove403,
+  CategoriesControllerRemove404,
+  CategoriesControllerUpdate200,
+  CategoriesControllerUpdate400,
+  CategoriesControllerUpdate401,
+  CategoriesControllerUpdate403,
+  CategoriesControllerUpdate404,
+  CategoriesControllerUpdate409,
+  CreateCategoryDto,
+  UpdateCategoryDto
+} from '../model';
 
-import { apiMutator } from "../../client";
+import { apiMutator } from '../../client';
 
-const withQueryKey = <T extends object, K>(
-  query: T,
-  queryKey: K,
-): T & { queryKey: K } => {
+
+
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === "queryKey") continue;
+    if (key === 'queryKey') continue;
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
@@ -60,578 +100,352 @@ const withQueryKey = <T extends object, K>(
  * @summary Yangi toifa yaratish
  */
 export const categoriesControllerCreate = (
-  createCategoryDto: CreateCategoryDto,
-  signal?: AbortSignal,
+    createCategoryDto: CreateCategoryDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/categories`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: createCategoryDto,
-    signal,
-  });
-};
 
-export const getCategoriesControllerCreateQueryKey = (
-  createCategoryDto?: CreateCategoryDto,
+
+      return apiMutator<CategoriesControllerCreate201>(
+      {url: `/api/v1/categories`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createCategoryDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getCategoriesControllerCreateQueryKey = (createCategoryDto?: CreateCategoryDto,) => {
+    return [
+    'POST', `/api/v1/categories`, createCategoryDto
+    ] as const;
+    }
+
+
+export const getCategoriesControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof categoriesControllerCreate>>, TError = CategoriesControllerCreate400 | CategoriesControllerCreate401 | CategoriesControllerCreate403 | CategoriesControllerCreate409>(createCategoryDto: CreateCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerCreate>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/categories`, createCategoryDto] as const;
-};
 
-export const getCategoriesControllerCreateQueryOptions = <
-  TData = Awaited<ReturnType<typeof categoriesControllerCreate>>,
-  TError = unknown,
->(
-  createCategoryDto: CreateCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getCategoriesControllerCreateQueryKey(createCategoryDto);
+  const queryKey =  queryOptions?.queryKey ?? getCategoriesControllerCreateQueryKey(createCategoryDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof categoriesControllerCreate>>
-  > = ({ signal }) => categoriesControllerCreate(createCategoryDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof categoriesControllerCreate>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type CategoriesControllerCreateQueryResult = NonNullable<
-  Awaited<ReturnType<typeof categoriesControllerCreate>>
->;
-export type CategoriesControllerCreateQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof categoriesControllerCreate>>> = ({ signal }) => categoriesControllerCreate(createCategoryDto, signal);
 
-export function useCategoriesControllerCreate<
-  TData = Awaited<ReturnType<typeof categoriesControllerCreate>>,
-  TError = unknown,
->(
-  createCategoryDto: CreateCategoryDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerCreate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CategoriesControllerCreateQueryResult = NonNullable<Awaited<ReturnType<typeof categoriesControllerCreate>>>
+export type CategoriesControllerCreateQueryError = CategoriesControllerCreate400 | CategoriesControllerCreate401 | CategoriesControllerCreate403 | CategoriesControllerCreate409
+
+
+export function useCategoriesControllerCreate<TData = Awaited<ReturnType<typeof categoriesControllerCreate>>, TError = CategoriesControllerCreate400 | CategoriesControllerCreate401 | CategoriesControllerCreate403 | CategoriesControllerCreate409>(
+ createCategoryDto: CreateCategoryDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerCreate>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof categoriesControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof categoriesControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCategoriesControllerCreate<
-  TData = Awaited<ReturnType<typeof categoriesControllerCreate>>,
-  TError = unknown,
->(
-  createCategoryDto: CreateCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCategoriesControllerCreate<TData = Awaited<ReturnType<typeof categoriesControllerCreate>>, TError = CategoriesControllerCreate400 | CategoriesControllerCreate401 | CategoriesControllerCreate403 | CategoriesControllerCreate409>(
+ createCategoryDto: CreateCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerCreate>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof categoriesControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof categoriesControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCategoriesControllerCreate<
-  TData = Awaited<ReturnType<typeof categoriesControllerCreate>>,
-  TError = unknown,
->(
-  createCategoryDto: CreateCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCategoriesControllerCreate<TData = Awaited<ReturnType<typeof categoriesControllerCreate>>, TError = CategoriesControllerCreate400 | CategoriesControllerCreate401 | CategoriesControllerCreate403 | CategoriesControllerCreate409>(
+ createCategoryDto: CreateCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Yangi toifa yaratish
  */
 
-export function useCategoriesControllerCreate<
-  TData = Awaited<ReturnType<typeof categoriesControllerCreate>>,
-  TError = unknown,
->(
-  createCategoryDto: CreateCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getCategoriesControllerCreateQueryOptions(
-    createCategoryDto,
-    options,
-  );
+export function useCategoriesControllerCreate<TData = Awaited<ReturnType<typeof categoriesControllerCreate>>, TError = CategoriesControllerCreate400 | CategoriesControllerCreate401 | CategoriesControllerCreate403 | CategoriesControllerCreate409>(
+ createCategoryDto: CreateCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getCategoriesControllerCreateQueryOptions(createCategoryDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
 /**
- * @summary Toifalar ro'yxati
+ * @summary Toifalar ro'yxati (sahifalangan)
  */
-export const categoriesControllerFindAll = (signal?: AbortSignal) => {
-  return apiMutator<void>({ url: `/api/v1/categories`, method: "GET", signal });
-};
+export const categoriesControllerFindAll = (
+    params?: CategoriesControllerFindAllParams,
+ signal?: AbortSignal
+) => {
 
-export const getCategoriesControllerFindAllMutationKey = () =>
-  ["categoriesControllerFindAll"] as const;
 
-export const getCategoriesControllerFindAllMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof categoriesControllerFindAll>>,
-    TError,
-    void,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof categoriesControllerFindAll>>,
-  TError,
-  void,
-  TContext
-> => {
-  const mutationKey = getCategoriesControllerFindAllMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<CategoriesControllerFindAll200>(
+      {url: `/api/v1/categories`, method: 'GET',
+        params, signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof categoriesControllerFindAll>>,
-    void
-  > = () => {
-    return categoriesControllerFindAll();
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type CategoriesControllerFindAllMutationResult = NonNullable<
-  Awaited<ReturnType<typeof categoriesControllerFindAll>>
->;
 
-export type CategoriesControllerFindAllMutationError = unknown;
+export const getCategoriesControllerFindAllMutationKey = () => ['categoriesControllerFindAll'] as const;
 
-/**
- * @summary Toifalar ro'yxati
+export const getCategoriesControllerFindAllMutationOptions = <TError = CategoriesControllerFindAll400 | CategoriesControllerFindAll401 | CategoriesControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof categoriesControllerFindAll>>, TError,CategoriesControllerFindAllMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof categoriesControllerFindAll>>, TError,CategoriesControllerFindAllMutationVariables, TContext> => {
+
+const mutationKey = getCategoriesControllerFindAllMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof categoriesControllerFindAll>>, CategoriesControllerFindAllMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  categoriesControllerFindAll(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CategoriesControllerFindAllMutationResult = NonNullable<Awaited<ReturnType<typeof categoriesControllerFindAll>>>
+
+    export type CategoriesControllerFindAllMutationError = CategoriesControllerFindAll400 | CategoriesControllerFindAll401 | CategoriesControllerFindAll403
+    export type CategoriesControllerFindAllMutationVariables = {params?: CategoriesControllerFindAllParams}
+
+    /**
+ * @summary Toifalar ro'yxati (sahifalangan)
  */
-export const useCategoriesControllerFindAll = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof categoriesControllerFindAll>>,
-      TError,
-      void,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof categoriesControllerFindAll>>,
-  TError,
-  void,
-  TContext
-> => {
-  return useMutation(
-    getCategoriesControllerFindAllMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useCategoriesControllerFindAll = <TError = CategoriesControllerFindAll400 | CategoriesControllerFindAll401 | CategoriesControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof categoriesControllerFindAll>>, TError,CategoriesControllerFindAllMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof categoriesControllerFindAll>>,
+        TError,
+        CategoriesControllerFindAllMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCategoriesControllerFindAllMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Toifani tahrirlash
  */
 export const categoriesControllerUpdate = (
-  id: number,
-  updateCategoryDto: UpdateCategoryDto,
-  signal?: AbortSignal,
+    id: number,
+    updateCategoryDto: UpdateCategoryDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/categories/${id}`,
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    data: updateCategoryDto,
-    signal,
-  });
-};
 
-export const getCategoriesControllerUpdateQueryKey = (
-  id: number,
-  updateCategoryDto?: UpdateCategoryDto,
+
+      return apiMutator<CategoriesControllerUpdate200>(
+      {url: `/api/v1/categories/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateCategoryDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getCategoriesControllerUpdateQueryKey = (id: number,
+    updateCategoryDto?: UpdateCategoryDto,) => {
+    return [
+    'PATCH', `/api/v1/categories/${id}`, updateCategoryDto
+    ] as const;
+    }
+
+
+export const getCategoriesControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof categoriesControllerUpdate>>, TError = CategoriesControllerUpdate400 | CategoriesControllerUpdate401 | CategoriesControllerUpdate403 | CategoriesControllerUpdate404 | CategoriesControllerUpdate409>(id: number,
+    updateCategoryDto: UpdateCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerUpdate>>, TError, TData>>, }
 ) => {
-  return ["PATCH", `/api/v1/categories/${id}`, updateCategoryDto] as const;
-};
 
-export const getCategoriesControllerUpdateQueryOptions = <
-  TData = Awaited<ReturnType<typeof categoriesControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateCategoryDto: UpdateCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerUpdate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getCategoriesControllerUpdateQueryKey(id, updateCategoryDto);
+  const queryKey =  queryOptions?.queryKey ?? getCategoriesControllerUpdateQueryKey(id,updateCategoryDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof categoriesControllerUpdate>>
-  > = ({ signal }) => categoriesControllerUpdate(id, updateCategoryDto, signal);
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof categoriesControllerUpdate>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type CategoriesControllerUpdateQueryResult = NonNullable<
-  Awaited<ReturnType<typeof categoriesControllerUpdate>>
->;
-export type CategoriesControllerUpdateQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof categoriesControllerUpdate>>> = ({ signal }) => categoriesControllerUpdate(id,updateCategoryDto, signal);
 
-export function useCategoriesControllerUpdate<
-  TData = Awaited<ReturnType<typeof categoriesControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateCategoryDto: UpdateCategoryDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerUpdate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerUpdate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CategoriesControllerUpdateQueryResult = NonNullable<Awaited<ReturnType<typeof categoriesControllerUpdate>>>
+export type CategoriesControllerUpdateQueryError = CategoriesControllerUpdate400 | CategoriesControllerUpdate401 | CategoriesControllerUpdate403 | CategoriesControllerUpdate404 | CategoriesControllerUpdate409
+
+
+export function useCategoriesControllerUpdate<TData = Awaited<ReturnType<typeof categoriesControllerUpdate>>, TError = CategoriesControllerUpdate400 | CategoriesControllerUpdate401 | CategoriesControllerUpdate403 | CategoriesControllerUpdate404 | CategoriesControllerUpdate409>(
+ id: number,
+    updateCategoryDto: UpdateCategoryDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerUpdate>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof categoriesControllerUpdate>>,
           TError,
           Awaited<ReturnType<typeof categoriesControllerUpdate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCategoriesControllerUpdate<
-  TData = Awaited<ReturnType<typeof categoriesControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateCategoryDto: UpdateCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerUpdate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCategoriesControllerUpdate<TData = Awaited<ReturnType<typeof categoriesControllerUpdate>>, TError = CategoriesControllerUpdate400 | CategoriesControllerUpdate401 | CategoriesControllerUpdate403 | CategoriesControllerUpdate404 | CategoriesControllerUpdate409>(
+ id: number,
+    updateCategoryDto: UpdateCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerUpdate>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof categoriesControllerUpdate>>,
           TError,
           Awaited<ReturnType<typeof categoriesControllerUpdate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCategoriesControllerUpdate<
-  TData = Awaited<ReturnType<typeof categoriesControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateCategoryDto: UpdateCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerUpdate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCategoriesControllerUpdate<TData = Awaited<ReturnType<typeof categoriesControllerUpdate>>, TError = CategoriesControllerUpdate400 | CategoriesControllerUpdate401 | CategoriesControllerUpdate403 | CategoriesControllerUpdate404 | CategoriesControllerUpdate409>(
+ id: number,
+    updateCategoryDto: UpdateCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerUpdate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Toifani tahrirlash
  */
 
-export function useCategoriesControllerUpdate<
-  TData = Awaited<ReturnType<typeof categoriesControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateCategoryDto: UpdateCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerUpdate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getCategoriesControllerUpdateQueryOptions(
-    id,
-    updateCategoryDto,
-    options,
-  );
+export function useCategoriesControllerUpdate<TData = Awaited<ReturnType<typeof categoriesControllerUpdate>>, TError = CategoriesControllerUpdate400 | CategoriesControllerUpdate401 | CategoriesControllerUpdate403 | CategoriesControllerUpdate404 | CategoriesControllerUpdate409>(
+ id: number,
+    updateCategoryDto: UpdateCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerUpdate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getCategoriesControllerUpdateQueryOptions(id,updateCategoryDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * @summary Toifani o'chirish
  */
 export const categoriesControllerRemove = (
-  id: number,
-  signal?: AbortSignal,
+    id: number,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/categories/${id}`,
-    method: "DELETE",
-    signal,
-  });
-};
 
-export const getCategoriesControllerRemoveQueryKey = (id: number) => {
-  return ["DELETE", `/api/v1/categories/${id}`] as const;
-};
 
-export const getCategoriesControllerRemoveQueryOptions = <
-  TData = Awaited<ReturnType<typeof categoriesControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
+      return apiMutator<CategoriesControllerRemove200>(
+      {url: `/api/v1/categories/${id}`, method: 'DELETE', signal
+    },
+      );
+    }
+
+
+
+
+export const getCategoriesControllerRemoveQueryKey = (id: number,) => {
+    return [
+    'DELETE', `/api/v1/categories/${id}`
+    ] as const;
+    }
+
+
+export const getCategoriesControllerRemoveQueryOptions = <TData = Awaited<ReturnType<typeof categoriesControllerRemove>>, TError = CategoriesControllerRemove401 | CategoriesControllerRemove403 | CategoriesControllerRemove404>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerRemove>>, TError, TData>>, }
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getCategoriesControllerRemoveQueryKey(id);
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof categoriesControllerRemove>>
-  > = ({ signal }) => categoriesControllerRemove(id, signal);
+  const queryKey =  queryOptions?.queryKey ?? getCategoriesControllerRemoveQueryKey(id);
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof categoriesControllerRemove>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type CategoriesControllerRemoveQueryResult = NonNullable<
-  Awaited<ReturnType<typeof categoriesControllerRemove>>
->;
-export type CategoriesControllerRemoveQueryError = unknown;
 
-export function useCategoriesControllerRemove<
-  TData = Awaited<ReturnType<typeof categoriesControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerRemove>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof categoriesControllerRemove>>> = ({ signal }) => categoriesControllerRemove(id, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerRemove>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CategoriesControllerRemoveQueryResult = NonNullable<Awaited<ReturnType<typeof categoriesControllerRemove>>>
+export type CategoriesControllerRemoveQueryError = CategoriesControllerRemove401 | CategoriesControllerRemove403 | CategoriesControllerRemove404
+
+
+export function useCategoriesControllerRemove<TData = Awaited<ReturnType<typeof categoriesControllerRemove>>, TError = CategoriesControllerRemove401 | CategoriesControllerRemove403 | CategoriesControllerRemove404>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerRemove>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof categoriesControllerRemove>>,
           TError,
           Awaited<ReturnType<typeof categoriesControllerRemove>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCategoriesControllerRemove<
-  TData = Awaited<ReturnType<typeof categoriesControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerRemove>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCategoriesControllerRemove<TData = Awaited<ReturnType<typeof categoriesControllerRemove>>, TError = CategoriesControllerRemove401 | CategoriesControllerRemove403 | CategoriesControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerRemove>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof categoriesControllerRemove>>,
           TError,
           Awaited<ReturnType<typeof categoriesControllerRemove>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useCategoriesControllerRemove<
-  TData = Awaited<ReturnType<typeof categoriesControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCategoriesControllerRemove<TData = Awaited<ReturnType<typeof categoriesControllerRemove>>, TError = CategoriesControllerRemove401 | CategoriesControllerRemove403 | CategoriesControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerRemove>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Toifani o'chirish
  */
 
-export function useCategoriesControllerRemove<
-  TData = Awaited<ReturnType<typeof categoriesControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof categoriesControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getCategoriesControllerRemoveQueryOptions(id, options);
+export function useCategoriesControllerRemove<TData = Awaited<ReturnType<typeof categoriesControllerRemove>>, TError = CategoriesControllerRemove401 | CategoriesControllerRemove403 | CategoriesControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof categoriesControllerRemove>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getCategoriesControllerRemoveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+

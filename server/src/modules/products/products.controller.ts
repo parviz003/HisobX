@@ -49,7 +49,9 @@ import 'multer';
 const PRODUCT_BODY = (required: string[]) => ({
   schema: {
     type: 'object',
-    required,
+    // OpenAPI'da `required` bo'sh massiv bo'la olmaydi (PATCH'da hamma maydon
+    // ixtiyoriy) — bunday holatda kalit umuman qo'yilmaydi.
+    ...(required.length ? { required } : {}),
     properties: {
       name: { type: 'string', example: 'Coca Cola 1L' },
       sellingPrice: { type: 'string', example: '12000', description: "So'mda" },

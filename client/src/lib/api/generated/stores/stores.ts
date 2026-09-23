@@ -16,9 +16,26 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -31,22 +48,62 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
-import type { CreateStoreDto, OnboardStoreDto, UpdateStoreDto } from "../model";
+import type {
+  CreateStoreDto,
+  OnboardStoreDto,
+  StoresControllerCreate201,
+  StoresControllerCreate400,
+  StoresControllerCreate401,
+  StoresControllerCreate403,
+  StoresControllerFindAll200,
+  StoresControllerFindAll400,
+  StoresControllerFindAll401,
+  StoresControllerFindAll403,
+  StoresControllerFindAllParams,
+  StoresControllerFindOne200,
+  StoresControllerFindOne401,
+  StoresControllerFindOne403,
+  StoresControllerFindOne404,
+  StoresControllerGetStore200,
+  StoresControllerGetStore401,
+  StoresControllerGetStore403,
+  StoresControllerGetStore404,
+  StoresControllerOnboard201,
+  StoresControllerOnboard400,
+  StoresControllerOnboard401,
+  StoresControllerOnboard403,
+  StoresControllerOnboard409,
+  StoresControllerRemove200,
+  StoresControllerRemove401,
+  StoresControllerRemove403,
+  StoresControllerRemove404,
+  StoresControllerUpdateById200,
+  StoresControllerUpdateById400,
+  StoresControllerUpdateById401,
+  StoresControllerUpdateById403,
+  StoresControllerUpdateById404,
+  StoresControllerUpdateStore200,
+  StoresControllerUpdateStore400,
+  StoresControllerUpdateStore401,
+  StoresControllerUpdateStore403,
+  StoresControllerUpdateStore404,
+  UpdateStoreDto
+} from '../model';
 
-import { apiMutator } from "../../client";
+import { apiMutator } from '../../client';
 
-const withQueryKey = <T extends object, K>(
-  query: T,
-  queryKey: K,
-): T & { queryKey: K } => {
+
+
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === "queryKey") continue;
+    if (key === 'queryKey') continue;
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
@@ -59,1067 +116,672 @@ const withQueryKey = <T extends object, K>(
 /**
  * @summary Joriy do'kon ma'lumotlarini olish
  */
-export const storesControllerGetStore = (signal?: AbortSignal) => {
-  return apiMutator<void>({ url: `/api/v1/stores/me`, method: "GET", signal });
-};
+export const storesControllerGetStore = (
 
-export const getStoresControllerGetStoreMutationKey = () =>
-  ["storesControllerGetStore"] as const;
+ signal?: AbortSignal
+) => {
 
-export const getStoresControllerGetStoreMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof storesControllerGetStore>>,
-    TError,
-    void,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof storesControllerGetStore>>,
-  TError,
-  void,
-  TContext
-> => {
-  const mutationKey = getStoresControllerGetStoreMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof storesControllerGetStore>>,
-    void
-  > = () => {
-    return storesControllerGetStore();
-  };
+      return apiMutator<StoresControllerGetStore200>(
+      {url: `/api/v1/stores/me`, method: 'GET', signal
+    },
+      );
+    }
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type StoresControllerGetStoreMutationResult = NonNullable<
-  Awaited<ReturnType<typeof storesControllerGetStore>>
->;
 
-export type StoresControllerGetStoreMutationError = unknown;
 
-/**
+export const getStoresControllerGetStoreMutationKey = () => ['storesControllerGetStore'] as const;
+
+export const getStoresControllerGetStoreMutationOptions = <TError = StoresControllerGetStore401 | StoresControllerGetStore403 | StoresControllerGetStore404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof storesControllerGetStore>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof storesControllerGetStore>>, TError,void, TContext> => {
+
+const mutationKey = getStoresControllerGetStoreMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof storesControllerGetStore>>, void> = () => {
+
+
+          return  storesControllerGetStore()
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StoresControllerGetStoreMutationResult = NonNullable<Awaited<ReturnType<typeof storesControllerGetStore>>>
+
+    export type StoresControllerGetStoreMutationError = StoresControllerGetStore401 | StoresControllerGetStore403 | StoresControllerGetStore404
+
+
+    /**
  * @summary Joriy do'kon ma'lumotlarini olish
  */
-export const useStoresControllerGetStore = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof storesControllerGetStore>>,
-      TError,
-      void,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof storesControllerGetStore>>,
-  TError,
-  void,
-  TContext
-> => {
-  return useMutation(
-    getStoresControllerGetStoreMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useStoresControllerGetStore = <TError = StoresControllerGetStore401 | StoresControllerGetStore403 | StoresControllerGetStore404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof storesControllerGetStore>>, TError,void, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof storesControllerGetStore>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getStoresControllerGetStoreMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Do'kon ma'lumotlarini tahrirlash
  */
 export const storesControllerUpdateStore = (
-  updateStoreDto: UpdateStoreDto,
-  signal?: AbortSignal,
+    updateStoreDto: UpdateStoreDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/stores/me`,
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    data: updateStoreDto,
-    signal,
-  });
-};
 
-export const getStoresControllerUpdateStoreQueryKey = (
-  updateStoreDto?: UpdateStoreDto,
+
+      return apiMutator<StoresControllerUpdateStore200>(
+      {url: `/api/v1/stores/me`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateStoreDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getStoresControllerUpdateStoreQueryKey = (updateStoreDto?: UpdateStoreDto,) => {
+    return [
+    'PATCH', `/api/v1/stores/me`, updateStoreDto
+    ] as const;
+    }
+
+
+export const getStoresControllerUpdateStoreQueryOptions = <TData = Awaited<ReturnType<typeof storesControllerUpdateStore>>, TError = StoresControllerUpdateStore400 | StoresControllerUpdateStore401 | StoresControllerUpdateStore403 | StoresControllerUpdateStore404>(updateStoreDto: UpdateStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerUpdateStore>>, TError, TData>>, }
 ) => {
-  return ["PATCH", `/api/v1/stores/me`, updateStoreDto] as const;
-};
 
-export const getStoresControllerUpdateStoreQueryOptions = <
-  TData = Awaited<ReturnType<typeof storesControllerUpdateStore>>,
-  TError = unknown,
->(
-  updateStoreDto: UpdateStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerUpdateStore>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getStoresControllerUpdateStoreQueryKey(updateStoreDto);
+  const queryKey =  queryOptions?.queryKey ?? getStoresControllerUpdateStoreQueryKey(updateStoreDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof storesControllerUpdateStore>>
-  > = ({ signal }) => storesControllerUpdateStore(updateStoreDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof storesControllerUpdateStore>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type StoresControllerUpdateStoreQueryResult = NonNullable<
-  Awaited<ReturnType<typeof storesControllerUpdateStore>>
->;
-export type StoresControllerUpdateStoreQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof storesControllerUpdateStore>>> = ({ signal }) => storesControllerUpdateStore(updateStoreDto, signal);
 
-export function useStoresControllerUpdateStore<
-  TData = Awaited<ReturnType<typeof storesControllerUpdateStore>>,
-  TError = unknown,
->(
-  updateStoreDto: UpdateStoreDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerUpdateStore>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof storesControllerUpdateStore>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type StoresControllerUpdateStoreQueryResult = NonNullable<Awaited<ReturnType<typeof storesControllerUpdateStore>>>
+export type StoresControllerUpdateStoreQueryError = StoresControllerUpdateStore400 | StoresControllerUpdateStore401 | StoresControllerUpdateStore403 | StoresControllerUpdateStore404
+
+
+export function useStoresControllerUpdateStore<TData = Awaited<ReturnType<typeof storesControllerUpdateStore>>, TError = StoresControllerUpdateStore400 | StoresControllerUpdateStore401 | StoresControllerUpdateStore403 | StoresControllerUpdateStore404>(
+ updateStoreDto: UpdateStoreDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerUpdateStore>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof storesControllerUpdateStore>>,
           TError,
           Awaited<ReturnType<typeof storesControllerUpdateStore>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useStoresControllerUpdateStore<
-  TData = Awaited<ReturnType<typeof storesControllerUpdateStore>>,
-  TError = unknown,
->(
-  updateStoreDto: UpdateStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerUpdateStore>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStoresControllerUpdateStore<TData = Awaited<ReturnType<typeof storesControllerUpdateStore>>, TError = StoresControllerUpdateStore400 | StoresControllerUpdateStore401 | StoresControllerUpdateStore403 | StoresControllerUpdateStore404>(
+ updateStoreDto: UpdateStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerUpdateStore>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof storesControllerUpdateStore>>,
           TError,
           Awaited<ReturnType<typeof storesControllerUpdateStore>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useStoresControllerUpdateStore<
-  TData = Awaited<ReturnType<typeof storesControllerUpdateStore>>,
-  TError = unknown,
->(
-  updateStoreDto: UpdateStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerUpdateStore>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStoresControllerUpdateStore<TData = Awaited<ReturnType<typeof storesControllerUpdateStore>>, TError = StoresControllerUpdateStore400 | StoresControllerUpdateStore401 | StoresControllerUpdateStore403 | StoresControllerUpdateStore404>(
+ updateStoreDto: UpdateStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerUpdateStore>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Do'kon ma'lumotlarini tahrirlash
  */
 
-export function useStoresControllerUpdateStore<
-  TData = Awaited<ReturnType<typeof storesControllerUpdateStore>>,
-  TError = unknown,
->(
-  updateStoreDto: UpdateStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerUpdateStore>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getStoresControllerUpdateStoreQueryOptions(
-    updateStoreDto,
-    options,
-  );
+export function useStoresControllerUpdateStore<TData = Awaited<ReturnType<typeof storesControllerUpdateStore>>, TError = StoresControllerUpdateStore400 | StoresControllerUpdateStore401 | StoresControllerUpdateStore403 | StoresControllerUpdateStore404>(
+ updateStoreDto: UpdateStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerUpdateStore>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getStoresControllerUpdateStoreQueryOptions(updateStoreDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * @summary Barcha do'konlar (faqat SUPERADMIN)
- */
-export const storesControllerFindAll = (signal?: AbortSignal) => {
-  return apiMutator<void>({ url: `/api/v1/stores`, method: "GET", signal });
-};
 
-export const getStoresControllerFindAllMutationKey = () =>
-  ["storesControllerFindAll"] as const;
 
-export const getStoresControllerFindAllMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof storesControllerFindAll>>,
-    TError,
-    void,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof storesControllerFindAll>>,
-  TError,
-  void,
-  TContext
-> => {
-  const mutationKey = getStoresControllerFindAllMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof storesControllerFindAll>>,
-    void
-  > = () => {
-    return storesControllerFindAll();
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
-
-export type StoresControllerFindAllMutationResult = NonNullable<
-  Awaited<ReturnType<typeof storesControllerFindAll>>
->;
-
-export type StoresControllerFindAllMutationError = unknown;
 
 /**
  * @summary Barcha do'konlar (faqat SUPERADMIN)
  */
-export const useStoresControllerFindAll = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof storesControllerFindAll>>,
-      TError,
-      void,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof storesControllerFindAll>>,
-  TError,
-  void,
-  TContext
-> => {
-  return useMutation(
-    getStoresControllerFindAllMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const storesControllerFindAll = (
+    params?: StoresControllerFindAllParams,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<StoresControllerFindAll200>(
+      {url: `/api/v1/stores`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+
+
+
+
+export const getStoresControllerFindAllMutationKey = () => ['storesControllerFindAll'] as const;
+
+export const getStoresControllerFindAllMutationOptions = <TError = StoresControllerFindAll400 | StoresControllerFindAll401 | StoresControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof storesControllerFindAll>>, TError,StoresControllerFindAllMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof storesControllerFindAll>>, TError,StoresControllerFindAllMutationVariables, TContext> => {
+
+const mutationKey = getStoresControllerFindAllMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof storesControllerFindAll>>, StoresControllerFindAllMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  storesControllerFindAll(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StoresControllerFindAllMutationResult = NonNullable<Awaited<ReturnType<typeof storesControllerFindAll>>>
+
+    export type StoresControllerFindAllMutationError = StoresControllerFindAll400 | StoresControllerFindAll401 | StoresControllerFindAll403
+    export type StoresControllerFindAllMutationVariables = {params?: StoresControllerFindAllParams}
+
+    /**
+ * @summary Barcha do'konlar (faqat SUPERADMIN)
+ */
+export const useStoresControllerFindAll = <TError = StoresControllerFindAll400 | StoresControllerFindAll401 | StoresControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof storesControllerFindAll>>, TError,StoresControllerFindAllMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof storesControllerFindAll>>,
+        TError,
+        StoresControllerFindAllMutationVariables,
+        TContext
+      > => {
+      return useMutation(getStoresControllerFindAllMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Yangi do'kon ochish (faqat SUPERADMIN)
  */
 export const storesControllerCreate = (
-  createStoreDto: CreateStoreDto,
-  signal?: AbortSignal,
+    createStoreDto: CreateStoreDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/stores`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: createStoreDto,
-    signal,
-  });
-};
 
-export const getStoresControllerCreateQueryKey = (
-  createStoreDto?: CreateStoreDto,
+
+      return apiMutator<StoresControllerCreate201>(
+      {url: `/api/v1/stores`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createStoreDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getStoresControllerCreateQueryKey = (createStoreDto?: CreateStoreDto,) => {
+    return [
+    'POST', `/api/v1/stores`, createStoreDto
+    ] as const;
+    }
+
+
+export const getStoresControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof storesControllerCreate>>, TError = StoresControllerCreate400 | StoresControllerCreate401 | StoresControllerCreate403>(createStoreDto: CreateStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerCreate>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/stores`, createStoreDto] as const;
-};
 
-export const getStoresControllerCreateQueryOptions = <
-  TData = Awaited<ReturnType<typeof storesControllerCreate>>,
-  TError = unknown,
->(
-  createStoreDto: CreateStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getStoresControllerCreateQueryKey(createStoreDto);
+  const queryKey =  queryOptions?.queryKey ?? getStoresControllerCreateQueryKey(createStoreDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof storesControllerCreate>>
-  > = ({ signal }) => storesControllerCreate(createStoreDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof storesControllerCreate>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type StoresControllerCreateQueryResult = NonNullable<
-  Awaited<ReturnType<typeof storesControllerCreate>>
->;
-export type StoresControllerCreateQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof storesControllerCreate>>> = ({ signal }) => storesControllerCreate(createStoreDto, signal);
 
-export function useStoresControllerCreate<
-  TData = Awaited<ReturnType<typeof storesControllerCreate>>,
-  TError = unknown,
->(
-  createStoreDto: CreateStoreDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof storesControllerCreate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type StoresControllerCreateQueryResult = NonNullable<Awaited<ReturnType<typeof storesControllerCreate>>>
+export type StoresControllerCreateQueryError = StoresControllerCreate400 | StoresControllerCreate401 | StoresControllerCreate403
+
+
+export function useStoresControllerCreate<TData = Awaited<ReturnType<typeof storesControllerCreate>>, TError = StoresControllerCreate400 | StoresControllerCreate401 | StoresControllerCreate403>(
+ createStoreDto: CreateStoreDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerCreate>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof storesControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof storesControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useStoresControllerCreate<
-  TData = Awaited<ReturnType<typeof storesControllerCreate>>,
-  TError = unknown,
->(
-  createStoreDto: CreateStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStoresControllerCreate<TData = Awaited<ReturnType<typeof storesControllerCreate>>, TError = StoresControllerCreate400 | StoresControllerCreate401 | StoresControllerCreate403>(
+ createStoreDto: CreateStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerCreate>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof storesControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof storesControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useStoresControllerCreate<
-  TData = Awaited<ReturnType<typeof storesControllerCreate>>,
-  TError = unknown,
->(
-  createStoreDto: CreateStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStoresControllerCreate<TData = Awaited<ReturnType<typeof storesControllerCreate>>, TError = StoresControllerCreate400 | StoresControllerCreate401 | StoresControllerCreate403>(
+ createStoreDto: CreateStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Yangi do'kon ochish (faqat SUPERADMIN)
  */
 
-export function useStoresControllerCreate<
-  TData = Awaited<ReturnType<typeof storesControllerCreate>>,
-  TError = unknown,
->(
-  createStoreDto: CreateStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getStoresControllerCreateQueryOptions(
-    createStoreDto,
-    options,
-  );
+export function useStoresControllerCreate<TData = Awaited<ReturnType<typeof storesControllerCreate>>, TError = StoresControllerCreate400 | StoresControllerCreate401 | StoresControllerCreate403>(
+ createStoreDto: CreateStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getStoresControllerCreateQueryOptions(createStoreDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * Do'kon hamda ADMIN rolidagi foydalanuvchi bir vaqtda yaratiladi. Admin telefoni band bo'lsa 409 qaytadi va do'kon ham yaratilmaydi.
  * @summary Do'kon va uning ADMIN'ini bitta tranzaksiyada yaratish (faqat SUPERADMIN)
  */
 export const storesControllerOnboard = (
-  onboardStoreDto: OnboardStoreDto,
-  signal?: AbortSignal,
+    onboardStoreDto: OnboardStoreDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<unknown>({
-    url: `/api/v1/stores/onboard`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: onboardStoreDto,
-    signal,
-  });
-};
 
-export const getStoresControllerOnboardQueryKey = (
-  onboardStoreDto?: OnboardStoreDto,
+
+      return apiMutator<StoresControllerOnboard201>(
+      {url: `/api/v1/stores/onboard`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: onboardStoreDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getStoresControllerOnboardQueryKey = (onboardStoreDto?: OnboardStoreDto,) => {
+    return [
+    'POST', `/api/v1/stores/onboard`, onboardStoreDto
+    ] as const;
+    }
+
+
+export const getStoresControllerOnboardQueryOptions = <TData = Awaited<ReturnType<typeof storesControllerOnboard>>, TError = StoresControllerOnboard400 | StoresControllerOnboard401 | StoresControllerOnboard403 | StoresControllerOnboard409>(onboardStoreDto: OnboardStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerOnboard>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/stores/onboard`, onboardStoreDto] as const;
-};
 
-export const getStoresControllerOnboardQueryOptions = <
-  TData = Awaited<ReturnType<typeof storesControllerOnboard>>,
-  TError = void,
->(
-  onboardStoreDto: OnboardStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerOnboard>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getStoresControllerOnboardQueryKey(onboardStoreDto);
+  const queryKey =  queryOptions?.queryKey ?? getStoresControllerOnboardQueryKey(onboardStoreDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof storesControllerOnboard>>
-  > = ({ signal }) => storesControllerOnboard(onboardStoreDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof storesControllerOnboard>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type StoresControllerOnboardQueryResult = NonNullable<
-  Awaited<ReturnType<typeof storesControllerOnboard>>
->;
-export type StoresControllerOnboardQueryError = void;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof storesControllerOnboard>>> = ({ signal }) => storesControllerOnboard(onboardStoreDto, signal);
 
-export function useStoresControllerOnboard<
-  TData = Awaited<ReturnType<typeof storesControllerOnboard>>,
-  TError = void,
->(
-  onboardStoreDto: OnboardStoreDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerOnboard>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof storesControllerOnboard>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type StoresControllerOnboardQueryResult = NonNullable<Awaited<ReturnType<typeof storesControllerOnboard>>>
+export type StoresControllerOnboardQueryError = StoresControllerOnboard400 | StoresControllerOnboard401 | StoresControllerOnboard403 | StoresControllerOnboard409
+
+
+export function useStoresControllerOnboard<TData = Awaited<ReturnType<typeof storesControllerOnboard>>, TError = StoresControllerOnboard400 | StoresControllerOnboard401 | StoresControllerOnboard403 | StoresControllerOnboard409>(
+ onboardStoreDto: OnboardStoreDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerOnboard>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof storesControllerOnboard>>,
           TError,
           Awaited<ReturnType<typeof storesControllerOnboard>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useStoresControllerOnboard<
-  TData = Awaited<ReturnType<typeof storesControllerOnboard>>,
-  TError = void,
->(
-  onboardStoreDto: OnboardStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerOnboard>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStoresControllerOnboard<TData = Awaited<ReturnType<typeof storesControllerOnboard>>, TError = StoresControllerOnboard400 | StoresControllerOnboard401 | StoresControllerOnboard403 | StoresControllerOnboard409>(
+ onboardStoreDto: OnboardStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerOnboard>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof storesControllerOnboard>>,
           TError,
           Awaited<ReturnType<typeof storesControllerOnboard>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useStoresControllerOnboard<
-  TData = Awaited<ReturnType<typeof storesControllerOnboard>>,
-  TError = void,
->(
-  onboardStoreDto: OnboardStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerOnboard>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStoresControllerOnboard<TData = Awaited<ReturnType<typeof storesControllerOnboard>>, TError = StoresControllerOnboard400 | StoresControllerOnboard401 | StoresControllerOnboard403 | StoresControllerOnboard409>(
+ onboardStoreDto: OnboardStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerOnboard>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Do'kon va uning ADMIN'ini bitta tranzaksiyada yaratish (faqat SUPERADMIN)
  */
 
-export function useStoresControllerOnboard<
-  TData = Awaited<ReturnType<typeof storesControllerOnboard>>,
-  TError = void,
->(
-  onboardStoreDto: OnboardStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerOnboard>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getStoresControllerOnboardQueryOptions(
-    onboardStoreDto,
-    options,
-  );
+export function useStoresControllerOnboard<TData = Awaited<ReturnType<typeof storesControllerOnboard>>, TError = StoresControllerOnboard400 | StoresControllerOnboard401 | StoresControllerOnboard403 | StoresControllerOnboard409>(
+ onboardStoreDto: OnboardStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerOnboard>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getStoresControllerOnboardQueryOptions(onboardStoreDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * @summary Do'kon ma'lumoti (faqat SUPERADMIN)
- */
-export const storesControllerFindOne = (id: number, signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/stores/${id}`,
-    method: "GET",
-    signal,
-  });
-};
 
-export const getStoresControllerFindOneMutationKey = () =>
-  ["storesControllerFindOne"] as const;
 
-export const getStoresControllerFindOneMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof storesControllerFindOne>>,
-    TError,
-    StoresControllerFindOneMutationVariables,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof storesControllerFindOne>>,
-  TError,
-  StoresControllerFindOneMutationVariables,
-  TContext
-> => {
-  const mutationKey = getStoresControllerFindOneMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof storesControllerFindOne>>,
-    StoresControllerFindOneMutationVariables
-  > = (props) => {
-    const { id } = props ?? {};
 
-    return storesControllerFindOne(id);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type StoresControllerFindOneMutationResult = NonNullable<
-  Awaited<ReturnType<typeof storesControllerFindOne>>
->;
-
-export type StoresControllerFindOneMutationError = unknown;
-export type StoresControllerFindOneMutationVariables = { id: number };
 
 /**
  * @summary Do'kon ma'lumoti (faqat SUPERADMIN)
  */
-export const useStoresControllerFindOne = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof storesControllerFindOne>>,
-      TError,
-      StoresControllerFindOneMutationVariables,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof storesControllerFindOne>>,
-  TError,
-  StoresControllerFindOneMutationVariables,
-  TContext
-> => {
-  return useMutation(
-    getStoresControllerFindOneMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const storesControllerFindOne = (
+    id: number,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<StoresControllerFindOne200>(
+      {url: `/api/v1/stores/${id}`, method: 'GET', signal
+    },
+      );
+    }
+
+
+
+
+export const getStoresControllerFindOneMutationKey = () => ['storesControllerFindOne'] as const;
+
+export const getStoresControllerFindOneMutationOptions = <TError = StoresControllerFindOne401 | StoresControllerFindOne403 | StoresControllerFindOne404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof storesControllerFindOne>>, TError,StoresControllerFindOneMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof storesControllerFindOne>>, TError,StoresControllerFindOneMutationVariables, TContext> => {
+
+const mutationKey = getStoresControllerFindOneMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof storesControllerFindOne>>, StoresControllerFindOneMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  storesControllerFindOne(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StoresControllerFindOneMutationResult = NonNullable<Awaited<ReturnType<typeof storesControllerFindOne>>>
+
+    export type StoresControllerFindOneMutationError = StoresControllerFindOne401 | StoresControllerFindOne403 | StoresControllerFindOne404
+    export type StoresControllerFindOneMutationVariables = {id: number}
+
+    /**
+ * @summary Do'kon ma'lumoti (faqat SUPERADMIN)
+ */
+export const useStoresControllerFindOne = <TError = StoresControllerFindOne401 | StoresControllerFindOne403 | StoresControllerFindOne404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof storesControllerFindOne>>, TError,StoresControllerFindOneMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof storesControllerFindOne>>,
+        TError,
+        StoresControllerFindOneMutationVariables,
+        TContext
+      > => {
+      return useMutation(getStoresControllerFindOneMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Do'konni tahrirlash (faqat SUPERADMIN)
  */
 export const storesControllerUpdateById = (
-  id: number,
-  updateStoreDto: UpdateStoreDto,
-  signal?: AbortSignal,
+    id: number,
+    updateStoreDto: UpdateStoreDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/stores/${id}`,
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    data: updateStoreDto,
-    signal,
-  });
-};
 
-export const getStoresControllerUpdateByIdQueryKey = (
-  id: number,
-  updateStoreDto?: UpdateStoreDto,
+
+      return apiMutator<StoresControllerUpdateById200>(
+      {url: `/api/v1/stores/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateStoreDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getStoresControllerUpdateByIdQueryKey = (id: number,
+    updateStoreDto?: UpdateStoreDto,) => {
+    return [
+    'PATCH', `/api/v1/stores/${id}`, updateStoreDto
+    ] as const;
+    }
+
+
+export const getStoresControllerUpdateByIdQueryOptions = <TData = Awaited<ReturnType<typeof storesControllerUpdateById>>, TError = StoresControllerUpdateById400 | StoresControllerUpdateById401 | StoresControllerUpdateById403 | StoresControllerUpdateById404>(id: number,
+    updateStoreDto: UpdateStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerUpdateById>>, TError, TData>>, }
 ) => {
-  return ["PATCH", `/api/v1/stores/${id}`, updateStoreDto] as const;
-};
 
-export const getStoresControllerUpdateByIdQueryOptions = <
-  TData = Awaited<ReturnType<typeof storesControllerUpdateById>>,
-  TError = unknown,
->(
-  id: number,
-  updateStoreDto: UpdateStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerUpdateById>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getStoresControllerUpdateByIdQueryKey(id, updateStoreDto);
+  const queryKey =  queryOptions?.queryKey ?? getStoresControllerUpdateByIdQueryKey(id,updateStoreDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof storesControllerUpdateById>>
-  > = ({ signal }) => storesControllerUpdateById(id, updateStoreDto, signal);
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof storesControllerUpdateById>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type StoresControllerUpdateByIdQueryResult = NonNullable<
-  Awaited<ReturnType<typeof storesControllerUpdateById>>
->;
-export type StoresControllerUpdateByIdQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof storesControllerUpdateById>>> = ({ signal }) => storesControllerUpdateById(id,updateStoreDto, signal);
 
-export function useStoresControllerUpdateById<
-  TData = Awaited<ReturnType<typeof storesControllerUpdateById>>,
-  TError = unknown,
->(
-  id: number,
-  updateStoreDto: UpdateStoreDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerUpdateById>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof storesControllerUpdateById>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type StoresControllerUpdateByIdQueryResult = NonNullable<Awaited<ReturnType<typeof storesControllerUpdateById>>>
+export type StoresControllerUpdateByIdQueryError = StoresControllerUpdateById400 | StoresControllerUpdateById401 | StoresControllerUpdateById403 | StoresControllerUpdateById404
+
+
+export function useStoresControllerUpdateById<TData = Awaited<ReturnType<typeof storesControllerUpdateById>>, TError = StoresControllerUpdateById400 | StoresControllerUpdateById401 | StoresControllerUpdateById403 | StoresControllerUpdateById404>(
+ id: number,
+    updateStoreDto: UpdateStoreDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerUpdateById>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof storesControllerUpdateById>>,
           TError,
           Awaited<ReturnType<typeof storesControllerUpdateById>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useStoresControllerUpdateById<
-  TData = Awaited<ReturnType<typeof storesControllerUpdateById>>,
-  TError = unknown,
->(
-  id: number,
-  updateStoreDto: UpdateStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerUpdateById>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStoresControllerUpdateById<TData = Awaited<ReturnType<typeof storesControllerUpdateById>>, TError = StoresControllerUpdateById400 | StoresControllerUpdateById401 | StoresControllerUpdateById403 | StoresControllerUpdateById404>(
+ id: number,
+    updateStoreDto: UpdateStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerUpdateById>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof storesControllerUpdateById>>,
           TError,
           Awaited<ReturnType<typeof storesControllerUpdateById>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useStoresControllerUpdateById<
-  TData = Awaited<ReturnType<typeof storesControllerUpdateById>>,
-  TError = unknown,
->(
-  id: number,
-  updateStoreDto: UpdateStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerUpdateById>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStoresControllerUpdateById<TData = Awaited<ReturnType<typeof storesControllerUpdateById>>, TError = StoresControllerUpdateById400 | StoresControllerUpdateById401 | StoresControllerUpdateById403 | StoresControllerUpdateById404>(
+ id: number,
+    updateStoreDto: UpdateStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerUpdateById>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Do'konni tahrirlash (faqat SUPERADMIN)
  */
 
-export function useStoresControllerUpdateById<
-  TData = Awaited<ReturnType<typeof storesControllerUpdateById>>,
-  TError = unknown,
->(
-  id: number,
-  updateStoreDto: UpdateStoreDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerUpdateById>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getStoresControllerUpdateByIdQueryOptions(
-    id,
-    updateStoreDto,
-    options,
-  );
+export function useStoresControllerUpdateById<TData = Awaited<ReturnType<typeof storesControllerUpdateById>>, TError = StoresControllerUpdateById400 | StoresControllerUpdateById401 | StoresControllerUpdateById403 | StoresControllerUpdateById404>(
+ id: number,
+    updateStoreDto: UpdateStoreDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerUpdateById>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getStoresControllerUpdateByIdQueryOptions(id,updateStoreDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
 /**
  * @summary Do'konni o'chirish (faqat SUPERADMIN)
  */
-export const storesControllerRemove = (id: number, signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/stores/${id}`,
-    method: "DELETE",
-    signal,
-  });
-};
-
-export const getStoresControllerRemoveQueryKey = (id: number) => {
-  return ["DELETE", `/api/v1/stores/${id}`] as const;
-};
-
-export const getStoresControllerRemoveQueryOptions = <
-  TData = Awaited<ReturnType<typeof storesControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
+export const storesControllerRemove = (
+    id: number,
+ signal?: AbortSignal
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getStoresControllerRemoveQueryKey(id);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof storesControllerRemove>>
-  > = ({ signal }) => storesControllerRemove(id, signal);
+      return apiMutator<StoresControllerRemove200>(
+      {url: `/api/v1/stores/${id}`, method: 'DELETE', signal
+    },
+      );
+    }
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof storesControllerRemove>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type StoresControllerRemoveQueryResult = NonNullable<
-  Awaited<ReturnType<typeof storesControllerRemove>>
->;
-export type StoresControllerRemoveQueryError = unknown;
 
-export function useStoresControllerRemove<
-  TData = Awaited<ReturnType<typeof storesControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerRemove>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+export const getStoresControllerRemoveQueryKey = (id: number,) => {
+    return [
+    'DELETE', `/api/v1/stores/${id}`
+    ] as const;
+    }
+
+
+export const getStoresControllerRemoveQueryOptions = <TData = Awaited<ReturnType<typeof storesControllerRemove>>, TError = StoresControllerRemove401 | StoresControllerRemove403 | StoresControllerRemove404>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerRemove>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getStoresControllerRemoveQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof storesControllerRemove>>> = ({ signal }) => storesControllerRemove(id, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof storesControllerRemove>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type StoresControllerRemoveQueryResult = NonNullable<Awaited<ReturnType<typeof storesControllerRemove>>>
+export type StoresControllerRemoveQueryError = StoresControllerRemove401 | StoresControllerRemove403 | StoresControllerRemove404
+
+
+export function useStoresControllerRemove<TData = Awaited<ReturnType<typeof storesControllerRemove>>, TError = StoresControllerRemove401 | StoresControllerRemove403 | StoresControllerRemove404>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerRemove>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof storesControllerRemove>>,
           TError,
           Awaited<ReturnType<typeof storesControllerRemove>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useStoresControllerRemove<
-  TData = Awaited<ReturnType<typeof storesControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerRemove>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStoresControllerRemove<TData = Awaited<ReturnType<typeof storesControllerRemove>>, TError = StoresControllerRemove401 | StoresControllerRemove403 | StoresControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerRemove>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof storesControllerRemove>>,
           TError,
           Awaited<ReturnType<typeof storesControllerRemove>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useStoresControllerRemove<
-  TData = Awaited<ReturnType<typeof storesControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStoresControllerRemove<TData = Awaited<ReturnType<typeof storesControllerRemove>>, TError = StoresControllerRemove401 | StoresControllerRemove403 | StoresControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerRemove>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Do'konni o'chirish (faqat SUPERADMIN)
  */
 
-export function useStoresControllerRemove<
-  TData = Awaited<ReturnType<typeof storesControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof storesControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getStoresControllerRemoveQueryOptions(id, options);
+export function useStoresControllerRemove<TData = Awaited<ReturnType<typeof storesControllerRemove>>, TError = StoresControllerRemove401 | StoresControllerRemove403 | StoresControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerRemove>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getStoresControllerRemoveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+

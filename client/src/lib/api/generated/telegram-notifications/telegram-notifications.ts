@@ -16,9 +16,25 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import {
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -28,22 +44,38 @@ import type {
   QueryKey,
   UndefinedInitialDataOptions,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
-import type { TestNotificationDto } from "../model";
+import type {
+  TelegramControllerSendTest200,
+  TelegramControllerSendTest400,
+  TelegramControllerSendTest401,
+  TelegramControllerSendTest403,
+  TelegramControllerSendTest503,
+  TelegramControllerTriggerDailySummary200,
+  TelegramControllerTriggerDailySummary401,
+  TelegramControllerTriggerDailySummary403,
+  TelegramControllerTriggerDebtReminder200,
+  TelegramControllerTriggerDebtReminder401,
+  TelegramControllerTriggerDebtReminder403,
+  TelegramControllerTriggerLowStock200,
+  TelegramControllerTriggerLowStock401,
+  TelegramControllerTriggerLowStock403,
+  TestNotificationDto
+} from '../model';
 
-import { apiMutator } from "../../client";
+import { apiMutator } from '../../client';
 
-const withQueryKey = <T extends object, K>(
-  query: T,
-  queryKey: K,
-): T & { queryKey: K } => {
+
+
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === "queryKey") continue;
+    if (key === 'queryKey') continue;
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
@@ -58,605 +90,369 @@ const withQueryKey = <T extends object, K>(
  * @summary Do'kon telegram guruhiga test xabar yuborish
  */
 export const telegramControllerSendTest = (
-  testNotificationDto: TestNotificationDto,
-  signal?: AbortSignal,
+    testNotificationDto: TestNotificationDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<unknown>({
-    url: `/api/v1/telegram/test`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: testNotificationDto,
-    signal,
-  });
-};
 
-export const getTelegramControllerSendTestQueryKey = (
-  testNotificationDto?: TestNotificationDto,
+
+      return apiMutator<TelegramControllerSendTest200>(
+      {url: `/api/v1/telegram/test`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: testNotificationDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getTelegramControllerSendTestQueryKey = (testNotificationDto?: TestNotificationDto,) => {
+    return [
+    'POST', `/api/v1/telegram/test`, testNotificationDto
+    ] as const;
+    }
+
+
+export const getTelegramControllerSendTestQueryOptions = <TData = Awaited<ReturnType<typeof telegramControllerSendTest>>, TError = TelegramControllerSendTest400 | TelegramControllerSendTest401 | TelegramControllerSendTest403 | TelegramControllerSendTest503>(testNotificationDto: TestNotificationDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerSendTest>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/telegram/test`, testNotificationDto] as const;
-};
 
-export const getTelegramControllerSendTestQueryOptions = <
-  TData = Awaited<ReturnType<typeof telegramControllerSendTest>>,
-  TError = void,
->(
-  testNotificationDto: TestNotificationDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerSendTest>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getTelegramControllerSendTestQueryKey(testNotificationDto);
+  const queryKey =  queryOptions?.queryKey ?? getTelegramControllerSendTestQueryKey(testNotificationDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof telegramControllerSendTest>>
-  > = ({ signal }) => telegramControllerSendTest(testNotificationDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof telegramControllerSendTest>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type TelegramControllerSendTestQueryResult = NonNullable<
-  Awaited<ReturnType<typeof telegramControllerSendTest>>
->;
-export type TelegramControllerSendTestQueryError = void;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof telegramControllerSendTest>>> = ({ signal }) => telegramControllerSendTest(testNotificationDto, signal);
 
-export function useTelegramControllerSendTest<
-  TData = Awaited<ReturnType<typeof telegramControllerSendTest>>,
-  TError = void,
->(
-  testNotificationDto: TestNotificationDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerSendTest>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof telegramControllerSendTest>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type TelegramControllerSendTestQueryResult = NonNullable<Awaited<ReturnType<typeof telegramControllerSendTest>>>
+export type TelegramControllerSendTestQueryError = TelegramControllerSendTest400 | TelegramControllerSendTest401 | TelegramControllerSendTest403 | TelegramControllerSendTest503
+
+
+export function useTelegramControllerSendTest<TData = Awaited<ReturnType<typeof telegramControllerSendTest>>, TError = TelegramControllerSendTest400 | TelegramControllerSendTest401 | TelegramControllerSendTest403 | TelegramControllerSendTest503>(
+ testNotificationDto: TestNotificationDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerSendTest>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof telegramControllerSendTest>>,
           TError,
           Awaited<ReturnType<typeof telegramControllerSendTest>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useTelegramControllerSendTest<
-  TData = Awaited<ReturnType<typeof telegramControllerSendTest>>,
-  TError = void,
->(
-  testNotificationDto: TestNotificationDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerSendTest>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTelegramControllerSendTest<TData = Awaited<ReturnType<typeof telegramControllerSendTest>>, TError = TelegramControllerSendTest400 | TelegramControllerSendTest401 | TelegramControllerSendTest403 | TelegramControllerSendTest503>(
+ testNotificationDto: TestNotificationDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerSendTest>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof telegramControllerSendTest>>,
           TError,
           Awaited<ReturnType<typeof telegramControllerSendTest>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useTelegramControllerSendTest<
-  TData = Awaited<ReturnType<typeof telegramControllerSendTest>>,
-  TError = void,
->(
-  testNotificationDto: TestNotificationDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerSendTest>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTelegramControllerSendTest<TData = Awaited<ReturnType<typeof telegramControllerSendTest>>, TError = TelegramControllerSendTest400 | TelegramControllerSendTest401 | TelegramControllerSendTest403 | TelegramControllerSendTest503>(
+ testNotificationDto: TestNotificationDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerSendTest>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Do'kon telegram guruhiga test xabar yuborish
  */
 
-export function useTelegramControllerSendTest<
-  TData = Awaited<ReturnType<typeof telegramControllerSendTest>>,
-  TError = void,
->(
-  testNotificationDto: TestNotificationDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerSendTest>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getTelegramControllerSendTestQueryOptions(
-    testNotificationDto,
-    options,
-  );
+export function useTelegramControllerSendTest<TData = Awaited<ReturnType<typeof telegramControllerSendTest>>, TError = TelegramControllerSendTest400 | TelegramControllerSendTest401 | TelegramControllerSendTest403 | TelegramControllerSendTest503>(
+ testNotificationDto: TestNotificationDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerSendTest>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getTelegramControllerSendTestQueryOptions(testNotificationDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
 /**
  * @summary Qarzdorlik eslatmalarini qo‘lda ishga tushirish
  */
-export const telegramControllerTriggerDebtReminder = (signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/telegram/trigger/debt-reminder`,
-    method: "POST",
-    signal,
-  });
-};
+export const telegramControllerTriggerDebtReminder = (
+
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<TelegramControllerTriggerDebtReminder200>(
+      {url: `/api/v1/telegram/trigger/debt-reminder`, method: 'POST', signal
+    },
+      );
+    }
+
+
+
 
 export const getTelegramControllerTriggerDebtReminderQueryKey = () => {
-  return ["POST", `/api/v1/telegram/trigger/debt-reminder`] as const;
-};
+    return [
+    'POST', `/api/v1/telegram/trigger/debt-reminder`
+    ] as const;
+    }
 
-export const getTelegramControllerTriggerDebtReminderQueryOptions = <
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>,
-  TError = unknown,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getTelegramControllerTriggerDebtReminderQueryKey();
+export const getTelegramControllerTriggerDebtReminderQueryOptions = <TData = Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>, TError = TelegramControllerTriggerDebtReminder401 | TelegramControllerTriggerDebtReminder403>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>, TError, TData>>, }
+) => {
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>
-  > = ({ signal }) => telegramControllerTriggerDebtReminder(signal);
+const {query: queryOptions} = options ?? {};
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+  const queryKey =  queryOptions?.queryKey ?? getTelegramControllerTriggerDebtReminderQueryKey();
 
-export type TelegramControllerTriggerDebtReminderQueryResult = NonNullable<
-  Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>
->;
-export type TelegramControllerTriggerDebtReminderQueryError = unknown;
 
-export function useTelegramControllerTriggerDebtReminder<
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>,
-  TError = unknown,
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>> = ({ signal }) => telegramControllerTriggerDebtReminder(signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type TelegramControllerTriggerDebtReminderQueryResult = NonNullable<Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>>
+export type TelegramControllerTriggerDebtReminderQueryError = TelegramControllerTriggerDebtReminder401 | TelegramControllerTriggerDebtReminder403
+
+
+export function useTelegramControllerTriggerDebtReminder<TData = Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>, TError = TelegramControllerTriggerDebtReminder401 | TelegramControllerTriggerDebtReminder403>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>,
           TError,
           Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useTelegramControllerTriggerDebtReminder<
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTelegramControllerTriggerDebtReminder<TData = Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>, TError = TelegramControllerTriggerDebtReminder401 | TelegramControllerTriggerDebtReminder403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>,
           TError,
           Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useTelegramControllerTriggerDebtReminder<
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTelegramControllerTriggerDebtReminder<TData = Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>, TError = TelegramControllerTriggerDebtReminder401 | TelegramControllerTriggerDebtReminder403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Qarzdorlik eslatmalarini qo‘lda ishga tushirish
  */
 
-export function useTelegramControllerTriggerDebtReminder<
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getTelegramControllerTriggerDebtReminderQueryOptions(options);
+export function useTelegramControllerTriggerDebtReminder<TData = Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>, TError = TelegramControllerTriggerDebtReminder401 | TelegramControllerTriggerDebtReminder403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerDebtReminder>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getTelegramControllerTriggerDebtReminderQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
 /**
  * @summary Kam qolgan mahsulotlar eslatmasini qo‘lda ishga tushirish
  */
-export const telegramControllerTriggerLowStock = (signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/telegram/trigger/low-stock`,
-    method: "POST",
-    signal,
-  });
-};
+export const telegramControllerTriggerLowStock = (
+
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<TelegramControllerTriggerLowStock200>(
+      {url: `/api/v1/telegram/trigger/low-stock`, method: 'POST', signal
+    },
+      );
+    }
+
+
+
 
 export const getTelegramControllerTriggerLowStockQueryKey = () => {
-  return ["POST", `/api/v1/telegram/trigger/low-stock`] as const;
-};
+    return [
+    'POST', `/api/v1/telegram/trigger/low-stock`
+    ] as const;
+    }
 
-export const getTelegramControllerTriggerLowStockQueryOptions = <
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>,
-  TError = unknown,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getTelegramControllerTriggerLowStockQueryKey();
+export const getTelegramControllerTriggerLowStockQueryOptions = <TData = Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>, TError = TelegramControllerTriggerLowStock401 | TelegramControllerTriggerLowStock403>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>, TError, TData>>, }
+) => {
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>
-  > = ({ signal }) => telegramControllerTriggerLowStock(signal);
+const {query: queryOptions} = options ?? {};
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+  const queryKey =  queryOptions?.queryKey ?? getTelegramControllerTriggerLowStockQueryKey();
 
-export type TelegramControllerTriggerLowStockQueryResult = NonNullable<
-  Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>
->;
-export type TelegramControllerTriggerLowStockQueryError = unknown;
 
-export function useTelegramControllerTriggerLowStock<
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>,
-  TError = unknown,
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>> = ({ signal }) => telegramControllerTriggerLowStock(signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type TelegramControllerTriggerLowStockQueryResult = NonNullable<Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>>
+export type TelegramControllerTriggerLowStockQueryError = TelegramControllerTriggerLowStock401 | TelegramControllerTriggerLowStock403
+
+
+export function useTelegramControllerTriggerLowStock<TData = Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>, TError = TelegramControllerTriggerLowStock401 | TelegramControllerTriggerLowStock403>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>,
           TError,
           Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useTelegramControllerTriggerLowStock<
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTelegramControllerTriggerLowStock<TData = Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>, TError = TelegramControllerTriggerLowStock401 | TelegramControllerTriggerLowStock403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>,
           TError,
           Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useTelegramControllerTriggerLowStock<
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTelegramControllerTriggerLowStock<TData = Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>, TError = TelegramControllerTriggerLowStock401 | TelegramControllerTriggerLowStock403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Kam qolgan mahsulotlar eslatmasini qo‘lda ishga tushirish
  */
 
-export function useTelegramControllerTriggerLowStock<
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getTelegramControllerTriggerLowStockQueryOptions(options);
+export function useTelegramControllerTriggerLowStock<TData = Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>, TError = TelegramControllerTriggerLowStock401 | TelegramControllerTriggerLowStock403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerLowStock>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getTelegramControllerTriggerLowStockQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
 /**
  * @summary Kunlik yakuniy hisobotni qo‘lda yuborish
  */
-export const telegramControllerTriggerDailySummary = (signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/telegram/trigger/daily-summary`,
-    method: "POST",
-    signal,
-  });
-};
+export const telegramControllerTriggerDailySummary = (
+
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<TelegramControllerTriggerDailySummary200>(
+      {url: `/api/v1/telegram/trigger/daily-summary`, method: 'POST', signal
+    },
+      );
+    }
+
+
+
 
 export const getTelegramControllerTriggerDailySummaryQueryKey = () => {
-  return ["POST", `/api/v1/telegram/trigger/daily-summary`] as const;
-};
+    return [
+    'POST', `/api/v1/telegram/trigger/daily-summary`
+    ] as const;
+    }
 
-export const getTelegramControllerTriggerDailySummaryQueryOptions = <
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>,
-  TError = unknown,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getTelegramControllerTriggerDailySummaryQueryKey();
+export const getTelegramControllerTriggerDailySummaryQueryOptions = <TData = Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>, TError = TelegramControllerTriggerDailySummary401 | TelegramControllerTriggerDailySummary403>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>, TError, TData>>, }
+) => {
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>
-  > = ({ signal }) => telegramControllerTriggerDailySummary(signal);
+const {query: queryOptions} = options ?? {};
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+  const queryKey =  queryOptions?.queryKey ?? getTelegramControllerTriggerDailySummaryQueryKey();
 
-export type TelegramControllerTriggerDailySummaryQueryResult = NonNullable<
-  Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>
->;
-export type TelegramControllerTriggerDailySummaryQueryError = unknown;
 
-export function useTelegramControllerTriggerDailySummary<
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>,
-  TError = unknown,
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>> = ({ signal }) => telegramControllerTriggerDailySummary(signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type TelegramControllerTriggerDailySummaryQueryResult = NonNullable<Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>>
+export type TelegramControllerTriggerDailySummaryQueryError = TelegramControllerTriggerDailySummary401 | TelegramControllerTriggerDailySummary403
+
+
+export function useTelegramControllerTriggerDailySummary<TData = Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>, TError = TelegramControllerTriggerDailySummary401 | TelegramControllerTriggerDailySummary403>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>,
           TError,
           Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useTelegramControllerTriggerDailySummary<
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTelegramControllerTriggerDailySummary<TData = Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>, TError = TelegramControllerTriggerDailySummary401 | TelegramControllerTriggerDailySummary403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>,
           TError,
           Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useTelegramControllerTriggerDailySummary<
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTelegramControllerTriggerDailySummary<TData = Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>, TError = TelegramControllerTriggerDailySummary401 | TelegramControllerTriggerDailySummary403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Kunlik yakuniy hisobotni qo‘lda yuborish
  */
 
-export function useTelegramControllerTriggerDailySummary<
-  TData = Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getTelegramControllerTriggerDailySummaryQueryOptions(options);
+export function useTelegramControllerTriggerDailySummary<TData = Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>, TError = TelegramControllerTriggerDailySummary401 | TelegramControllerTriggerDailySummary403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof telegramControllerTriggerDailySummary>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getTelegramControllerTriggerDailySummaryQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+

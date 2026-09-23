@@ -16,9 +16,26 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -31,22 +48,49 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
-import type { CreateInventoryDto } from "../model";
+import type {
+  CreateInventoryDto,
+  InventoryControllerGetStockLevels200,
+  InventoryControllerGetStockLevels400,
+  InventoryControllerGetStockLevels401,
+  InventoryControllerGetStockLevels403,
+  InventoryControllerGetStockLevelsParams,
+  InventoryControllerGetTransactions200,
+  InventoryControllerGetTransactions400,
+  InventoryControllerGetTransactions401,
+  InventoryControllerGetTransactions403,
+  InventoryControllerGetTransactionsParams,
+  InventoryControllerOpeningStock201,
+  InventoryControllerOpeningStock400,
+  InventoryControllerOpeningStock401,
+  InventoryControllerOpeningStock403,
+  InventoryControllerOpeningStock404,
+  InventoryControllerPurchase201,
+  InventoryControllerPurchase400,
+  InventoryControllerPurchase401,
+  InventoryControllerPurchase403,
+  InventoryControllerPurchase404,
+  InventoryControllerWriteOff201,
+  InventoryControllerWriteOff400,
+  InventoryControllerWriteOff401,
+  InventoryControllerWriteOff403,
+  InventoryControllerWriteOff404
+} from '../model';
 
-import { apiMutator } from "../../client";
+import { apiMutator } from '../../client';
 
-const withQueryKey = <T extends object, K>(
-  query: T,
-  queryKey: K,
-): T & { queryKey: K } => {
+
+
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === "queryKey") continue;
+    if (key === 'queryKey') continue;
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
@@ -60,656 +104,413 @@ const withQueryKey = <T extends object, K>(
  * @summary Ombor kirimi (xarid)
  */
 export const inventoryControllerPurchase = (
-  createInventoryDto: CreateInventoryDto,
-  signal?: AbortSignal,
+    createInventoryDto: CreateInventoryDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/inventory/purchase`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: createInventoryDto,
-    signal,
-  });
-};
 
-export const getInventoryControllerPurchaseQueryKey = (
-  createInventoryDto?: CreateInventoryDto,
+
+      return apiMutator<InventoryControllerPurchase201>(
+      {url: `/api/v1/inventory/purchase`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createInventoryDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getInventoryControllerPurchaseQueryKey = (createInventoryDto?: CreateInventoryDto,) => {
+    return [
+    'POST', `/api/v1/inventory/purchase`, createInventoryDto
+    ] as const;
+    }
+
+
+export const getInventoryControllerPurchaseQueryOptions = <TData = Awaited<ReturnType<typeof inventoryControllerPurchase>>, TError = InventoryControllerPurchase400 | InventoryControllerPurchase401 | InventoryControllerPurchase403 | InventoryControllerPurchase404>(createInventoryDto: CreateInventoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerPurchase>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/inventory/purchase`, createInventoryDto] as const;
-};
 
-export const getInventoryControllerPurchaseQueryOptions = <
-  TData = Awaited<ReturnType<typeof inventoryControllerPurchase>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerPurchase>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getInventoryControllerPurchaseQueryKey(createInventoryDto);
+  const queryKey =  queryOptions?.queryKey ?? getInventoryControllerPurchaseQueryKey(createInventoryDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof inventoryControllerPurchase>>
-  > = ({ signal }) => inventoryControllerPurchase(createInventoryDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof inventoryControllerPurchase>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type InventoryControllerPurchaseQueryResult = NonNullable<
-  Awaited<ReturnType<typeof inventoryControllerPurchase>>
->;
-export type InventoryControllerPurchaseQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof inventoryControllerPurchase>>> = ({ signal }) => inventoryControllerPurchase(createInventoryDto, signal);
 
-export function useInventoryControllerPurchase<
-  TData = Awaited<ReturnType<typeof inventoryControllerPurchase>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerPurchase>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerPurchase>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type InventoryControllerPurchaseQueryResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerPurchase>>>
+export type InventoryControllerPurchaseQueryError = InventoryControllerPurchase400 | InventoryControllerPurchase401 | InventoryControllerPurchase403 | InventoryControllerPurchase404
+
+
+export function useInventoryControllerPurchase<TData = Awaited<ReturnType<typeof inventoryControllerPurchase>>, TError = InventoryControllerPurchase400 | InventoryControllerPurchase401 | InventoryControllerPurchase403 | InventoryControllerPurchase404>(
+ createInventoryDto: CreateInventoryDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerPurchase>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof inventoryControllerPurchase>>,
           TError,
           Awaited<ReturnType<typeof inventoryControllerPurchase>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useInventoryControllerPurchase<
-  TData = Awaited<ReturnType<typeof inventoryControllerPurchase>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerPurchase>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useInventoryControllerPurchase<TData = Awaited<ReturnType<typeof inventoryControllerPurchase>>, TError = InventoryControllerPurchase400 | InventoryControllerPurchase401 | InventoryControllerPurchase403 | InventoryControllerPurchase404>(
+ createInventoryDto: CreateInventoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerPurchase>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof inventoryControllerPurchase>>,
           TError,
           Awaited<ReturnType<typeof inventoryControllerPurchase>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useInventoryControllerPurchase<
-  TData = Awaited<ReturnType<typeof inventoryControllerPurchase>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerPurchase>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useInventoryControllerPurchase<TData = Awaited<ReturnType<typeof inventoryControllerPurchase>>, TError = InventoryControllerPurchase400 | InventoryControllerPurchase401 | InventoryControllerPurchase403 | InventoryControllerPurchase404>(
+ createInventoryDto: CreateInventoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerPurchase>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Ombor kirimi (xarid)
  */
 
-export function useInventoryControllerPurchase<
-  TData = Awaited<ReturnType<typeof inventoryControllerPurchase>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerPurchase>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getInventoryControllerPurchaseQueryOptions(
-    createInventoryDto,
-    options,
-  );
+export function useInventoryControllerPurchase<TData = Awaited<ReturnType<typeof inventoryControllerPurchase>>, TError = InventoryControllerPurchase400 | InventoryControllerPurchase401 | InventoryControllerPurchase403 | InventoryControllerPurchase404>(
+ createInventoryDto: CreateInventoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerPurchase>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getInventoryControllerPurchaseQueryOptions(createInventoryDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * @summary Hisobdan chiqarish
  */
 export const inventoryControllerWriteOff = (
-  createInventoryDto: CreateInventoryDto,
-  signal?: AbortSignal,
+    createInventoryDto: CreateInventoryDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/inventory/write-off`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: createInventoryDto,
-    signal,
-  });
-};
 
-export const getInventoryControllerWriteOffQueryKey = (
-  createInventoryDto?: CreateInventoryDto,
+
+      return apiMutator<InventoryControllerWriteOff201>(
+      {url: `/api/v1/inventory/write-off`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createInventoryDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getInventoryControllerWriteOffQueryKey = (createInventoryDto?: CreateInventoryDto,) => {
+    return [
+    'POST', `/api/v1/inventory/write-off`, createInventoryDto
+    ] as const;
+    }
+
+
+export const getInventoryControllerWriteOffQueryOptions = <TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError = InventoryControllerWriteOff400 | InventoryControllerWriteOff401 | InventoryControllerWriteOff403 | InventoryControllerWriteOff404>(createInventoryDto: CreateInventoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/inventory/write-off`, createInventoryDto] as const;
-};
 
-export const getInventoryControllerWriteOffQueryOptions = <
-  TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getInventoryControllerWriteOffQueryKey(createInventoryDto);
+  const queryKey =  queryOptions?.queryKey ?? getInventoryControllerWriteOffQueryKey(createInventoryDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof inventoryControllerWriteOff>>
-  > = ({ signal }) => inventoryControllerWriteOff(createInventoryDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type InventoryControllerWriteOffQueryResult = NonNullable<
-  Awaited<ReturnType<typeof inventoryControllerWriteOff>>
->;
-export type InventoryControllerWriteOffQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof inventoryControllerWriteOff>>> = ({ signal }) => inventoryControllerWriteOff(createInventoryDto, signal);
 
-export function useInventoryControllerWriteOff<
-  TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type InventoryControllerWriteOffQueryResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerWriteOff>>>
+export type InventoryControllerWriteOffQueryError = InventoryControllerWriteOff400 | InventoryControllerWriteOff401 | InventoryControllerWriteOff403 | InventoryControllerWriteOff404
+
+
+export function useInventoryControllerWriteOff<TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError = InventoryControllerWriteOff400 | InventoryControllerWriteOff401 | InventoryControllerWriteOff403 | InventoryControllerWriteOff404>(
+ createInventoryDto: CreateInventoryDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
           TError,
           Awaited<ReturnType<typeof inventoryControllerWriteOff>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useInventoryControllerWriteOff<
-  TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useInventoryControllerWriteOff<TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError = InventoryControllerWriteOff400 | InventoryControllerWriteOff401 | InventoryControllerWriteOff403 | InventoryControllerWriteOff404>(
+ createInventoryDto: CreateInventoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
           TError,
           Awaited<ReturnType<typeof inventoryControllerWriteOff>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useInventoryControllerWriteOff<
-  TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useInventoryControllerWriteOff<TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError = InventoryControllerWriteOff400 | InventoryControllerWriteOff401 | InventoryControllerWriteOff403 | InventoryControllerWriteOff404>(
+ createInventoryDto: CreateInventoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Hisobdan chiqarish
  */
 
-export function useInventoryControllerWriteOff<
-  TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerWriteOff>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getInventoryControllerWriteOffQueryOptions(
-    createInventoryDto,
-    options,
-  );
+export function useInventoryControllerWriteOff<TData = Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError = InventoryControllerWriteOff400 | InventoryControllerWriteOff401 | InventoryControllerWriteOff403 | InventoryControllerWriteOff404>(
+ createInventoryDto: CreateInventoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerWriteOff>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getInventoryControllerWriteOffQueryOptions(createInventoryDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * @summary Boshlang'ich qoldiq kiritish
  */
 export const inventoryControllerOpeningStock = (
-  createInventoryDto: CreateInventoryDto,
-  signal?: AbortSignal,
+    createInventoryDto: CreateInventoryDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/inventory/opening`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: createInventoryDto,
-    signal,
-  });
-};
 
-export const getInventoryControllerOpeningStockQueryKey = (
-  createInventoryDto?: CreateInventoryDto,
+
+      return apiMutator<InventoryControllerOpeningStock201>(
+      {url: `/api/v1/inventory/opening`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createInventoryDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getInventoryControllerOpeningStockQueryKey = (createInventoryDto?: CreateInventoryDto,) => {
+    return [
+    'POST', `/api/v1/inventory/opening`, createInventoryDto
+    ] as const;
+    }
+
+
+export const getInventoryControllerOpeningStockQueryOptions = <TData = Awaited<ReturnType<typeof inventoryControllerOpeningStock>>, TError = InventoryControllerOpeningStock400 | InventoryControllerOpeningStock401 | InventoryControllerOpeningStock403 | InventoryControllerOpeningStock404>(createInventoryDto: CreateInventoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerOpeningStock>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/inventory/opening`, createInventoryDto] as const;
-};
 
-export const getInventoryControllerOpeningStockQueryOptions = <
-  TData = Awaited<ReturnType<typeof inventoryControllerOpeningStock>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerOpeningStock>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getInventoryControllerOpeningStockQueryKey(createInventoryDto);
+  const queryKey =  queryOptions?.queryKey ?? getInventoryControllerOpeningStockQueryKey(createInventoryDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof inventoryControllerOpeningStock>>
-  > = ({ signal }) =>
-    inventoryControllerOpeningStock(createInventoryDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof inventoryControllerOpeningStock>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type InventoryControllerOpeningStockQueryResult = NonNullable<
-  Awaited<ReturnType<typeof inventoryControllerOpeningStock>>
->;
-export type InventoryControllerOpeningStockQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof inventoryControllerOpeningStock>>> = ({ signal }) => inventoryControllerOpeningStock(createInventoryDto, signal);
 
-export function useInventoryControllerOpeningStock<
-  TData = Awaited<ReturnType<typeof inventoryControllerOpeningStock>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerOpeningStock>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerOpeningStock>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type InventoryControllerOpeningStockQueryResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerOpeningStock>>>
+export type InventoryControllerOpeningStockQueryError = InventoryControllerOpeningStock400 | InventoryControllerOpeningStock401 | InventoryControllerOpeningStock403 | InventoryControllerOpeningStock404
+
+
+export function useInventoryControllerOpeningStock<TData = Awaited<ReturnType<typeof inventoryControllerOpeningStock>>, TError = InventoryControllerOpeningStock400 | InventoryControllerOpeningStock401 | InventoryControllerOpeningStock403 | InventoryControllerOpeningStock404>(
+ createInventoryDto: CreateInventoryDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerOpeningStock>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof inventoryControllerOpeningStock>>,
           TError,
           Awaited<ReturnType<typeof inventoryControllerOpeningStock>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useInventoryControllerOpeningStock<
-  TData = Awaited<ReturnType<typeof inventoryControllerOpeningStock>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerOpeningStock>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useInventoryControllerOpeningStock<TData = Awaited<ReturnType<typeof inventoryControllerOpeningStock>>, TError = InventoryControllerOpeningStock400 | InventoryControllerOpeningStock401 | InventoryControllerOpeningStock403 | InventoryControllerOpeningStock404>(
+ createInventoryDto: CreateInventoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerOpeningStock>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof inventoryControllerOpeningStock>>,
           TError,
           Awaited<ReturnType<typeof inventoryControllerOpeningStock>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useInventoryControllerOpeningStock<
-  TData = Awaited<ReturnType<typeof inventoryControllerOpeningStock>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerOpeningStock>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useInventoryControllerOpeningStock<TData = Awaited<ReturnType<typeof inventoryControllerOpeningStock>>, TError = InventoryControllerOpeningStock400 | InventoryControllerOpeningStock401 | InventoryControllerOpeningStock403 | InventoryControllerOpeningStock404>(
+ createInventoryDto: CreateInventoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerOpeningStock>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Boshlang'ich qoldiq kiritish
  */
 
-export function useInventoryControllerOpeningStock<
-  TData = Awaited<ReturnType<typeof inventoryControllerOpeningStock>>,
-  TError = unknown,
->(
-  createInventoryDto: CreateInventoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof inventoryControllerOpeningStock>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getInventoryControllerOpeningStockQueryOptions(
-    createInventoryDto,
-    options,
-  );
+export function useInventoryControllerOpeningStock<TData = Awaited<ReturnType<typeof inventoryControllerOpeningStock>>, TError = InventoryControllerOpeningStock400 | InventoryControllerOpeningStock401 | InventoryControllerOpeningStock403 | InventoryControllerOpeningStock404>(
+ createInventoryDto: CreateInventoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof inventoryControllerOpeningStock>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getInventoryControllerOpeningStockQueryOptions(createInventoryDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * @summary Ombor harakatlari tarixi
- */
-export const inventoryControllerGetTransactions = (signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/inventory/transactions`,
-    method: "GET",
-    signal,
-  });
-};
 
-export const getInventoryControllerGetTransactionsMutationKey = () =>
-  ["inventoryControllerGetTransactions"] as const;
 
-export const getInventoryControllerGetTransactionsMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof inventoryControllerGetTransactions>>,
-    TError,
-    void,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof inventoryControllerGetTransactions>>,
-  TError,
-  void,
-  TContext
-> => {
-  const mutationKey = getInventoryControllerGetTransactionsMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof inventoryControllerGetTransactions>>,
-    void
-  > = () => {
-    return inventoryControllerGetTransactions();
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
-
-export type InventoryControllerGetTransactionsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof inventoryControllerGetTransactions>>
->;
-
-export type InventoryControllerGetTransactionsMutationError = unknown;
 
 /**
  * @summary Ombor harakatlari tarixi
  */
-export const useInventoryControllerGetTransactions = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof inventoryControllerGetTransactions>>,
-      TError,
-      void,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof inventoryControllerGetTransactions>>,
-  TError,
-  void,
-  TContext
-> => {
-  return useMutation(
-    getInventoryControllerGetTransactionsMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const inventoryControllerGetTransactions = (
+    params?: InventoryControllerGetTransactionsParams,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<InventoryControllerGetTransactions200>(
+      {url: `/api/v1/inventory/transactions`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+
+
+
+
+export const getInventoryControllerGetTransactionsMutationKey = () => ['inventoryControllerGetTransactions'] as const;
+
+export const getInventoryControllerGetTransactionsMutationOptions = <TError = InventoryControllerGetTransactions400 | InventoryControllerGetTransactions401 | InventoryControllerGetTransactions403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerGetTransactions>>, TError,InventoryControllerGetTransactionsMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerGetTransactions>>, TError,InventoryControllerGetTransactionsMutationVariables, TContext> => {
+
+const mutationKey = getInventoryControllerGetTransactionsMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof inventoryControllerGetTransactions>>, InventoryControllerGetTransactionsMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  inventoryControllerGetTransactions(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InventoryControllerGetTransactionsMutationResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerGetTransactions>>>
+
+    export type InventoryControllerGetTransactionsMutationError = InventoryControllerGetTransactions400 | InventoryControllerGetTransactions401 | InventoryControllerGetTransactions403
+    export type InventoryControllerGetTransactionsMutationVariables = {params?: InventoryControllerGetTransactionsParams}
+
+    /**
+ * @summary Ombor harakatlari tarixi
+ */
+export const useInventoryControllerGetTransactions = <TError = InventoryControllerGetTransactions400 | InventoryControllerGetTransactions401 | InventoryControllerGetTransactions403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerGetTransactions>>, TError,InventoryControllerGetTransactionsMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof inventoryControllerGetTransactions>>,
+        TError,
+        InventoryControllerGetTransactionsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getInventoryControllerGetTransactionsMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Joriy qoldiqlar
  */
-export const inventoryControllerGetStockLevels = (signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/inventory/stock`,
-    method: "GET",
-    signal,
-  });
-};
+export const inventoryControllerGetStockLevels = (
+    params?: InventoryControllerGetStockLevelsParams,
+ signal?: AbortSignal
+) => {
 
-export const getInventoryControllerGetStockLevelsMutationKey = () =>
-  ["inventoryControllerGetStockLevels"] as const;
 
-export const getInventoryControllerGetStockLevelsMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof inventoryControllerGetStockLevels>>,
-    TError,
-    void,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof inventoryControllerGetStockLevels>>,
-  TError,
-  void,
-  TContext
-> => {
-  const mutationKey = getInventoryControllerGetStockLevelsMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<InventoryControllerGetStockLevels200>(
+      {url: `/api/v1/inventory/stock`, method: 'GET',
+        params, signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof inventoryControllerGetStockLevels>>,
-    void
-  > = () => {
-    return inventoryControllerGetStockLevels();
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type InventoryControllerGetStockLevelsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof inventoryControllerGetStockLevels>>
->;
 
-export type InventoryControllerGetStockLevelsMutationError = unknown;
+export const getInventoryControllerGetStockLevelsMutationKey = () => ['inventoryControllerGetStockLevels'] as const;
 
-/**
+export const getInventoryControllerGetStockLevelsMutationOptions = <TError = InventoryControllerGetStockLevels400 | InventoryControllerGetStockLevels401 | InventoryControllerGetStockLevels403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerGetStockLevels>>, TError,InventoryControllerGetStockLevelsMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerGetStockLevels>>, TError,InventoryControllerGetStockLevelsMutationVariables, TContext> => {
+
+const mutationKey = getInventoryControllerGetStockLevelsMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof inventoryControllerGetStockLevels>>, InventoryControllerGetStockLevelsMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  inventoryControllerGetStockLevels(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InventoryControllerGetStockLevelsMutationResult = NonNullable<Awaited<ReturnType<typeof inventoryControllerGetStockLevels>>>
+
+    export type InventoryControllerGetStockLevelsMutationError = InventoryControllerGetStockLevels400 | InventoryControllerGetStockLevels401 | InventoryControllerGetStockLevels403
+    export type InventoryControllerGetStockLevelsMutationVariables = {params?: InventoryControllerGetStockLevelsParams}
+
+    /**
  * @summary Joriy qoldiqlar
  */
-export const useInventoryControllerGetStockLevels = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof inventoryControllerGetStockLevels>>,
-      TError,
-      void,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof inventoryControllerGetStockLevels>>,
-  TError,
-  void,
-  TContext
-> => {
-  return useMutation(
-    getInventoryControllerGetStockLevelsMutationOptions(options),
-    queryClient,
-  );
-};
+export const useInventoryControllerGetStockLevels = <TError = InventoryControllerGetStockLevels400 | InventoryControllerGetStockLevels401 | InventoryControllerGetStockLevels403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inventoryControllerGetStockLevels>>, TError,InventoryControllerGetStockLevelsMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof inventoryControllerGetStockLevels>>,
+        TError,
+        InventoryControllerGetStockLevelsMutationVariables,
+        TContext
+      > => {
+      return useMutation(getInventoryControllerGetStockLevelsMutationOptions(options), queryClient);
+    }

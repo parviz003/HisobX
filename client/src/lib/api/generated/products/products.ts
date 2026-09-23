@@ -16,9 +16,26 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -31,22 +48,49 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
-import type { CreateProductDto, UpdateProductDto } from "../model";
+import type {
+  ProductsControllerCreate201,
+  ProductsControllerCreate400,
+  ProductsControllerCreate401,
+  ProductsControllerCreate403,
+  ProductsControllerCreate409,
+  ProductsControllerCreateBody,
+  ProductsControllerFindAll200,
+  ProductsControllerFindAll400,
+  ProductsControllerFindAll401,
+  ProductsControllerFindAll403,
+  ProductsControllerFindAllParams,
+  ProductsControllerFindOne200,
+  ProductsControllerFindOne401,
+  ProductsControllerFindOne403,
+  ProductsControllerFindOne404,
+  ProductsControllerRemove200,
+  ProductsControllerRemove401,
+  ProductsControllerRemove403,
+  ProductsControllerRemove404,
+  ProductsControllerUpdate200,
+  ProductsControllerUpdate400,
+  ProductsControllerUpdate401,
+  ProductsControllerUpdate403,
+  ProductsControllerUpdate404,
+  ProductsControllerUpdate409,
+  ProductsControllerUpdateBody
+} from '../model';
 
-import { apiMutator } from "../../client";
+import { apiMutator } from '../../client';
 
-const withQueryKey = <T extends object, K>(
-  query: T,
-  queryKey: K,
-): T & { queryKey: K } => {
+
+
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === "queryKey") continue;
+    if (key === 'queryKey') continue;
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
@@ -60,681 +104,457 @@ const withQueryKey = <T extends object, K>(
  * @summary Mahsulot yaratish (rasm bilan)
  */
 export const productsControllerCreate = (
-  createProductDto: CreateProductDto,
-  signal?: AbortSignal,
+    productsControllerCreateBody: ProductsControllerCreateBody,
+ signal?: AbortSignal
 ) => {
-  const formData = new FormData();
-  formData.append(`name`, createProductDto.name);
-  formData.append(`sellingPrice`, createProductDto.sellingPrice.toString());
-  if (createProductDto.categoryId !== undefined) {
-    formData.append(`categoryId`, createProductDto.categoryId.toString());
-  }
-  if (createProductDto.unit !== undefined) {
-    formData.append(`unit`, createProductDto.unit);
-  }
-  if (createProductDto.barcode !== undefined) {
-    formData.append(`barcode`, createProductDto.barcode);
-  }
-  if (createProductDto.minStock !== undefined) {
-    formData.append(`minStock`, createProductDto.minStock.toString());
-  }
-  if (createProductDto.image !== undefined) {
-    formData.append(`image`, createProductDto.image);
-  }
 
-  return apiMutator<void>({
-    url: `/api/v1/products`,
-    method: "POST",
-    headers: { "Content-Type": "multipart/form-data" },
-    data: formData,
-    signal,
-  });
-};
+      const formData = new FormData();
+formData.append(`name`, productsControllerCreateBody.name);
+formData.append(`sellingPrice`, productsControllerCreateBody.sellingPrice);
+if(productsControllerCreateBody.categoryId !== undefined) {
+ formData.append(`categoryId`, productsControllerCreateBody.categoryId);
+ }
+if(productsControllerCreateBody.unit !== undefined) {
+ formData.append(`unit`, productsControllerCreateBody.unit);
+ }
+if(productsControllerCreateBody.barcode !== undefined) {
+ formData.append(`barcode`, productsControllerCreateBody.barcode);
+ }
+if(productsControllerCreateBody.minStock !== undefined) {
+ formData.append(`minStock`, productsControllerCreateBody.minStock);
+ }
+if(productsControllerCreateBody.image !== undefined) {
+ formData.append(`image`, productsControllerCreateBody.image);
+ }
 
-export const getProductsControllerCreateQueryKey = (
-  createProductDto?: CreateProductDto,
+      return apiMutator<ProductsControllerCreate201>(
+      {url: `/api/v1/products`, method: 'POST',
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
+    },
+      );
+    }
+
+
+
+
+export const getProductsControllerCreateQueryKey = (productsControllerCreateBody?: ProductsControllerCreateBody,) => {
+    return [
+    'POST', `/api/v1/products`, productsControllerCreateBody
+    ] as const;
+    }
+
+
+export const getProductsControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof productsControllerCreate>>, TError = ProductsControllerCreate400 | ProductsControllerCreate401 | ProductsControllerCreate403 | ProductsControllerCreate409>(productsControllerCreateBody: ProductsControllerCreateBody, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerCreate>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/products`, createProductDto] as const;
-};
 
-export const getProductsControllerCreateQueryOptions = <
-  TData = Awaited<ReturnType<typeof productsControllerCreate>>,
-  TError = unknown,
->(
-  createProductDto: CreateProductDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getProductsControllerCreateQueryKey(createProductDto);
+  const queryKey =  queryOptions?.queryKey ?? getProductsControllerCreateQueryKey(productsControllerCreateBody);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof productsControllerCreate>>
-  > = ({ signal }) => productsControllerCreate(createProductDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof productsControllerCreate>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type ProductsControllerCreateQueryResult = NonNullable<
-  Awaited<ReturnType<typeof productsControllerCreate>>
->;
-export type ProductsControllerCreateQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof productsControllerCreate>>> = ({ signal }) => productsControllerCreate(productsControllerCreateBody, signal);
 
-export function useProductsControllerCreate<
-  TData = Awaited<ReturnType<typeof productsControllerCreate>>,
-  TError = unknown,
->(
-  createProductDto: CreateProductDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof productsControllerCreate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ProductsControllerCreateQueryResult = NonNullable<Awaited<ReturnType<typeof productsControllerCreate>>>
+export type ProductsControllerCreateQueryError = ProductsControllerCreate400 | ProductsControllerCreate401 | ProductsControllerCreate403 | ProductsControllerCreate409
+
+
+export function useProductsControllerCreate<TData = Awaited<ReturnType<typeof productsControllerCreate>>, TError = ProductsControllerCreate400 | ProductsControllerCreate401 | ProductsControllerCreate403 | ProductsControllerCreate409>(
+ productsControllerCreateBody: ProductsControllerCreateBody, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerCreate>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof productsControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof productsControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useProductsControllerCreate<
-  TData = Awaited<ReturnType<typeof productsControllerCreate>>,
-  TError = unknown,
->(
-  createProductDto: CreateProductDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useProductsControllerCreate<TData = Awaited<ReturnType<typeof productsControllerCreate>>, TError = ProductsControllerCreate400 | ProductsControllerCreate401 | ProductsControllerCreate403 | ProductsControllerCreate409>(
+ productsControllerCreateBody: ProductsControllerCreateBody, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerCreate>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof productsControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof productsControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useProductsControllerCreate<
-  TData = Awaited<ReturnType<typeof productsControllerCreate>>,
-  TError = unknown,
->(
-  createProductDto: CreateProductDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useProductsControllerCreate<TData = Awaited<ReturnType<typeof productsControllerCreate>>, TError = ProductsControllerCreate400 | ProductsControllerCreate401 | ProductsControllerCreate403 | ProductsControllerCreate409>(
+ productsControllerCreateBody: ProductsControllerCreateBody, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Mahsulot yaratish (rasm bilan)
  */
 
-export function useProductsControllerCreate<
-  TData = Awaited<ReturnType<typeof productsControllerCreate>>,
-  TError = unknown,
->(
-  createProductDto: CreateProductDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getProductsControllerCreateQueryOptions(
-    createProductDto,
-    options,
-  );
+export function useProductsControllerCreate<TData = Awaited<ReturnType<typeof productsControllerCreate>>, TError = ProductsControllerCreate400 | ProductsControllerCreate401 | ProductsControllerCreate403 | ProductsControllerCreate409>(
+ productsControllerCreateBody: ProductsControllerCreateBody, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getProductsControllerCreateQueryOptions(productsControllerCreateBody,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * @summary Barcha mahsulotlarni qidirish va sahifalash
- */
-export const productsControllerFindAll = (signal?: AbortSignal) => {
-  return apiMutator<void>({ url: `/api/v1/products`, method: "GET", signal });
-};
 
-export const getProductsControllerFindAllMutationKey = () =>
-  ["productsControllerFindAll"] as const;
 
-export const getProductsControllerFindAllMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof productsControllerFindAll>>,
-    TError,
-    void,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof productsControllerFindAll>>,
-  TError,
-  void,
-  TContext
-> => {
-  const mutationKey = getProductsControllerFindAllMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof productsControllerFindAll>>,
-    void
-  > = () => {
-    return productsControllerFindAll();
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
-
-export type ProductsControllerFindAllMutationResult = NonNullable<
-  Awaited<ReturnType<typeof productsControllerFindAll>>
->;
-
-export type ProductsControllerFindAllMutationError = unknown;
 
 /**
  * @summary Barcha mahsulotlarni qidirish va sahifalash
  */
-export const useProductsControllerFindAll = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof productsControllerFindAll>>,
-      TError,
-      void,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof productsControllerFindAll>>,
-  TError,
-  void,
-  TContext
-> => {
-  return useMutation(
-    getProductsControllerFindAllMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const productsControllerFindAll = (
+    params?: ProductsControllerFindAllParams,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<ProductsControllerFindAll200>(
+      {url: `/api/v1/products`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+
+
+
+
+export const getProductsControllerFindAllMutationKey = () => ['productsControllerFindAll'] as const;
+
+export const getProductsControllerFindAllMutationOptions = <TError = ProductsControllerFindAll400 | ProductsControllerFindAll401 | ProductsControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof productsControllerFindAll>>, TError,ProductsControllerFindAllMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof productsControllerFindAll>>, TError,ProductsControllerFindAllMutationVariables, TContext> => {
+
+const mutationKey = getProductsControllerFindAllMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof productsControllerFindAll>>, ProductsControllerFindAllMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  productsControllerFindAll(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ProductsControllerFindAllMutationResult = NonNullable<Awaited<ReturnType<typeof productsControllerFindAll>>>
+
+    export type ProductsControllerFindAllMutationError = ProductsControllerFindAll400 | ProductsControllerFindAll401 | ProductsControllerFindAll403
+    export type ProductsControllerFindAllMutationVariables = {params?: ProductsControllerFindAllParams}
+
+    /**
+ * @summary Barcha mahsulotlarni qidirish va sahifalash
+ */
+export const useProductsControllerFindAll = <TError = ProductsControllerFindAll400 | ProductsControllerFindAll401 | ProductsControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof productsControllerFindAll>>, TError,ProductsControllerFindAllMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof productsControllerFindAll>>,
+        TError,
+        ProductsControllerFindAllMutationVariables,
+        TContext
+      > => {
+      return useMutation(getProductsControllerFindAllMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Mahsulot tafsilotlari
  */
-export const productsControllerFindOne = (id: number, signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/products/${id}`,
-    method: "GET",
-    signal,
-  });
-};
+export const productsControllerFindOne = (
+    id: number,
+ signal?: AbortSignal
+) => {
 
-export const getProductsControllerFindOneMutationKey = () =>
-  ["productsControllerFindOne"] as const;
 
-export const getProductsControllerFindOneMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof productsControllerFindOne>>,
-    TError,
-    ProductsControllerFindOneMutationVariables,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof productsControllerFindOne>>,
-  TError,
-  ProductsControllerFindOneMutationVariables,
-  TContext
-> => {
-  const mutationKey = getProductsControllerFindOneMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<ProductsControllerFindOne200>(
+      {url: `/api/v1/products/${id}`, method: 'GET', signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof productsControllerFindOne>>,
-    ProductsControllerFindOneMutationVariables
-  > = (props) => {
-    const { id } = props ?? {};
 
-    return productsControllerFindOne(id);
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type ProductsControllerFindOneMutationResult = NonNullable<
-  Awaited<ReturnType<typeof productsControllerFindOne>>
->;
+export const getProductsControllerFindOneMutationKey = () => ['productsControllerFindOne'] as const;
 
-export type ProductsControllerFindOneMutationError = unknown;
-export type ProductsControllerFindOneMutationVariables = { id: number };
+export const getProductsControllerFindOneMutationOptions = <TError = ProductsControllerFindOne401 | ProductsControllerFindOne403 | ProductsControllerFindOne404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof productsControllerFindOne>>, TError,ProductsControllerFindOneMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof productsControllerFindOne>>, TError,ProductsControllerFindOneMutationVariables, TContext> => {
 
-/**
+const mutationKey = getProductsControllerFindOneMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof productsControllerFindOne>>, ProductsControllerFindOneMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  productsControllerFindOne(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ProductsControllerFindOneMutationResult = NonNullable<Awaited<ReturnType<typeof productsControllerFindOne>>>
+
+    export type ProductsControllerFindOneMutationError = ProductsControllerFindOne401 | ProductsControllerFindOne403 | ProductsControllerFindOne404
+    export type ProductsControllerFindOneMutationVariables = {id: number}
+
+    /**
  * @summary Mahsulot tafsilotlari
  */
-export const useProductsControllerFindOne = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof productsControllerFindOne>>,
-      TError,
-      ProductsControllerFindOneMutationVariables,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof productsControllerFindOne>>,
-  TError,
-  ProductsControllerFindOneMutationVariables,
-  TContext
-> => {
-  return useMutation(
-    getProductsControllerFindOneMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useProductsControllerFindOne = <TError = ProductsControllerFindOne401 | ProductsControllerFindOne403 | ProductsControllerFindOne404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof productsControllerFindOne>>, TError,ProductsControllerFindOneMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof productsControllerFindOne>>,
+        TError,
+        ProductsControllerFindOneMutationVariables,
+        TContext
+      > => {
+      return useMutation(getProductsControllerFindOneMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Mahsulotni tahrirlash (rasmni yangilash bilan)
  */
 export const productsControllerUpdate = (
-  id: number,
-  updateProductDto: UpdateProductDto,
-  signal?: AbortSignal,
+    id: number,
+    productsControllerUpdateBody: ProductsControllerUpdateBody,
+ signal?: AbortSignal
 ) => {
-  const formData = new FormData();
 
-  return apiMutator<void>({
-    url: `/api/v1/products/${id}`,
-    method: "PATCH",
-    headers: { "Content-Type": "multipart/form-data" },
-    data: formData,
-    signal,
-  });
-};
+      const formData = new FormData();
+if(productsControllerUpdateBody.name !== undefined) {
+ formData.append(`name`, productsControllerUpdateBody.name);
+ }
+if(productsControllerUpdateBody.sellingPrice !== undefined) {
+ formData.append(`sellingPrice`, productsControllerUpdateBody.sellingPrice);
+ }
+if(productsControllerUpdateBody.categoryId !== undefined) {
+ formData.append(`categoryId`, productsControllerUpdateBody.categoryId);
+ }
+if(productsControllerUpdateBody.unit !== undefined) {
+ formData.append(`unit`, productsControllerUpdateBody.unit);
+ }
+if(productsControllerUpdateBody.barcode !== undefined) {
+ formData.append(`barcode`, productsControllerUpdateBody.barcode);
+ }
+if(productsControllerUpdateBody.minStock !== undefined) {
+ formData.append(`minStock`, productsControllerUpdateBody.minStock);
+ }
+if(productsControllerUpdateBody.image !== undefined) {
+ formData.append(`image`, productsControllerUpdateBody.image);
+ }
 
-export const getProductsControllerUpdateQueryKey = (
-  id: number,
-  updateProductDto?: UpdateProductDto,
+      return apiMutator<ProductsControllerUpdate200>(
+      {url: `/api/v1/products/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
+    },
+      );
+    }
+
+
+
+
+export const getProductsControllerUpdateQueryKey = (id: number,
+    productsControllerUpdateBody?: ProductsControllerUpdateBody,) => {
+    return [
+    'PATCH', `/api/v1/products/${id}`, productsControllerUpdateBody
+    ] as const;
+    }
+
+
+export const getProductsControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof productsControllerUpdate>>, TError = ProductsControllerUpdate400 | ProductsControllerUpdate401 | ProductsControllerUpdate403 | ProductsControllerUpdate404 | ProductsControllerUpdate409>(id: number,
+    productsControllerUpdateBody: ProductsControllerUpdateBody, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerUpdate>>, TError, TData>>, }
 ) => {
-  return ["PATCH", `/api/v1/products/${id}`, updateProductDto] as const;
-};
 
-export const getProductsControllerUpdateQueryOptions = <
-  TData = Awaited<ReturnType<typeof productsControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateProductDto: UpdateProductDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerUpdate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getProductsControllerUpdateQueryKey(id, updateProductDto);
+  const queryKey =  queryOptions?.queryKey ?? getProductsControllerUpdateQueryKey(id,productsControllerUpdateBody);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof productsControllerUpdate>>
-  > = ({ signal }) => productsControllerUpdate(id, updateProductDto, signal);
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof productsControllerUpdate>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type ProductsControllerUpdateQueryResult = NonNullable<
-  Awaited<ReturnType<typeof productsControllerUpdate>>
->;
-export type ProductsControllerUpdateQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof productsControllerUpdate>>> = ({ signal }) => productsControllerUpdate(id,productsControllerUpdateBody, signal);
 
-export function useProductsControllerUpdate<
-  TData = Awaited<ReturnType<typeof productsControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateProductDto: UpdateProductDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerUpdate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof productsControllerUpdate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ProductsControllerUpdateQueryResult = NonNullable<Awaited<ReturnType<typeof productsControllerUpdate>>>
+export type ProductsControllerUpdateQueryError = ProductsControllerUpdate400 | ProductsControllerUpdate401 | ProductsControllerUpdate403 | ProductsControllerUpdate404 | ProductsControllerUpdate409
+
+
+export function useProductsControllerUpdate<TData = Awaited<ReturnType<typeof productsControllerUpdate>>, TError = ProductsControllerUpdate400 | ProductsControllerUpdate401 | ProductsControllerUpdate403 | ProductsControllerUpdate404 | ProductsControllerUpdate409>(
+ id: number,
+    productsControllerUpdateBody: ProductsControllerUpdateBody, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerUpdate>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof productsControllerUpdate>>,
           TError,
           Awaited<ReturnType<typeof productsControllerUpdate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useProductsControllerUpdate<
-  TData = Awaited<ReturnType<typeof productsControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateProductDto: UpdateProductDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerUpdate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useProductsControllerUpdate<TData = Awaited<ReturnType<typeof productsControllerUpdate>>, TError = ProductsControllerUpdate400 | ProductsControllerUpdate401 | ProductsControllerUpdate403 | ProductsControllerUpdate404 | ProductsControllerUpdate409>(
+ id: number,
+    productsControllerUpdateBody: ProductsControllerUpdateBody, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerUpdate>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof productsControllerUpdate>>,
           TError,
           Awaited<ReturnType<typeof productsControllerUpdate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useProductsControllerUpdate<
-  TData = Awaited<ReturnType<typeof productsControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateProductDto: UpdateProductDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerUpdate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useProductsControllerUpdate<TData = Awaited<ReturnType<typeof productsControllerUpdate>>, TError = ProductsControllerUpdate400 | ProductsControllerUpdate401 | ProductsControllerUpdate403 | ProductsControllerUpdate404 | ProductsControllerUpdate409>(
+ id: number,
+    productsControllerUpdateBody: ProductsControllerUpdateBody, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerUpdate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Mahsulotni tahrirlash (rasmni yangilash bilan)
  */
 
-export function useProductsControllerUpdate<
-  TData = Awaited<ReturnType<typeof productsControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateProductDto: UpdateProductDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerUpdate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getProductsControllerUpdateQueryOptions(
-    id,
-    updateProductDto,
-    options,
-  );
+export function useProductsControllerUpdate<TData = Awaited<ReturnType<typeof productsControllerUpdate>>, TError = ProductsControllerUpdate400 | ProductsControllerUpdate401 | ProductsControllerUpdate403 | ProductsControllerUpdate404 | ProductsControllerUpdate409>(
+ id: number,
+    productsControllerUpdateBody: ProductsControllerUpdateBody, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerUpdate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getProductsControllerUpdateQueryOptions(id,productsControllerUpdateBody,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
 /**
  * @summary Mahsulotni o'chirish (soft delete va rasmni tozalash)
  */
-export const productsControllerRemove = (id: number, signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/products/${id}`,
-    method: "DELETE",
-    signal,
-  });
-};
-
-export const getProductsControllerRemoveQueryKey = (id: number) => {
-  return ["DELETE", `/api/v1/products/${id}`] as const;
-};
-
-export const getProductsControllerRemoveQueryOptions = <
-  TData = Awaited<ReturnType<typeof productsControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
+export const productsControllerRemove = (
+    id: number,
+ signal?: AbortSignal
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getProductsControllerRemoveQueryKey(id);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof productsControllerRemove>>
-  > = ({ signal }) => productsControllerRemove(id, signal);
+      return apiMutator<ProductsControllerRemove200>(
+      {url: `/api/v1/products/${id}`, method: 'DELETE', signal
+    },
+      );
+    }
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof productsControllerRemove>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type ProductsControllerRemoveQueryResult = NonNullable<
-  Awaited<ReturnType<typeof productsControllerRemove>>
->;
-export type ProductsControllerRemoveQueryError = unknown;
 
-export function useProductsControllerRemove<
-  TData = Awaited<ReturnType<typeof productsControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerRemove>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+export const getProductsControllerRemoveQueryKey = (id: number,) => {
+    return [
+    'DELETE', `/api/v1/products/${id}`
+    ] as const;
+    }
+
+
+export const getProductsControllerRemoveQueryOptions = <TData = Awaited<ReturnType<typeof productsControllerRemove>>, TError = ProductsControllerRemove401 | ProductsControllerRemove403 | ProductsControllerRemove404>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerRemove>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getProductsControllerRemoveQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof productsControllerRemove>>> = ({ signal }) => productsControllerRemove(id, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof productsControllerRemove>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ProductsControllerRemoveQueryResult = NonNullable<Awaited<ReturnType<typeof productsControllerRemove>>>
+export type ProductsControllerRemoveQueryError = ProductsControllerRemove401 | ProductsControllerRemove403 | ProductsControllerRemove404
+
+
+export function useProductsControllerRemove<TData = Awaited<ReturnType<typeof productsControllerRemove>>, TError = ProductsControllerRemove401 | ProductsControllerRemove403 | ProductsControllerRemove404>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerRemove>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof productsControllerRemove>>,
           TError,
           Awaited<ReturnType<typeof productsControllerRemove>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useProductsControllerRemove<
-  TData = Awaited<ReturnType<typeof productsControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerRemove>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useProductsControllerRemove<TData = Awaited<ReturnType<typeof productsControllerRemove>>, TError = ProductsControllerRemove401 | ProductsControllerRemove403 | ProductsControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerRemove>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof productsControllerRemove>>,
           TError,
           Awaited<ReturnType<typeof productsControllerRemove>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useProductsControllerRemove<
-  TData = Awaited<ReturnType<typeof productsControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useProductsControllerRemove<TData = Awaited<ReturnType<typeof productsControllerRemove>>, TError = ProductsControllerRemove401 | ProductsControllerRemove403 | ProductsControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerRemove>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Mahsulotni o'chirish (soft delete va rasmni tozalash)
  */
 
-export function useProductsControllerRemove<
-  TData = Awaited<ReturnType<typeof productsControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof productsControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getProductsControllerRemoveQueryOptions(id, options);
+export function useProductsControllerRemove<TData = Awaited<ReturnType<typeof productsControllerRemove>>, TError = ProductsControllerRemove401 | ProductsControllerRemove403 | ProductsControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof productsControllerRemove>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getProductsControllerRemoveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+

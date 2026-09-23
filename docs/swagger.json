@@ -5841,7 +5841,6 @@
             "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "required": [],
                 "properties": {
                   "name": {
                     "type": "string",

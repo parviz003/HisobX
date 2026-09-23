@@ -16,9 +16,26 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -31,22 +48,43 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
-import type { MakePaymentDto } from "../model";
+import type {
+  DebtsControllerFindAll200,
+  DebtsControllerFindAll400,
+  DebtsControllerFindAll401,
+  DebtsControllerFindAll403,
+  DebtsControllerFindAllParams,
+  DebtsControllerFindOne200,
+  DebtsControllerFindOne401,
+  DebtsControllerFindOne403,
+  DebtsControllerFindOne404,
+  DebtsControllerGetOverdue200,
+  DebtsControllerGetOverdue400,
+  DebtsControllerGetOverdue401,
+  DebtsControllerGetOverdue403,
+  DebtsControllerGetOverdueParams,
+  DebtsControllerMakePayment200,
+  DebtsControllerMakePayment400,
+  DebtsControllerMakePayment401,
+  DebtsControllerMakePayment403,
+  DebtsControllerMakePayment404,
+  MakePaymentDto
+} from '../model';
 
-import { apiMutator } from "../../client";
+import { apiMutator } from '../../client';
 
-const withQueryKey = <T extends object, K>(
-  query: T,
-  queryKey: K,
-): T & { queryKey: K } => {
+
+
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === "queryKey") continue;
+    if (key === 'queryKey') continue;
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
@@ -59,415 +97,299 @@ const withQueryKey = <T extends object, K>(
 /**
  * @summary Qarzlar ro'yxati
  */
-export const debtsControllerFindAll = (signal?: AbortSignal) => {
-  return apiMutator<void>({ url: `/api/v1/debts`, method: "GET", signal });
-};
+export const debtsControllerFindAll = (
+    params?: DebtsControllerFindAllParams,
+ signal?: AbortSignal
+) => {
 
-export const getDebtsControllerFindAllMutationKey = () =>
-  ["debtsControllerFindAll"] as const;
 
-export const getDebtsControllerFindAllMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof debtsControllerFindAll>>,
-    TError,
-    void,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof debtsControllerFindAll>>,
-  TError,
-  void,
-  TContext
-> => {
-  const mutationKey = getDebtsControllerFindAllMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<DebtsControllerFindAll200>(
+      {url: `/api/v1/debts`, method: 'GET',
+        params, signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof debtsControllerFindAll>>,
-    void
-  > = () => {
-    return debtsControllerFindAll();
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type DebtsControllerFindAllMutationResult = NonNullable<
-  Awaited<ReturnType<typeof debtsControllerFindAll>>
->;
 
-export type DebtsControllerFindAllMutationError = unknown;
+export const getDebtsControllerFindAllMutationKey = () => ['debtsControllerFindAll'] as const;
 
-/**
+export const getDebtsControllerFindAllMutationOptions = <TError = DebtsControllerFindAll400 | DebtsControllerFindAll401 | DebtsControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof debtsControllerFindAll>>, TError,DebtsControllerFindAllMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof debtsControllerFindAll>>, TError,DebtsControllerFindAllMutationVariables, TContext> => {
+
+const mutationKey = getDebtsControllerFindAllMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof debtsControllerFindAll>>, DebtsControllerFindAllMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  debtsControllerFindAll(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DebtsControllerFindAllMutationResult = NonNullable<Awaited<ReturnType<typeof debtsControllerFindAll>>>
+
+    export type DebtsControllerFindAllMutationError = DebtsControllerFindAll400 | DebtsControllerFindAll401 | DebtsControllerFindAll403
+    export type DebtsControllerFindAllMutationVariables = {params?: DebtsControllerFindAllParams}
+
+    /**
  * @summary Qarzlar ro'yxati
  */
-export const useDebtsControllerFindAll = <TError = unknown, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof debtsControllerFindAll>>,
-      TError,
-      void,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof debtsControllerFindAll>>,
-  TError,
-  void,
-  TContext
-> => {
-  return useMutation(
-    getDebtsControllerFindAllMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useDebtsControllerFindAll = <TError = DebtsControllerFindAll400 | DebtsControllerFindAll401 | DebtsControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof debtsControllerFindAll>>, TError,DebtsControllerFindAllMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof debtsControllerFindAll>>,
+        TError,
+        DebtsControllerFindAllMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDebtsControllerFindAllMutationOptions(options), queryClient);
+    }
+    /**
+ * Mijoz bo'yicha guruhlangan
  * @summary Muddati o'tgan qarzlar
  */
-export const debtsControllerGetOverdue = (signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/debts/overdue`,
-    method: "GET",
-    signal,
-  });
-};
+export const debtsControllerGetOverdue = (
+    params?: DebtsControllerGetOverdueParams,
+ signal?: AbortSignal
+) => {
 
-export const getDebtsControllerGetOverdueMutationKey = () =>
-  ["debtsControllerGetOverdue"] as const;
 
-export const getDebtsControllerGetOverdueMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof debtsControllerGetOverdue>>,
-    TError,
-    void,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof debtsControllerGetOverdue>>,
-  TError,
-  void,
-  TContext
-> => {
-  const mutationKey = getDebtsControllerGetOverdueMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<DebtsControllerGetOverdue200>(
+      {url: `/api/v1/debts/overdue`, method: 'GET',
+        params, signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof debtsControllerGetOverdue>>,
-    void
-  > = () => {
-    return debtsControllerGetOverdue();
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type DebtsControllerGetOverdueMutationResult = NonNullable<
-  Awaited<ReturnType<typeof debtsControllerGetOverdue>>
->;
 
-export type DebtsControllerGetOverdueMutationError = unknown;
+export const getDebtsControllerGetOverdueMutationKey = () => ['debtsControllerGetOverdue'] as const;
 
-/**
+export const getDebtsControllerGetOverdueMutationOptions = <TError = DebtsControllerGetOverdue400 | DebtsControllerGetOverdue401 | DebtsControllerGetOverdue403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof debtsControllerGetOverdue>>, TError,DebtsControllerGetOverdueMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof debtsControllerGetOverdue>>, TError,DebtsControllerGetOverdueMutationVariables, TContext> => {
+
+const mutationKey = getDebtsControllerGetOverdueMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof debtsControllerGetOverdue>>, DebtsControllerGetOverdueMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  debtsControllerGetOverdue(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DebtsControllerGetOverdueMutationResult = NonNullable<Awaited<ReturnType<typeof debtsControllerGetOverdue>>>
+
+    export type DebtsControllerGetOverdueMutationError = DebtsControllerGetOverdue400 | DebtsControllerGetOverdue401 | DebtsControllerGetOverdue403
+    export type DebtsControllerGetOverdueMutationVariables = {params?: DebtsControllerGetOverdueParams}
+
+    /**
  * @summary Muddati o'tgan qarzlar
  */
-export const useDebtsControllerGetOverdue = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof debtsControllerGetOverdue>>,
-      TError,
-      void,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof debtsControllerGetOverdue>>,
-  TError,
-  void,
-  TContext
-> => {
-  return useMutation(
-    getDebtsControllerGetOverdueMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useDebtsControllerGetOverdue = <TError = DebtsControllerGetOverdue400 | DebtsControllerGetOverdue401 | DebtsControllerGetOverdue403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof debtsControllerGetOverdue>>, TError,DebtsControllerGetOverdueMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof debtsControllerGetOverdue>>,
+        TError,
+        DebtsControllerGetOverdueMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDebtsControllerGetOverdueMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Qarz tafsilotlari va to'lovlar tarixi
  */
-export const debtsControllerFindOne = (id: number, signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/debts/${id}`,
-    method: "GET",
-    signal,
-  });
-};
+export const debtsControllerFindOne = (
+    id: number,
+ signal?: AbortSignal
+) => {
 
-export const getDebtsControllerFindOneMutationKey = () =>
-  ["debtsControllerFindOne"] as const;
 
-export const getDebtsControllerFindOneMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof debtsControllerFindOne>>,
-    TError,
-    DebtsControllerFindOneMutationVariables,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof debtsControllerFindOne>>,
-  TError,
-  DebtsControllerFindOneMutationVariables,
-  TContext
-> => {
-  const mutationKey = getDebtsControllerFindOneMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<DebtsControllerFindOne200>(
+      {url: `/api/v1/debts/${id}`, method: 'GET', signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof debtsControllerFindOne>>,
-    DebtsControllerFindOneMutationVariables
-  > = (props) => {
-    const { id } = props ?? {};
 
-    return debtsControllerFindOne(id);
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type DebtsControllerFindOneMutationResult = NonNullable<
-  Awaited<ReturnType<typeof debtsControllerFindOne>>
->;
+export const getDebtsControllerFindOneMutationKey = () => ['debtsControllerFindOne'] as const;
 
-export type DebtsControllerFindOneMutationError = unknown;
-export type DebtsControllerFindOneMutationVariables = { id: number };
+export const getDebtsControllerFindOneMutationOptions = <TError = DebtsControllerFindOne401 | DebtsControllerFindOne403 | DebtsControllerFindOne404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof debtsControllerFindOne>>, TError,DebtsControllerFindOneMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof debtsControllerFindOne>>, TError,DebtsControllerFindOneMutationVariables, TContext> => {
 
-/**
+const mutationKey = getDebtsControllerFindOneMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof debtsControllerFindOne>>, DebtsControllerFindOneMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  debtsControllerFindOne(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DebtsControllerFindOneMutationResult = NonNullable<Awaited<ReturnType<typeof debtsControllerFindOne>>>
+
+    export type DebtsControllerFindOneMutationError = DebtsControllerFindOne401 | DebtsControllerFindOne403 | DebtsControllerFindOne404
+    export type DebtsControllerFindOneMutationVariables = {id: number}
+
+    /**
  * @summary Qarz tafsilotlari va to'lovlar tarixi
  */
-export const useDebtsControllerFindOne = <TError = unknown, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof debtsControllerFindOne>>,
-      TError,
-      DebtsControllerFindOneMutationVariables,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof debtsControllerFindOne>>,
-  TError,
-  DebtsControllerFindOneMutationVariables,
-  TContext
-> => {
-  return useMutation(
-    getDebtsControllerFindOneMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useDebtsControllerFindOne = <TError = DebtsControllerFindOne401 | DebtsControllerFindOne403 | DebtsControllerFindOne404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof debtsControllerFindOne>>, TError,DebtsControllerFindOneMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof debtsControllerFindOne>>,
+        TError,
+        DebtsControllerFindOneMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDebtsControllerFindOneMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Qarzga to'lov qabul qilish
  */
 export const debtsControllerMakePayment = (
-  id: number,
-  makePaymentDto: MakePaymentDto,
-  signal?: AbortSignal,
+    id: number,
+    makePaymentDto: MakePaymentDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/debts/${id}/pay`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: makePaymentDto,
-    signal,
-  });
-};
 
-export const getDebtsControllerMakePaymentQueryKey = (
-  id: number,
-  makePaymentDto?: MakePaymentDto,
+
+      return apiMutator<DebtsControllerMakePayment200>(
+      {url: `/api/v1/debts/${id}/pay`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: makePaymentDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getDebtsControllerMakePaymentQueryKey = (id: number,
+    makePaymentDto?: MakePaymentDto,) => {
+    return [
+    'POST', `/api/v1/debts/${id}/pay`, makePaymentDto
+    ] as const;
+    }
+
+
+export const getDebtsControllerMakePaymentQueryOptions = <TData = Awaited<ReturnType<typeof debtsControllerMakePayment>>, TError = DebtsControllerMakePayment400 | DebtsControllerMakePayment401 | DebtsControllerMakePayment403 | DebtsControllerMakePayment404>(id: number,
+    makePaymentDto: MakePaymentDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof debtsControllerMakePayment>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/debts/${id}/pay`, makePaymentDto] as const;
-};
 
-export const getDebtsControllerMakePaymentQueryOptions = <
-  TData = Awaited<ReturnType<typeof debtsControllerMakePayment>>,
-  TError = unknown,
->(
-  id: number,
-  makePaymentDto: MakePaymentDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof debtsControllerMakePayment>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getDebtsControllerMakePaymentQueryKey(id, makePaymentDto);
+  const queryKey =  queryOptions?.queryKey ?? getDebtsControllerMakePaymentQueryKey(id,makePaymentDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof debtsControllerMakePayment>>
-  > = ({ signal }) => debtsControllerMakePayment(id, makePaymentDto, signal);
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof debtsControllerMakePayment>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type DebtsControllerMakePaymentQueryResult = NonNullable<
-  Awaited<ReturnType<typeof debtsControllerMakePayment>>
->;
-export type DebtsControllerMakePaymentQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof debtsControllerMakePayment>>> = ({ signal }) => debtsControllerMakePayment(id,makePaymentDto, signal);
 
-export function useDebtsControllerMakePayment<
-  TData = Awaited<ReturnType<typeof debtsControllerMakePayment>>,
-  TError = unknown,
->(
-  id: number,
-  makePaymentDto: MakePaymentDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof debtsControllerMakePayment>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof debtsControllerMakePayment>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type DebtsControllerMakePaymentQueryResult = NonNullable<Awaited<ReturnType<typeof debtsControllerMakePayment>>>
+export type DebtsControllerMakePaymentQueryError = DebtsControllerMakePayment400 | DebtsControllerMakePayment401 | DebtsControllerMakePayment403 | DebtsControllerMakePayment404
+
+
+export function useDebtsControllerMakePayment<TData = Awaited<ReturnType<typeof debtsControllerMakePayment>>, TError = DebtsControllerMakePayment400 | DebtsControllerMakePayment401 | DebtsControllerMakePayment403 | DebtsControllerMakePayment404>(
+ id: number,
+    makePaymentDto: MakePaymentDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof debtsControllerMakePayment>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof debtsControllerMakePayment>>,
           TError,
           Awaited<ReturnType<typeof debtsControllerMakePayment>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useDebtsControllerMakePayment<
-  TData = Awaited<ReturnType<typeof debtsControllerMakePayment>>,
-  TError = unknown,
->(
-  id: number,
-  makePaymentDto: MakePaymentDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof debtsControllerMakePayment>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDebtsControllerMakePayment<TData = Awaited<ReturnType<typeof debtsControllerMakePayment>>, TError = DebtsControllerMakePayment400 | DebtsControllerMakePayment401 | DebtsControllerMakePayment403 | DebtsControllerMakePayment404>(
+ id: number,
+    makePaymentDto: MakePaymentDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof debtsControllerMakePayment>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof debtsControllerMakePayment>>,
           TError,
           Awaited<ReturnType<typeof debtsControllerMakePayment>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useDebtsControllerMakePayment<
-  TData = Awaited<ReturnType<typeof debtsControllerMakePayment>>,
-  TError = unknown,
->(
-  id: number,
-  makePaymentDto: MakePaymentDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof debtsControllerMakePayment>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDebtsControllerMakePayment<TData = Awaited<ReturnType<typeof debtsControllerMakePayment>>, TError = DebtsControllerMakePayment400 | DebtsControllerMakePayment401 | DebtsControllerMakePayment403 | DebtsControllerMakePayment404>(
+ id: number,
+    makePaymentDto: MakePaymentDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof debtsControllerMakePayment>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Qarzga to'lov qabul qilish
  */
 
-export function useDebtsControllerMakePayment<
-  TData = Awaited<ReturnType<typeof debtsControllerMakePayment>>,
-  TError = unknown,
->(
-  id: number,
-  makePaymentDto: MakePaymentDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof debtsControllerMakePayment>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getDebtsControllerMakePaymentQueryOptions(
-    id,
-    makePaymentDto,
-    options,
-  );
+export function useDebtsControllerMakePayment<TData = Awaited<ReturnType<typeof debtsControllerMakePayment>>, TError = DebtsControllerMakePayment400 | DebtsControllerMakePayment401 | DebtsControllerMakePayment403 | DebtsControllerMakePayment404>(
+ id: number,
+    makePaymentDto: MakePaymentDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof debtsControllerMakePayment>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getDebtsControllerMakePaymentQueryOptions(id,makePaymentDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+

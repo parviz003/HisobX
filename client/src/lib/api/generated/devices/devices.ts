@@ -16,9 +16,26 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -31,20 +48,30 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
-import { apiMutator } from "../../client";
+import type {
+  DeviceControllerFindAll200,
+  DeviceControllerFindAll401,
+  DeviceControllerFindAll403,
+  DeviceControllerRemove200,
+  DeviceControllerRemove400,
+  DeviceControllerRemove401,
+  DeviceControllerRemove404
+} from '../model';
 
-const withQueryKey = <T extends object, K>(
-  query: T,
-  queryKey: K,
-): T & { queryKey: K } => {
+import { apiMutator } from '../../client';
+
+
+
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === "queryKey") continue;
+    if (key === 'queryKey') continue;
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
@@ -55,237 +82,161 @@ const withQueryKey = <T extends object, K>(
 };
 
 /**
+ * Qurilmalar oxirgi faollik bo'yicha saralanadi. `isCurrent` — shu so'rov yuborilgan qurilma. `canRemoveAt` — qurilmani o'chirish mumkin bo'ladigan payt.
  * @summary Foydalanuvchining faol qurilmalarini olish
  */
-export const deviceControllerFindAll = (signal?: AbortSignal) => {
-  return apiMutator<void>({ url: `/api/v1/device`, method: "GET", signal });
-};
+export const deviceControllerFindAll = (
 
-export const getDeviceControllerFindAllMutationKey = () =>
-  ["deviceControllerFindAll"] as const;
-
-export const getDeviceControllerFindAllMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof deviceControllerFindAll>>,
-    TError,
-    void,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof deviceControllerFindAll>>,
-  TError,
-  void,
-  TContext
-> => {
-  const mutationKey = getDeviceControllerFindAllMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof deviceControllerFindAll>>,
-    void
-  > = () => {
-    return deviceControllerFindAll();
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type DeviceControllerFindAllMutationResult = NonNullable<
-  Awaited<ReturnType<typeof deviceControllerFindAll>>
->;
-
-export type DeviceControllerFindAllMutationError = unknown;
-
-/**
- * @summary Foydalanuvchining faol qurilmalarini olish
- */
-export const useDeviceControllerFindAll = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof deviceControllerFindAll>>,
-      TError,
-      void,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof deviceControllerFindAll>>,
-  TError,
-  void,
-  TContext
-> => {
-  return useMutation(
-    getDeviceControllerFindAllMutationOptions(options),
-    queryClient,
-  );
-};
-/**
- * @summary Eski qurilmani o'chirish (24 soatdan so'ng mumkin)
- */
-export const deviceControllerRemove = (id: number, signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/device/${id}`,
-    method: "DELETE",
-    signal,
-  });
-};
-
-export const getDeviceControllerRemoveQueryKey = (id: number) => {
-  return ["DELETE", `/api/v1/device/${id}`] as const;
-};
-
-export const getDeviceControllerRemoveQueryOptions = <
-  TData = Awaited<ReturnType<typeof deviceControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof deviceControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
+ signal?: AbortSignal
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getDeviceControllerRemoveQueryKey(id);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof deviceControllerRemove>>
-  > = ({ signal }) => deviceControllerRemove(id, signal);
+      return apiMutator<DeviceControllerFindAll200>(
+      {url: `/api/v1/device`, method: 'GET', signal
+    },
+      );
+    }
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof deviceControllerRemove>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type DeviceControllerRemoveQueryResult = NonNullable<
-  Awaited<ReturnType<typeof deviceControllerRemove>>
->;
-export type DeviceControllerRemoveQueryError = unknown;
 
-export function useDeviceControllerRemove<
-  TData = Awaited<ReturnType<typeof deviceControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof deviceControllerRemove>>,
+
+export const getDeviceControllerFindAllMutationKey = () => ['deviceControllerFindAll'] as const;
+
+export const getDeviceControllerFindAllMutationOptions = <TError = DeviceControllerFindAll401 | DeviceControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deviceControllerFindAll>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof deviceControllerFindAll>>, TError,void, TContext> => {
+
+const mutationKey = getDeviceControllerFindAllMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deviceControllerFindAll>>, void> = () => {
+
+
+          return  deviceControllerFindAll()
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeviceControllerFindAllMutationResult = NonNullable<Awaited<ReturnType<typeof deviceControllerFindAll>>>
+
+    export type DeviceControllerFindAllMutationError = DeviceControllerFindAll401 | DeviceControllerFindAll403
+
+
+    /**
+ * @summary Foydalanuvchining faol qurilmalarini olish
+ */
+export const useDeviceControllerFindAll = <TError = DeviceControllerFindAll401 | DeviceControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deviceControllerFindAll>>, TError,void, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deviceControllerFindAll>>,
         TError,
-        TData
-      >
-    > &
-      Pick<
+        void,
+        TContext
+      > => {
+      return useMutation(getDeviceControllerFindAllMutationOptions(options), queryClient);
+    }
+    /**
+ * Qurilmani u qo'shilgandan 24 soat o'tgachgina o'chirish mumkin. Faqat o'z qurilmangizni o'chira olasiz; joriy qurilma o'chirilmaydi.
+ * @summary Eski qurilmani o'chirish
+ */
+export const deviceControllerRemove = (
+    id: number,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<DeviceControllerRemove200>(
+      {url: `/api/v1/device/${id}`, method: 'DELETE', signal
+    },
+      );
+    }
+
+
+
+
+export const getDeviceControllerRemoveQueryKey = (id: number,) => {
+    return [
+    'DELETE', `/api/v1/device/${id}`
+    ] as const;
+    }
+
+
+export const getDeviceControllerRemoveQueryOptions = <TData = Awaited<ReturnType<typeof deviceControllerRemove>>, TError = DeviceControllerRemove400 | DeviceControllerRemove401 | DeviceControllerRemove404>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deviceControllerRemove>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDeviceControllerRemoveQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof deviceControllerRemove>>> = ({ signal }) => deviceControllerRemove(id, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof deviceControllerRemove>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type DeviceControllerRemoveQueryResult = NonNullable<Awaited<ReturnType<typeof deviceControllerRemove>>>
+export type DeviceControllerRemoveQueryError = DeviceControllerRemove400 | DeviceControllerRemove401 | DeviceControllerRemove404
+
+
+export function useDeviceControllerRemove<TData = Awaited<ReturnType<typeof deviceControllerRemove>>, TError = DeviceControllerRemove400 | DeviceControllerRemove401 | DeviceControllerRemove404>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof deviceControllerRemove>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof deviceControllerRemove>>,
           TError,
           Awaited<ReturnType<typeof deviceControllerRemove>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useDeviceControllerRemove<
-  TData = Awaited<ReturnType<typeof deviceControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof deviceControllerRemove>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDeviceControllerRemove<TData = Awaited<ReturnType<typeof deviceControllerRemove>>, TError = DeviceControllerRemove400 | DeviceControllerRemove401 | DeviceControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deviceControllerRemove>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof deviceControllerRemove>>,
           TError,
           Awaited<ReturnType<typeof deviceControllerRemove>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useDeviceControllerRemove<
-  TData = Awaited<ReturnType<typeof deviceControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof deviceControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDeviceControllerRemove<TData = Awaited<ReturnType<typeof deviceControllerRemove>>, TError = DeviceControllerRemove400 | DeviceControllerRemove401 | DeviceControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deviceControllerRemove>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Eski qurilmani o'chirish (24 soatdan so'ng mumkin)
+ * @summary Eski qurilmani o'chirish
  */
 
-export function useDeviceControllerRemove<
-  TData = Awaited<ReturnType<typeof deviceControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof deviceControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getDeviceControllerRemoveQueryOptions(id, options);
+export function useDeviceControllerRemove<TData = Awaited<ReturnType<typeof deviceControllerRemove>>, TError = DeviceControllerRemove400 | DeviceControllerRemove401 | DeviceControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deviceControllerRemove>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getDeviceControllerRemoveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+

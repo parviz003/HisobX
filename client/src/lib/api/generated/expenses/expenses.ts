@@ -16,9 +16,26 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -31,27 +48,56 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
 import type {
   CreateExpenseCategoryDto,
   CreateExpenseDto,
+  ExpensesControllerCreate201,
+  ExpensesControllerCreate400,
+  ExpensesControllerCreate401,
+  ExpensesControllerCreate403,
+  ExpensesControllerCreate404,
+  ExpensesControllerCreateCategory201,
+  ExpensesControllerCreateCategory400,
+  ExpensesControllerCreateCategory401,
+  ExpensesControllerCreateCategory403,
+  ExpensesControllerCreateCategory409,
+  ExpensesControllerFindAll200,
+  ExpensesControllerFindAll400,
+  ExpensesControllerFindAll401,
+  ExpensesControllerFindAll403,
+  ExpensesControllerFindAllCategories200,
+  ExpensesControllerFindAllCategories400,
+  ExpensesControllerFindAllCategories401,
+  ExpensesControllerFindAllCategories403,
+  ExpensesControllerFindAllCategoriesParams,
   ExpensesControllerFindAllParams,
-  UpdateExpenseCategoryDto,
-} from "../model";
+  ExpensesControllerRemoveCategory200,
+  ExpensesControllerRemoveCategory400,
+  ExpensesControllerRemoveCategory401,
+  ExpensesControllerRemoveCategory403,
+  ExpensesControllerRemoveCategory404,
+  ExpensesControllerUpdateCategory200,
+  ExpensesControllerUpdateCategory400,
+  ExpensesControllerUpdateCategory401,
+  ExpensesControllerUpdateCategory403,
+  ExpensesControllerUpdateCategory404,
+  UpdateExpenseCategoryDto
+} from '../model';
 
-import { apiMutator } from "../../client";
+import { apiMutator } from '../../client';
 
-const withQueryKey = <T extends object, K>(
-  query: T,
-  queryKey: K,
-): T & { queryKey: K } => {
+
+
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === "queryKey") continue;
+    if (key === 'queryKey') continue;
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
@@ -64,852 +110,513 @@ const withQueryKey = <T extends object, K>(
 /**
  * @summary Xarajat toifalarini olish
  */
-export const expensesControllerFindAllCategories = (signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/expenses/categories`,
-    method: "GET",
-    signal,
-  });
-};
+export const expensesControllerFindAllCategories = (
+    params?: ExpensesControllerFindAllCategoriesParams,
+ signal?: AbortSignal
+) => {
 
-export const getExpensesControllerFindAllCategoriesMutationKey = () =>
-  ["expensesControllerFindAllCategories"] as const;
 
-export const getExpensesControllerFindAllCategoriesMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof expensesControllerFindAllCategories>>,
-    TError,
-    void,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof expensesControllerFindAllCategories>>,
-  TError,
-  void,
-  TContext
-> => {
-  const mutationKey = getExpensesControllerFindAllCategoriesMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<ExpensesControllerFindAllCategories200>(
+      {url: `/api/v1/expenses/categories`, method: 'GET',
+        params, signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof expensesControllerFindAllCategories>>,
-    void
-  > = () => {
-    return expensesControllerFindAllCategories();
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type ExpensesControllerFindAllCategoriesMutationResult = NonNullable<
-  Awaited<ReturnType<typeof expensesControllerFindAllCategories>>
->;
 
-export type ExpensesControllerFindAllCategoriesMutationError = unknown;
+export const getExpensesControllerFindAllCategoriesMutationKey = () => ['expensesControllerFindAllCategories'] as const;
 
-/**
+export const getExpensesControllerFindAllCategoriesMutationOptions = <TError = ExpensesControllerFindAllCategories400 | ExpensesControllerFindAllCategories401 | ExpensesControllerFindAllCategories403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof expensesControllerFindAllCategories>>, TError,ExpensesControllerFindAllCategoriesMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof expensesControllerFindAllCategories>>, TError,ExpensesControllerFindAllCategoriesMutationVariables, TContext> => {
+
+const mutationKey = getExpensesControllerFindAllCategoriesMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof expensesControllerFindAllCategories>>, ExpensesControllerFindAllCategoriesMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  expensesControllerFindAllCategories(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExpensesControllerFindAllCategoriesMutationResult = NonNullable<Awaited<ReturnType<typeof expensesControllerFindAllCategories>>>
+
+    export type ExpensesControllerFindAllCategoriesMutationError = ExpensesControllerFindAllCategories400 | ExpensesControllerFindAllCategories401 | ExpensesControllerFindAllCategories403
+    export type ExpensesControllerFindAllCategoriesMutationVariables = {params?: ExpensesControllerFindAllCategoriesParams}
+
+    /**
  * @summary Xarajat toifalarini olish
  */
-export const useExpensesControllerFindAllCategories = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof expensesControllerFindAllCategories>>,
-      TError,
-      void,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof expensesControllerFindAllCategories>>,
-  TError,
-  void,
-  TContext
-> => {
-  return useMutation(
-    getExpensesControllerFindAllCategoriesMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useExpensesControllerFindAllCategories = <TError = ExpensesControllerFindAllCategories400 | ExpensesControllerFindAllCategories401 | ExpensesControllerFindAllCategories403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof expensesControllerFindAllCategories>>, TError,ExpensesControllerFindAllCategoriesMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof expensesControllerFindAllCategories>>,
+        TError,
+        ExpensesControllerFindAllCategoriesMutationVariables,
+        TContext
+      > => {
+      return useMutation(getExpensesControllerFindAllCategoriesMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Yangi xarajat toifasini yaratish
  */
 export const expensesControllerCreateCategory = (
-  createExpenseCategoryDto: CreateExpenseCategoryDto,
-  signal?: AbortSignal,
+    createExpenseCategoryDto: CreateExpenseCategoryDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/expenses/categories`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: createExpenseCategoryDto,
-    signal,
-  });
-};
 
-export const getExpensesControllerCreateCategoryQueryKey = (
-  createExpenseCategoryDto?: CreateExpenseCategoryDto,
+
+      return apiMutator<ExpensesControllerCreateCategory201>(
+      {url: `/api/v1/expenses/categories`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createExpenseCategoryDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getExpensesControllerCreateCategoryQueryKey = (createExpenseCategoryDto?: CreateExpenseCategoryDto,) => {
+    return [
+    'POST', `/api/v1/expenses/categories`, createExpenseCategoryDto
+    ] as const;
+    }
+
+
+export const getExpensesControllerCreateCategoryQueryOptions = <TData = Awaited<ReturnType<typeof expensesControllerCreateCategory>>, TError = ExpensesControllerCreateCategory400 | ExpensesControllerCreateCategory401 | ExpensesControllerCreateCategory403 | ExpensesControllerCreateCategory409>(createExpenseCategoryDto: CreateExpenseCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerCreateCategory>>, TError, TData>>, }
 ) => {
-  return [
-    "POST",
-    `/api/v1/expenses/categories`,
-    createExpenseCategoryDto,
-  ] as const;
-};
 
-export const getExpensesControllerCreateCategoryQueryOptions = <
-  TData = Awaited<ReturnType<typeof expensesControllerCreateCategory>>,
-  TError = unknown,
->(
-  createExpenseCategoryDto: CreateExpenseCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerCreateCategory>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getExpensesControllerCreateCategoryQueryKey(createExpenseCategoryDto);
+  const queryKey =  queryOptions?.queryKey ?? getExpensesControllerCreateCategoryQueryKey(createExpenseCategoryDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof expensesControllerCreateCategory>>
-  > = ({ signal }) =>
-    expensesControllerCreateCategory(createExpenseCategoryDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof expensesControllerCreateCategory>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type ExpensesControllerCreateCategoryQueryResult = NonNullable<
-  Awaited<ReturnType<typeof expensesControllerCreateCategory>>
->;
-export type ExpensesControllerCreateCategoryQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof expensesControllerCreateCategory>>> = ({ signal }) => expensesControllerCreateCategory(createExpenseCategoryDto, signal);
 
-export function useExpensesControllerCreateCategory<
-  TData = Awaited<ReturnType<typeof expensesControllerCreateCategory>>,
-  TError = unknown,
->(
-  createExpenseCategoryDto: CreateExpenseCategoryDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerCreateCategory>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof expensesControllerCreateCategory>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExpensesControllerCreateCategoryQueryResult = NonNullable<Awaited<ReturnType<typeof expensesControllerCreateCategory>>>
+export type ExpensesControllerCreateCategoryQueryError = ExpensesControllerCreateCategory400 | ExpensesControllerCreateCategory401 | ExpensesControllerCreateCategory403 | ExpensesControllerCreateCategory409
+
+
+export function useExpensesControllerCreateCategory<TData = Awaited<ReturnType<typeof expensesControllerCreateCategory>>, TError = ExpensesControllerCreateCategory400 | ExpensesControllerCreateCategory401 | ExpensesControllerCreateCategory403 | ExpensesControllerCreateCategory409>(
+ createExpenseCategoryDto: CreateExpenseCategoryDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerCreateCategory>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof expensesControllerCreateCategory>>,
           TError,
           Awaited<ReturnType<typeof expensesControllerCreateCategory>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useExpensesControllerCreateCategory<
-  TData = Awaited<ReturnType<typeof expensesControllerCreateCategory>>,
-  TError = unknown,
->(
-  createExpenseCategoryDto: CreateExpenseCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerCreateCategory>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExpensesControllerCreateCategory<TData = Awaited<ReturnType<typeof expensesControllerCreateCategory>>, TError = ExpensesControllerCreateCategory400 | ExpensesControllerCreateCategory401 | ExpensesControllerCreateCategory403 | ExpensesControllerCreateCategory409>(
+ createExpenseCategoryDto: CreateExpenseCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerCreateCategory>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof expensesControllerCreateCategory>>,
           TError,
           Awaited<ReturnType<typeof expensesControllerCreateCategory>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useExpensesControllerCreateCategory<
-  TData = Awaited<ReturnType<typeof expensesControllerCreateCategory>>,
-  TError = unknown,
->(
-  createExpenseCategoryDto: CreateExpenseCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerCreateCategory>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExpensesControllerCreateCategory<TData = Awaited<ReturnType<typeof expensesControllerCreateCategory>>, TError = ExpensesControllerCreateCategory400 | ExpensesControllerCreateCategory401 | ExpensesControllerCreateCategory403 | ExpensesControllerCreateCategory409>(
+ createExpenseCategoryDto: CreateExpenseCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerCreateCategory>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Yangi xarajat toifasini yaratish
  */
 
-export function useExpensesControllerCreateCategory<
-  TData = Awaited<ReturnType<typeof expensesControllerCreateCategory>>,
-  TError = unknown,
->(
-  createExpenseCategoryDto: CreateExpenseCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerCreateCategory>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getExpensesControllerCreateCategoryQueryOptions(
-    createExpenseCategoryDto,
-    options,
-  );
+export function useExpensesControllerCreateCategory<TData = Awaited<ReturnType<typeof expensesControllerCreateCategory>>, TError = ExpensesControllerCreateCategory400 | ExpensesControllerCreateCategory401 | ExpensesControllerCreateCategory403 | ExpensesControllerCreateCategory409>(
+ createExpenseCategoryDto: CreateExpenseCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerCreateCategory>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getExpensesControllerCreateCategoryQueryOptions(createExpenseCategoryDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * @summary Xarajat toifasini tahrirlash
  */
 export const expensesControllerUpdateCategory = (
-  id: number,
-  updateExpenseCategoryDto: UpdateExpenseCategoryDto,
-  signal?: AbortSignal,
+    id: number,
+    updateExpenseCategoryDto: UpdateExpenseCategoryDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/expenses/categories/${id}`,
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    data: updateExpenseCategoryDto,
-    signal,
-  });
-};
 
-export const getExpensesControllerUpdateCategoryQueryKey = (
-  id: number,
-  updateExpenseCategoryDto?: UpdateExpenseCategoryDto,
+
+      return apiMutator<ExpensesControllerUpdateCategory200>(
+      {url: `/api/v1/expenses/categories/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateExpenseCategoryDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getExpensesControllerUpdateCategoryQueryKey = (id: number,
+    updateExpenseCategoryDto?: UpdateExpenseCategoryDto,) => {
+    return [
+    'PATCH', `/api/v1/expenses/categories/${id}`, updateExpenseCategoryDto
+    ] as const;
+    }
+
+
+export const getExpensesControllerUpdateCategoryQueryOptions = <TData = Awaited<ReturnType<typeof expensesControllerUpdateCategory>>, TError = ExpensesControllerUpdateCategory400 | ExpensesControllerUpdateCategory401 | ExpensesControllerUpdateCategory403 | ExpensesControllerUpdateCategory404>(id: number,
+    updateExpenseCategoryDto: UpdateExpenseCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerUpdateCategory>>, TError, TData>>, }
 ) => {
-  return [
-    "PATCH",
-    `/api/v1/expenses/categories/${id}`,
-    updateExpenseCategoryDto,
-  ] as const;
-};
 
-export const getExpensesControllerUpdateCategoryQueryOptions = <
-  TData = Awaited<ReturnType<typeof expensesControllerUpdateCategory>>,
-  TError = unknown,
->(
-  id: number,
-  updateExpenseCategoryDto: UpdateExpenseCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerUpdateCategory>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getExpensesControllerUpdateCategoryQueryKey(id, updateExpenseCategoryDto);
+  const queryKey =  queryOptions?.queryKey ?? getExpensesControllerUpdateCategoryQueryKey(id,updateExpenseCategoryDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof expensesControllerUpdateCategory>>
-  > = ({ signal }) =>
-    expensesControllerUpdateCategory(id, updateExpenseCategoryDto, signal);
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof expensesControllerUpdateCategory>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type ExpensesControllerUpdateCategoryQueryResult = NonNullable<
-  Awaited<ReturnType<typeof expensesControllerUpdateCategory>>
->;
-export type ExpensesControllerUpdateCategoryQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof expensesControllerUpdateCategory>>> = ({ signal }) => expensesControllerUpdateCategory(id,updateExpenseCategoryDto, signal);
 
-export function useExpensesControllerUpdateCategory<
-  TData = Awaited<ReturnType<typeof expensesControllerUpdateCategory>>,
-  TError = unknown,
->(
-  id: number,
-  updateExpenseCategoryDto: UpdateExpenseCategoryDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerUpdateCategory>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof expensesControllerUpdateCategory>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExpensesControllerUpdateCategoryQueryResult = NonNullable<Awaited<ReturnType<typeof expensesControllerUpdateCategory>>>
+export type ExpensesControllerUpdateCategoryQueryError = ExpensesControllerUpdateCategory400 | ExpensesControllerUpdateCategory401 | ExpensesControllerUpdateCategory403 | ExpensesControllerUpdateCategory404
+
+
+export function useExpensesControllerUpdateCategory<TData = Awaited<ReturnType<typeof expensesControllerUpdateCategory>>, TError = ExpensesControllerUpdateCategory400 | ExpensesControllerUpdateCategory401 | ExpensesControllerUpdateCategory403 | ExpensesControllerUpdateCategory404>(
+ id: number,
+    updateExpenseCategoryDto: UpdateExpenseCategoryDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerUpdateCategory>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof expensesControllerUpdateCategory>>,
           TError,
           Awaited<ReturnType<typeof expensesControllerUpdateCategory>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useExpensesControllerUpdateCategory<
-  TData = Awaited<ReturnType<typeof expensesControllerUpdateCategory>>,
-  TError = unknown,
->(
-  id: number,
-  updateExpenseCategoryDto: UpdateExpenseCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerUpdateCategory>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExpensesControllerUpdateCategory<TData = Awaited<ReturnType<typeof expensesControllerUpdateCategory>>, TError = ExpensesControllerUpdateCategory400 | ExpensesControllerUpdateCategory401 | ExpensesControllerUpdateCategory403 | ExpensesControllerUpdateCategory404>(
+ id: number,
+    updateExpenseCategoryDto: UpdateExpenseCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerUpdateCategory>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof expensesControllerUpdateCategory>>,
           TError,
           Awaited<ReturnType<typeof expensesControllerUpdateCategory>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useExpensesControllerUpdateCategory<
-  TData = Awaited<ReturnType<typeof expensesControllerUpdateCategory>>,
-  TError = unknown,
->(
-  id: number,
-  updateExpenseCategoryDto: UpdateExpenseCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerUpdateCategory>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExpensesControllerUpdateCategory<TData = Awaited<ReturnType<typeof expensesControllerUpdateCategory>>, TError = ExpensesControllerUpdateCategory400 | ExpensesControllerUpdateCategory401 | ExpensesControllerUpdateCategory403 | ExpensesControllerUpdateCategory404>(
+ id: number,
+    updateExpenseCategoryDto: UpdateExpenseCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerUpdateCategory>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Xarajat toifasini tahrirlash
  */
 
-export function useExpensesControllerUpdateCategory<
-  TData = Awaited<ReturnType<typeof expensesControllerUpdateCategory>>,
-  TError = unknown,
->(
-  id: number,
-  updateExpenseCategoryDto: UpdateExpenseCategoryDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerUpdateCategory>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getExpensesControllerUpdateCategoryQueryOptions(
-    id,
-    updateExpenseCategoryDto,
-    options,
-  );
+export function useExpensesControllerUpdateCategory<TData = Awaited<ReturnType<typeof expensesControllerUpdateCategory>>, TError = ExpensesControllerUpdateCategory400 | ExpensesControllerUpdateCategory401 | ExpensesControllerUpdateCategory403 | ExpensesControllerUpdateCategory404>(
+ id: number,
+    updateExpenseCategoryDto: UpdateExpenseCategoryDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerUpdateCategory>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getExpensesControllerUpdateCategoryQueryOptions(id,updateExpenseCategoryDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * @summary Xarajat toifasini o'chirish
  */
 export const expensesControllerRemoveCategory = (
-  id: number,
-  signal?: AbortSignal,
+    id: number,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/expenses/categories/${id}`,
-    method: "DELETE",
-    signal,
-  });
-};
 
-export const getExpensesControllerRemoveCategoryQueryKey = (id: number) => {
-  return ["DELETE", `/api/v1/expenses/categories/${id}`] as const;
-};
 
-export const getExpensesControllerRemoveCategoryQueryOptions = <
-  TData = Awaited<ReturnType<typeof expensesControllerRemoveCategory>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerRemoveCategory>>,
-        TError,
-        TData
-      >
-    >;
-  },
+      return apiMutator<ExpensesControllerRemoveCategory200>(
+      {url: `/api/v1/expenses/categories/${id}`, method: 'DELETE', signal
+    },
+      );
+    }
+
+
+
+
+export const getExpensesControllerRemoveCategoryQueryKey = (id: number,) => {
+    return [
+    'DELETE', `/api/v1/expenses/categories/${id}`
+    ] as const;
+    }
+
+
+export const getExpensesControllerRemoveCategoryQueryOptions = <TData = Awaited<ReturnType<typeof expensesControllerRemoveCategory>>, TError = ExpensesControllerRemoveCategory400 | ExpensesControllerRemoveCategory401 | ExpensesControllerRemoveCategory403 | ExpensesControllerRemoveCategory404>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerRemoveCategory>>, TError, TData>>, }
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getExpensesControllerRemoveCategoryQueryKey(id);
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof expensesControllerRemoveCategory>>
-  > = ({ signal }) => expensesControllerRemoveCategory(id, signal);
+  const queryKey =  queryOptions?.queryKey ?? getExpensesControllerRemoveCategoryQueryKey(id);
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof expensesControllerRemoveCategory>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type ExpensesControllerRemoveCategoryQueryResult = NonNullable<
-  Awaited<ReturnType<typeof expensesControllerRemoveCategory>>
->;
-export type ExpensesControllerRemoveCategoryQueryError = unknown;
 
-export function useExpensesControllerRemoveCategory<
-  TData = Awaited<ReturnType<typeof expensesControllerRemoveCategory>>,
-  TError = unknown,
->(
-  id: number,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerRemoveCategory>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof expensesControllerRemoveCategory>>> = ({ signal }) => expensesControllerRemoveCategory(id, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof expensesControllerRemoveCategory>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExpensesControllerRemoveCategoryQueryResult = NonNullable<Awaited<ReturnType<typeof expensesControllerRemoveCategory>>>
+export type ExpensesControllerRemoveCategoryQueryError = ExpensesControllerRemoveCategory400 | ExpensesControllerRemoveCategory401 | ExpensesControllerRemoveCategory403 | ExpensesControllerRemoveCategory404
+
+
+export function useExpensesControllerRemoveCategory<TData = Awaited<ReturnType<typeof expensesControllerRemoveCategory>>, TError = ExpensesControllerRemoveCategory400 | ExpensesControllerRemoveCategory401 | ExpensesControllerRemoveCategory403 | ExpensesControllerRemoveCategory404>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerRemoveCategory>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof expensesControllerRemoveCategory>>,
           TError,
           Awaited<ReturnType<typeof expensesControllerRemoveCategory>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useExpensesControllerRemoveCategory<
-  TData = Awaited<ReturnType<typeof expensesControllerRemoveCategory>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerRemoveCategory>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExpensesControllerRemoveCategory<TData = Awaited<ReturnType<typeof expensesControllerRemoveCategory>>, TError = ExpensesControllerRemoveCategory400 | ExpensesControllerRemoveCategory401 | ExpensesControllerRemoveCategory403 | ExpensesControllerRemoveCategory404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerRemoveCategory>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof expensesControllerRemoveCategory>>,
           TError,
           Awaited<ReturnType<typeof expensesControllerRemoveCategory>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useExpensesControllerRemoveCategory<
-  TData = Awaited<ReturnType<typeof expensesControllerRemoveCategory>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerRemoveCategory>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExpensesControllerRemoveCategory<TData = Awaited<ReturnType<typeof expensesControllerRemoveCategory>>, TError = ExpensesControllerRemoveCategory400 | ExpensesControllerRemoveCategory401 | ExpensesControllerRemoveCategory403 | ExpensesControllerRemoveCategory404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerRemoveCategory>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Xarajat toifasini o'chirish
  */
 
-export function useExpensesControllerRemoveCategory<
-  TData = Awaited<ReturnType<typeof expensesControllerRemoveCategory>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerRemoveCategory>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getExpensesControllerRemoveCategoryQueryOptions(
-    id,
-    options,
-  );
+export function useExpensesControllerRemoveCategory<TData = Awaited<ReturnType<typeof expensesControllerRemoveCategory>>, TError = ExpensesControllerRemoveCategory400 | ExpensesControllerRemoveCategory401 | ExpensesControllerRemoveCategory403 | ExpensesControllerRemoveCategory404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerRemoveCategory>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getExpensesControllerRemoveCategoryQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * @summary Xarajat qo‘shish (avtomatik kassadan chiqadi)
  */
 export const expensesControllerCreate = (
-  createExpenseDto: CreateExpenseDto,
-  signal?: AbortSignal,
+    createExpenseDto: CreateExpenseDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/expenses`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: createExpenseDto,
-    signal,
-  });
-};
 
-export const getExpensesControllerCreateQueryKey = (
-  createExpenseDto?: CreateExpenseDto,
+
+      return apiMutator<ExpensesControllerCreate201>(
+      {url: `/api/v1/expenses`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createExpenseDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getExpensesControllerCreateQueryKey = (createExpenseDto?: CreateExpenseDto,) => {
+    return [
+    'POST', `/api/v1/expenses`, createExpenseDto
+    ] as const;
+    }
+
+
+export const getExpensesControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof expensesControllerCreate>>, TError = ExpensesControllerCreate400 | ExpensesControllerCreate401 | ExpensesControllerCreate403 | ExpensesControllerCreate404>(createExpenseDto: CreateExpenseDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerCreate>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/expenses`, createExpenseDto] as const;
-};
 
-export const getExpensesControllerCreateQueryOptions = <
-  TData = Awaited<ReturnType<typeof expensesControllerCreate>>,
-  TError = unknown,
->(
-  createExpenseDto: CreateExpenseDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getExpensesControllerCreateQueryKey(createExpenseDto);
+  const queryKey =  queryOptions?.queryKey ?? getExpensesControllerCreateQueryKey(createExpenseDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof expensesControllerCreate>>
-  > = ({ signal }) => expensesControllerCreate(createExpenseDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof expensesControllerCreate>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type ExpensesControllerCreateQueryResult = NonNullable<
-  Awaited<ReturnType<typeof expensesControllerCreate>>
->;
-export type ExpensesControllerCreateQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof expensesControllerCreate>>> = ({ signal }) => expensesControllerCreate(createExpenseDto, signal);
 
-export function useExpensesControllerCreate<
-  TData = Awaited<ReturnType<typeof expensesControllerCreate>>,
-  TError = unknown,
->(
-  createExpenseDto: CreateExpenseDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof expensesControllerCreate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExpensesControllerCreateQueryResult = NonNullable<Awaited<ReturnType<typeof expensesControllerCreate>>>
+export type ExpensesControllerCreateQueryError = ExpensesControllerCreate400 | ExpensesControllerCreate401 | ExpensesControllerCreate403 | ExpensesControllerCreate404
+
+
+export function useExpensesControllerCreate<TData = Awaited<ReturnType<typeof expensesControllerCreate>>, TError = ExpensesControllerCreate400 | ExpensesControllerCreate401 | ExpensesControllerCreate403 | ExpensesControllerCreate404>(
+ createExpenseDto: CreateExpenseDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerCreate>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof expensesControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof expensesControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useExpensesControllerCreate<
-  TData = Awaited<ReturnType<typeof expensesControllerCreate>>,
-  TError = unknown,
->(
-  createExpenseDto: CreateExpenseDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExpensesControllerCreate<TData = Awaited<ReturnType<typeof expensesControllerCreate>>, TError = ExpensesControllerCreate400 | ExpensesControllerCreate401 | ExpensesControllerCreate403 | ExpensesControllerCreate404>(
+ createExpenseDto: CreateExpenseDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerCreate>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof expensesControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof expensesControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useExpensesControllerCreate<
-  TData = Awaited<ReturnType<typeof expensesControllerCreate>>,
-  TError = unknown,
->(
-  createExpenseDto: CreateExpenseDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExpensesControllerCreate<TData = Awaited<ReturnType<typeof expensesControllerCreate>>, TError = ExpensesControllerCreate400 | ExpensesControllerCreate401 | ExpensesControllerCreate403 | ExpensesControllerCreate404>(
+ createExpenseDto: CreateExpenseDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Xarajat qo‘shish (avtomatik kassadan chiqadi)
  */
 
-export function useExpensesControllerCreate<
-  TData = Awaited<ReturnType<typeof expensesControllerCreate>>,
-  TError = unknown,
->(
-  createExpenseDto: CreateExpenseDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof expensesControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getExpensesControllerCreateQueryOptions(
-    createExpenseDto,
-    options,
-  );
+export function useExpensesControllerCreate<TData = Awaited<ReturnType<typeof expensesControllerCreate>>, TError = ExpensesControllerCreate400 | ExpensesControllerCreate401 | ExpensesControllerCreate403 | ExpensesControllerCreate404>(
+ createExpenseDto: CreateExpenseDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof expensesControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getExpensesControllerCreateQueryOptions(createExpenseDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * @summary Xarajatlar ro‘yxatini sahifalash va filtrlash
  */
 export const expensesControllerFindAll = (
-  params?: ExpensesControllerFindAllParams,
-  signal?: AbortSignal,
+    params?: ExpensesControllerFindAllParams,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/expenses`,
-    method: "GET",
-    params,
-    signal,
-  });
-};
 
-export const getExpensesControllerFindAllMutationKey = () =>
-  ["expensesControllerFindAll"] as const;
 
-export const getExpensesControllerFindAllMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof expensesControllerFindAll>>,
-    TError,
-    ExpensesControllerFindAllMutationVariables,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof expensesControllerFindAll>>,
-  TError,
-  ExpensesControllerFindAllMutationVariables,
-  TContext
-> => {
-  const mutationKey = getExpensesControllerFindAllMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<ExpensesControllerFindAll200>(
+      {url: `/api/v1/expenses`, method: 'GET',
+        params, signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof expensesControllerFindAll>>,
-    ExpensesControllerFindAllMutationVariables
-  > = (props) => {
-    const { params } = props ?? {};
 
-    return expensesControllerFindAll(params);
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type ExpensesControllerFindAllMutationResult = NonNullable<
-  Awaited<ReturnType<typeof expensesControllerFindAll>>
->;
+export const getExpensesControllerFindAllMutationKey = () => ['expensesControllerFindAll'] as const;
 
-export type ExpensesControllerFindAllMutationError = unknown;
-export type ExpensesControllerFindAllMutationVariables = {
-  params?: ExpensesControllerFindAllParams;
-};
+export const getExpensesControllerFindAllMutationOptions = <TError = ExpensesControllerFindAll400 | ExpensesControllerFindAll401 | ExpensesControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof expensesControllerFindAll>>, TError,ExpensesControllerFindAllMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof expensesControllerFindAll>>, TError,ExpensesControllerFindAllMutationVariables, TContext> => {
 
-/**
+const mutationKey = getExpensesControllerFindAllMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof expensesControllerFindAll>>, ExpensesControllerFindAllMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  expensesControllerFindAll(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExpensesControllerFindAllMutationResult = NonNullable<Awaited<ReturnType<typeof expensesControllerFindAll>>>
+
+    export type ExpensesControllerFindAllMutationError = ExpensesControllerFindAll400 | ExpensesControllerFindAll401 | ExpensesControllerFindAll403
+    export type ExpensesControllerFindAllMutationVariables = {params?: ExpensesControllerFindAllParams}
+
+    /**
  * @summary Xarajatlar ro‘yxatini sahifalash va filtrlash
  */
-export const useExpensesControllerFindAll = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof expensesControllerFindAll>>,
-      TError,
-      ExpensesControllerFindAllMutationVariables,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof expensesControllerFindAll>>,
-  TError,
-  ExpensesControllerFindAllMutationVariables,
-  TContext
-> => {
-  return useMutation(
-    getExpensesControllerFindAllMutationOptions(options),
-    queryClient,
-  );
-};
+export const useExpensesControllerFindAll = <TError = ExpensesControllerFindAll400 | ExpensesControllerFindAll401 | ExpensesControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof expensesControllerFindAll>>, TError,ExpensesControllerFindAllMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof expensesControllerFindAll>>,
+        TError,
+        ExpensesControllerFindAllMutationVariables,
+        TContext
+      > => {
+      return useMutation(getExpensesControllerFindAllMutationOptions(options), queryClient);
+    }

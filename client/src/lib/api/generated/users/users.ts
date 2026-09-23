@@ -16,9 +16,26 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -31,28 +48,74 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
 import type {
+  ChangePasswordDto,
   CreateUserDto,
   ResetUserPasswordDto,
   UpdateProfileDto,
   UpdateUserDto,
+  UsersControllerChangePassword200,
+  UsersControllerChangePassword400,
+  UsersControllerChangePassword401,
+  UsersControllerChangePassword403,
+  UsersControllerCreate201,
+  UsersControllerCreate400,
+  UsersControllerCreate403,
+  UsersControllerCreate404,
+  UsersControllerCreate409,
+  UsersControllerFindAll200,
+  UsersControllerFindAll400,
+  UsersControllerFindAll401,
+  UsersControllerFindAll403,
   UsersControllerFindAllParams,
-} from "../model";
+  UsersControllerFindOne200,
+  UsersControllerFindOne401,
+  UsersControllerFindOne403,
+  UsersControllerFindOne404,
+  UsersControllerGetProfile200,
+  UsersControllerGetProfile401,
+  UsersControllerGetProfile403,
+  UsersControllerRemove200,
+  UsersControllerRemove403,
+  UsersControllerRemove404,
+  UsersControllerRemoveProfileImage200,
+  UsersControllerRemoveProfileImage400,
+  UsersControllerRemoveProfileImage401,
+  UsersControllerRemoveProfileImage403,
+  UsersControllerResetPassword200,
+  UsersControllerResetPassword400,
+  UsersControllerResetPassword403,
+  UsersControllerResetPassword404,
+  UsersControllerUpdate200,
+  UsersControllerUpdate400,
+  UsersControllerUpdate403,
+  UsersControllerUpdate404,
+  UsersControllerUpdate409,
+  UsersControllerUpdateProfile200,
+  UsersControllerUpdateProfile400,
+  UsersControllerUpdateProfile401,
+  UsersControllerUpdateProfile403,
+  UsersControllerUpdateProfileImage200,
+  UsersControllerUpdateProfileImage400,
+  UsersControllerUpdateProfileImage401,
+  UsersControllerUpdateProfileImage403,
+  UsersControllerUpdateProfileImageBody
+} from '../model';
 
-import { apiMutator } from "../../client";
+import { apiMutator } from '../../client';
 
-const withQueryKey = <T extends object, K>(
-  query: T,
-  queryKey: K,
-): T & { queryKey: K } => {
+
+
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === "queryKey") continue;
+    if (key === 'queryKey') continue;
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
@@ -65,1386 +128,963 @@ const withQueryKey = <T extends object, K>(
 /**
  * @summary O'z profilini ko'rish
  */
-export const usersControllerGetProfile = (signal?: AbortSignal) => {
-  return apiMutator<void>({ url: `/api/v1/users/me`, method: "GET", signal });
-};
+export const usersControllerGetProfile = (
 
-export const getUsersControllerGetProfileMutationKey = () =>
-  ["usersControllerGetProfile"] as const;
+ signal?: AbortSignal
+) => {
 
-export const getUsersControllerGetProfileMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof usersControllerGetProfile>>,
-    TError,
-    void,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof usersControllerGetProfile>>,
-  TError,
-  void,
-  TContext
-> => {
-  const mutationKey = getUsersControllerGetProfileMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof usersControllerGetProfile>>,
-    void
-  > = () => {
-    return usersControllerGetProfile();
-  };
+      return apiMutator<UsersControllerGetProfile200>(
+      {url: `/api/v1/users/me`, method: 'GET', signal
+    },
+      );
+    }
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type UsersControllerGetProfileMutationResult = NonNullable<
-  Awaited<ReturnType<typeof usersControllerGetProfile>>
->;
 
-export type UsersControllerGetProfileMutationError = unknown;
 
-/**
+export const getUsersControllerGetProfileMutationKey = () => ['usersControllerGetProfile'] as const;
+
+export const getUsersControllerGetProfileMutationOptions = <TError = UsersControllerGetProfile401 | UsersControllerGetProfile403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof usersControllerGetProfile>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof usersControllerGetProfile>>, TError,void, TContext> => {
+
+const mutationKey = getUsersControllerGetProfileMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof usersControllerGetProfile>>, void> = () => {
+
+
+          return  usersControllerGetProfile()
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UsersControllerGetProfileMutationResult = NonNullable<Awaited<ReturnType<typeof usersControllerGetProfile>>>
+
+    export type UsersControllerGetProfileMutationError = UsersControllerGetProfile401 | UsersControllerGetProfile403
+
+
+    /**
  * @summary O'z profilini ko'rish
  */
-export const useUsersControllerGetProfile = <
-  TError = unknown,
-  TContext = unknown,
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof usersControllerGetProfile>>,
-      TError,
-      void,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof usersControllerGetProfile>>,
-  TError,
-  void,
-  TContext
-> => {
-  return useMutation(
-    getUsersControllerGetProfileMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useUsersControllerGetProfile = <TError = UsersControllerGetProfile401 | UsersControllerGetProfile403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof usersControllerGetProfile>>, TError,void, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof usersControllerGetProfile>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getUsersControllerGetProfileMutationOptions(options), queryClient);
+    }
+    /**
+ * Faqat `fullName` o'zgartiriladi. Telefon raqam — kirish identifikatori, shuning uchun bu yerdan o'zgartirilmaydi. Parol uchun `PATCH /users/me/password` ishlatiladi.
  * @summary O'z profilini tahrirlash
  */
 export const usersControllerUpdateProfile = (
-  updateProfileDto: UpdateProfileDto,
-  signal?: AbortSignal,
+    updateProfileDto: UpdateProfileDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/users/me`,
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    data: updateProfileDto,
-    signal,
-  });
-};
 
-export const getUsersControllerUpdateProfileQueryKey = (
-  updateProfileDto?: UpdateProfileDto,
+
+      return apiMutator<UsersControllerUpdateProfile200>(
+      {url: `/api/v1/users/me`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateProfileDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getUsersControllerUpdateProfileQueryKey = (updateProfileDto?: UpdateProfileDto,) => {
+    return [
+    'PATCH', `/api/v1/users/me`, updateProfileDto
+    ] as const;
+    }
+
+
+export const getUsersControllerUpdateProfileQueryOptions = <TData = Awaited<ReturnType<typeof usersControllerUpdateProfile>>, TError = UsersControllerUpdateProfile400 | UsersControllerUpdateProfile401 | UsersControllerUpdateProfile403>(updateProfileDto: UpdateProfileDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdateProfile>>, TError, TData>>, }
 ) => {
-  return ["PATCH", `/api/v1/users/me`, updateProfileDto] as const;
-};
 
-export const getUsersControllerUpdateProfileQueryOptions = <
-  TData = Awaited<ReturnType<typeof usersControllerUpdateProfile>>,
-  TError = unknown,
->(
-  updateProfileDto: UpdateProfileDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerUpdateProfile>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getUsersControllerUpdateProfileQueryKey(updateProfileDto);
+  const queryKey =  queryOptions?.queryKey ?? getUsersControllerUpdateProfileQueryKey(updateProfileDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof usersControllerUpdateProfile>>
-  > = ({ signal }) => usersControllerUpdateProfile(updateProfileDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof usersControllerUpdateProfile>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type UsersControllerUpdateProfileQueryResult = NonNullable<
-  Awaited<ReturnType<typeof usersControllerUpdateProfile>>
->;
-export type UsersControllerUpdateProfileQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof usersControllerUpdateProfile>>> = ({ signal }) => usersControllerUpdateProfile(updateProfileDto, signal);
 
-export function useUsersControllerUpdateProfile<
-  TData = Awaited<ReturnType<typeof usersControllerUpdateProfile>>,
-  TError = unknown,
->(
-  updateProfileDto: UpdateProfileDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerUpdateProfile>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdateProfile>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type UsersControllerUpdateProfileQueryResult = NonNullable<Awaited<ReturnType<typeof usersControllerUpdateProfile>>>
+export type UsersControllerUpdateProfileQueryError = UsersControllerUpdateProfile400 | UsersControllerUpdateProfile401 | UsersControllerUpdateProfile403
+
+
+export function useUsersControllerUpdateProfile<TData = Awaited<ReturnType<typeof usersControllerUpdateProfile>>, TError = UsersControllerUpdateProfile400 | UsersControllerUpdateProfile401 | UsersControllerUpdateProfile403>(
+ updateProfileDto: UpdateProfileDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdateProfile>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof usersControllerUpdateProfile>>,
           TError,
           Awaited<ReturnType<typeof usersControllerUpdateProfile>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useUsersControllerUpdateProfile<
-  TData = Awaited<ReturnType<typeof usersControllerUpdateProfile>>,
-  TError = unknown,
->(
-  updateProfileDto: UpdateProfileDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerUpdateProfile>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerUpdateProfile<TData = Awaited<ReturnType<typeof usersControllerUpdateProfile>>, TError = UsersControllerUpdateProfile400 | UsersControllerUpdateProfile401 | UsersControllerUpdateProfile403>(
+ updateProfileDto: UpdateProfileDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdateProfile>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof usersControllerUpdateProfile>>,
           TError,
           Awaited<ReturnType<typeof usersControllerUpdateProfile>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useUsersControllerUpdateProfile<
-  TData = Awaited<ReturnType<typeof usersControllerUpdateProfile>>,
-  TError = unknown,
->(
-  updateProfileDto: UpdateProfileDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerUpdateProfile>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerUpdateProfile<TData = Awaited<ReturnType<typeof usersControllerUpdateProfile>>, TError = UsersControllerUpdateProfile400 | UsersControllerUpdateProfile401 | UsersControllerUpdateProfile403>(
+ updateProfileDto: UpdateProfileDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdateProfile>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary O'z profilini tahrirlash
  */
 
-export function useUsersControllerUpdateProfile<
-  TData = Awaited<ReturnType<typeof usersControllerUpdateProfile>>,
-  TError = unknown,
->(
-  updateProfileDto: UpdateProfileDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerUpdateProfile>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getUsersControllerUpdateProfileQueryOptions(
-    updateProfileDto,
-    options,
-  );
+export function useUsersControllerUpdateProfile<TData = Awaited<ReturnType<typeof usersControllerUpdateProfile>>, TError = UsersControllerUpdateProfile400 | UsersControllerUpdateProfile401 | UsersControllerUpdateProfile403>(
+ updateProfileDto: UpdateProfileDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdateProfile>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getUsersControllerUpdateProfileQueryOptions(updateProfileDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
+/**
+ * Joriy parol tasdiqlangach, JORIY QURILMADAN TASHQARI barcha sessiyalar bekor qilinadi. Joriy qurilma cookie'lari amal qilishda davom etadi.
+ * @summary Parolni almashtirish
+ */
+export const usersControllerChangePassword = (
+    changePasswordDto: ChangePasswordDto,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<UsersControllerChangePassword200>(
+      {url: `/api/v1/users/me/password`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: changePasswordDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getUsersControllerChangePasswordQueryKey = (changePasswordDto?: ChangePasswordDto,) => {
+    return [
+    'PATCH', `/api/v1/users/me/password`, changePasswordDto
+    ] as const;
+    }
+
+
+export const getUsersControllerChangePasswordQueryOptions = <TData = Awaited<ReturnType<typeof usersControllerChangePassword>>, TError = UsersControllerChangePassword400 | UsersControllerChangePassword401 | UsersControllerChangePassword403>(changePasswordDto: ChangePasswordDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerChangePassword>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getUsersControllerChangePasswordQueryKey(changePasswordDto);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof usersControllerChangePassword>>> = ({ signal }) => usersControllerChangePassword(changePasswordDto, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof usersControllerChangePassword>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type UsersControllerChangePasswordQueryResult = NonNullable<Awaited<ReturnType<typeof usersControllerChangePassword>>>
+export type UsersControllerChangePasswordQueryError = UsersControllerChangePassword400 | UsersControllerChangePassword401 | UsersControllerChangePassword403
+
+
+export function useUsersControllerChangePassword<TData = Awaited<ReturnType<typeof usersControllerChangePassword>>, TError = UsersControllerChangePassword400 | UsersControllerChangePassword401 | UsersControllerChangePassword403>(
+ changePasswordDto: ChangePasswordDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerChangePassword>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof usersControllerChangePassword>>,
+          TError,
+          Awaited<ReturnType<typeof usersControllerChangePassword>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerChangePassword<TData = Awaited<ReturnType<typeof usersControllerChangePassword>>, TError = UsersControllerChangePassword400 | UsersControllerChangePassword401 | UsersControllerChangePassword403>(
+ changePasswordDto: ChangePasswordDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerChangePassword>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof usersControllerChangePassword>>,
+          TError,
+          Awaited<ReturnType<typeof usersControllerChangePassword>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerChangePassword<TData = Awaited<ReturnType<typeof usersControllerChangePassword>>, TError = UsersControllerChangePassword400 | UsersControllerChangePassword401 | UsersControllerChangePassword403>(
+ changePasswordDto: ChangePasswordDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerChangePassword>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Parolni almashtirish
+ */
+
+export function useUsersControllerChangePassword<TData = Awaited<ReturnType<typeof usersControllerChangePassword>>, TError = UsersControllerChangePassword400 | UsersControllerChangePassword401 | UsersControllerChangePassword403>(
+ changePasswordDto: ChangePasswordDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerChangePassword>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getUsersControllerChangePasswordQueryOptions(changePasswordDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 /**
  * @summary Profil rasmini yuklash (eski rasm avtomatik o'chiriladi)
  */
-export const usersControllerUpdateProfileImage = (signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/users/me/image`,
-    method: "PATCH",
-    signal,
-  });
-};
+export const usersControllerUpdateProfileImage = (
+    usersControllerUpdateProfileImageBody: UsersControllerUpdateProfileImageBody,
+ signal?: AbortSignal
+) => {
 
-export const getUsersControllerUpdateProfileImageQueryKey = () => {
-  return ["PATCH", `/api/v1/users/me/image`] as const;
-};
+      const formData = new FormData();
+formData.append(`image`, usersControllerUpdateProfileImageBody.image);
 
-export const getUsersControllerUpdateProfileImageQueryOptions = <
-  TData = Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>,
-  TError = unknown,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
+      return apiMutator<UsersControllerUpdateProfileImage200>(
+      {url: `/api/v1/users/me/image`, method: 'PATCH',
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
+    },
+      );
+    }
 
-  const queryKey =
-    queryOptions?.queryKey ?? getUsersControllerUpdateProfileImageQueryKey();
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>
-  > = ({ signal }) => usersControllerUpdateProfileImage(signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type UsersControllerUpdateProfileImageQueryResult = NonNullable<
-  Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>
->;
-export type UsersControllerUpdateProfileImageQueryError = unknown;
+export const getUsersControllerUpdateProfileImageQueryKey = (usersControllerUpdateProfileImageBody?: UsersControllerUpdateProfileImageBody,) => {
+    return [
+    'PATCH', `/api/v1/users/me/image`, usersControllerUpdateProfileImageBody
+    ] as const;
+    }
 
-export function useUsersControllerUpdateProfileImage<
-  TData = Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>,
-  TError = unknown,
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+export const getUsersControllerUpdateProfileImageQueryOptions = <TData = Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>, TError = UsersControllerUpdateProfileImage400 | UsersControllerUpdateProfileImage401 | UsersControllerUpdateProfileImage403>(usersControllerUpdateProfileImageBody: UsersControllerUpdateProfileImageBody, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getUsersControllerUpdateProfileImageQueryKey(usersControllerUpdateProfileImageBody);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>> = ({ signal }) => usersControllerUpdateProfileImage(usersControllerUpdateProfileImageBody, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type UsersControllerUpdateProfileImageQueryResult = NonNullable<Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>>
+export type UsersControllerUpdateProfileImageQueryError = UsersControllerUpdateProfileImage400 | UsersControllerUpdateProfileImage401 | UsersControllerUpdateProfileImage403
+
+
+export function useUsersControllerUpdateProfileImage<TData = Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>, TError = UsersControllerUpdateProfileImage400 | UsersControllerUpdateProfileImage401 | UsersControllerUpdateProfileImage403>(
+ usersControllerUpdateProfileImageBody: UsersControllerUpdateProfileImageBody, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>,
           TError,
           Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useUsersControllerUpdateProfileImage<
-  TData = Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerUpdateProfileImage<TData = Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>, TError = UsersControllerUpdateProfileImage400 | UsersControllerUpdateProfileImage401 | UsersControllerUpdateProfileImage403>(
+ usersControllerUpdateProfileImageBody: UsersControllerUpdateProfileImageBody, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>,
           TError,
           Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useUsersControllerUpdateProfileImage<
-  TData = Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerUpdateProfileImage<TData = Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>, TError = UsersControllerUpdateProfileImage400 | UsersControllerUpdateProfileImage401 | UsersControllerUpdateProfileImage403>(
+ usersControllerUpdateProfileImageBody: UsersControllerUpdateProfileImageBody, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Profil rasmini yuklash (eski rasm avtomatik o'chiriladi)
  */
 
-export function useUsersControllerUpdateProfileImage<
-  TData = Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getUsersControllerUpdateProfileImageQueryOptions(options);
+export function useUsersControllerUpdateProfileImage<TData = Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>, TError = UsersControllerUpdateProfileImage400 | UsersControllerUpdateProfileImage401 | UsersControllerUpdateProfileImage403>(
+ usersControllerUpdateProfileImageBody: UsersControllerUpdateProfileImageBody, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdateProfileImage>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getUsersControllerUpdateProfileImageQueryOptions(usersControllerUpdateProfileImageBody,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
 /**
  * @summary Profil rasmini o'chirish
  */
-export const usersControllerRemoveProfileImage = (signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/users/me/image`,
-    method: "DELETE",
-    signal,
-  });
-};
+export const usersControllerRemoveProfileImage = (
+
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<UsersControllerRemoveProfileImage200>(
+      {url: `/api/v1/users/me/image`, method: 'DELETE', signal
+    },
+      );
+    }
+
+
+
 
 export const getUsersControllerRemoveProfileImageQueryKey = () => {
-  return ["DELETE", `/api/v1/users/me/image`] as const;
-};
+    return [
+    'DELETE', `/api/v1/users/me/image`
+    ] as const;
+    }
 
-export const getUsersControllerRemoveProfileImageQueryOptions = <
-  TData = Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>,
-  TError = unknown,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getUsersControllerRemoveProfileImageQueryKey();
+export const getUsersControllerRemoveProfileImageQueryOptions = <TData = Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>, TError = UsersControllerRemoveProfileImage400 | UsersControllerRemoveProfileImage401 | UsersControllerRemoveProfileImage403>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>, TError, TData>>, }
+) => {
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>
-  > = ({ signal }) => usersControllerRemoveProfileImage(signal);
+const {query: queryOptions} = options ?? {};
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+  const queryKey =  queryOptions?.queryKey ?? getUsersControllerRemoveProfileImageQueryKey();
 
-export type UsersControllerRemoveProfileImageQueryResult = NonNullable<
-  Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>
->;
-export type UsersControllerRemoveProfileImageQueryError = unknown;
 
-export function useUsersControllerRemoveProfileImage<
-  TData = Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>,
-  TError = unknown,
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>> = ({ signal }) => usersControllerRemoveProfileImage(signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type UsersControllerRemoveProfileImageQueryResult = NonNullable<Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>>
+export type UsersControllerRemoveProfileImageQueryError = UsersControllerRemoveProfileImage400 | UsersControllerRemoveProfileImage401 | UsersControllerRemoveProfileImage403
+
+
+export function useUsersControllerRemoveProfileImage<TData = Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>, TError = UsersControllerRemoveProfileImage400 | UsersControllerRemoveProfileImage401 | UsersControllerRemoveProfileImage403>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>,
           TError,
           Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useUsersControllerRemoveProfileImage<
-  TData = Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerRemoveProfileImage<TData = Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>, TError = UsersControllerRemoveProfileImage400 | UsersControllerRemoveProfileImage401 | UsersControllerRemoveProfileImage403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>,
           TError,
           Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useUsersControllerRemoveProfileImage<
-  TData = Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerRemoveProfileImage<TData = Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>, TError = UsersControllerRemoveProfileImage400 | UsersControllerRemoveProfileImage401 | UsersControllerRemoveProfileImage403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Profil rasmini o'chirish
  */
 
-export function useUsersControllerRemoveProfileImage<
-  TData = Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getUsersControllerRemoveProfileImageQueryOptions(options);
+export function useUsersControllerRemoveProfileImage<TData = Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>, TError = UsersControllerRemoveProfileImage400 | UsersControllerRemoveProfileImage401 | UsersControllerRemoveProfileImage403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerRemoveProfileImage>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getUsersControllerRemoveProfileImageQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * @summary Xodimlar ro'yxati (ADMIN — faqat o'z do'koni SELLER'lari, SUPERADMIN — barchasi)
  */
 export const usersControllerFindAll = (
-  params?: UsersControllerFindAllParams,
-  signal?: AbortSignal,
+    params?: UsersControllerFindAllParams,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/users`,
-    method: "GET",
-    params,
-    signal,
-  });
-};
 
-export const getUsersControllerFindAllMutationKey = () =>
-  ["usersControllerFindAll"] as const;
 
-export const getUsersControllerFindAllMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof usersControllerFindAll>>,
-    TError,
-    UsersControllerFindAllMutationVariables,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof usersControllerFindAll>>,
-  TError,
-  UsersControllerFindAllMutationVariables,
-  TContext
-> => {
-  const mutationKey = getUsersControllerFindAllMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
+      return apiMutator<UsersControllerFindAll200>(
+      {url: `/api/v1/users`, method: 'GET',
+        params, signal
+    },
+      );
+    }
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof usersControllerFindAll>>,
-    UsersControllerFindAllMutationVariables
-  > = (props) => {
-    const { params } = props ?? {};
 
-    return usersControllerFindAll(params);
-  };
 
-  return { mutationFn, ...mutationOptions };
-};
 
-export type UsersControllerFindAllMutationResult = NonNullable<
-  Awaited<ReturnType<typeof usersControllerFindAll>>
->;
+export const getUsersControllerFindAllMutationKey = () => ['usersControllerFindAll'] as const;
 
-export type UsersControllerFindAllMutationError = unknown;
-export type UsersControllerFindAllMutationVariables = {
-  params?: UsersControllerFindAllParams;
-};
+export const getUsersControllerFindAllMutationOptions = <TError = UsersControllerFindAll400 | UsersControllerFindAll401 | UsersControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof usersControllerFindAll>>, TError,UsersControllerFindAllMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof usersControllerFindAll>>, TError,UsersControllerFindAllMutationVariables, TContext> => {
 
-/**
+const mutationKey = getUsersControllerFindAllMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof usersControllerFindAll>>, UsersControllerFindAllMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  usersControllerFindAll(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UsersControllerFindAllMutationResult = NonNullable<Awaited<ReturnType<typeof usersControllerFindAll>>>
+
+    export type UsersControllerFindAllMutationError = UsersControllerFindAll400 | UsersControllerFindAll401 | UsersControllerFindAll403
+    export type UsersControllerFindAllMutationVariables = {params?: UsersControllerFindAllParams}
+
+    /**
  * @summary Xodimlar ro'yxati (ADMIN — faqat o'z do'koni SELLER'lari, SUPERADMIN — barchasi)
  */
-export const useUsersControllerFindAll = <TError = unknown, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof usersControllerFindAll>>,
-      TError,
-      UsersControllerFindAllMutationVariables,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof usersControllerFindAll>>,
-  TError,
-  UsersControllerFindAllMutationVariables,
-  TContext
-> => {
-  return useMutation(
-    getUsersControllerFindAllMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useUsersControllerFindAll = <TError = UsersControllerFindAll400 | UsersControllerFindAll401 | UsersControllerFindAll403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof usersControllerFindAll>>, TError,UsersControllerFindAllMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof usersControllerFindAll>>,
+        TError,
+        UsersControllerFindAllMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUsersControllerFindAllMutationOptions(options), queryClient);
+    }
+    /**
  * SUPERADMIN uchun `storeId` majburiy va mavjud, faol do'konga tegishli bo'lishi kerak. ADMIN uchun `storeId` e'tiborsiz qoldiriladi — xodim o'z do'koniga qo'shiladi. Yangi do'kon bilan birga ADMIN yaratish uchun `POST /stores/onboard` ishlatiladi.
  * @summary Xodim yaratish (ADMIN — o'z do'koniga SELLER, SUPERADMIN — ADMIN/SELLER)
  */
 export const usersControllerCreate = (
-  createUserDto: CreateUserDto,
-  signal?: AbortSignal,
+    createUserDto: CreateUserDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<unknown>({
-    url: `/api/v1/users`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: createUserDto,
-    signal,
-  });
-};
 
-export const getUsersControllerCreateQueryKey = (
-  createUserDto?: CreateUserDto,
+
+      return apiMutator<UsersControllerCreate201>(
+      {url: `/api/v1/users`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createUserDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getUsersControllerCreateQueryKey = (createUserDto?: CreateUserDto,) => {
+    return [
+    'POST', `/api/v1/users`, createUserDto
+    ] as const;
+    }
+
+
+export const getUsersControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof usersControllerCreate>>, TError = UsersControllerCreate400 | UsersControllerCreate403 | UsersControllerCreate404 | UsersControllerCreate409>(createUserDto: CreateUserDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerCreate>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/users`, createUserDto] as const;
-};
 
-export const getUsersControllerCreateQueryOptions = <
-  TData = Awaited<ReturnType<typeof usersControllerCreate>>,
-  TError = void,
->(
-  createUserDto: CreateUserDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getUsersControllerCreateQueryKey(createUserDto);
+  const queryKey =  queryOptions?.queryKey ?? getUsersControllerCreateQueryKey(createUserDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof usersControllerCreate>>
-  > = ({ signal }) => usersControllerCreate(createUserDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof usersControllerCreate>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type UsersControllerCreateQueryResult = NonNullable<
-  Awaited<ReturnType<typeof usersControllerCreate>>
->;
-export type UsersControllerCreateQueryError = void;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof usersControllerCreate>>> = ({ signal }) => usersControllerCreate(createUserDto, signal);
 
-export function useUsersControllerCreate<
-  TData = Awaited<ReturnType<typeof usersControllerCreate>>,
-  TError = void,
->(
-  createUserDto: CreateUserDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof usersControllerCreate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type UsersControllerCreateQueryResult = NonNullable<Awaited<ReturnType<typeof usersControllerCreate>>>
+export type UsersControllerCreateQueryError = UsersControllerCreate400 | UsersControllerCreate403 | UsersControllerCreate404 | UsersControllerCreate409
+
+
+export function useUsersControllerCreate<TData = Awaited<ReturnType<typeof usersControllerCreate>>, TError = UsersControllerCreate400 | UsersControllerCreate403 | UsersControllerCreate404 | UsersControllerCreate409>(
+ createUserDto: CreateUserDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerCreate>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof usersControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof usersControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useUsersControllerCreate<
-  TData = Awaited<ReturnType<typeof usersControllerCreate>>,
-  TError = void,
->(
-  createUserDto: CreateUserDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerCreate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerCreate<TData = Awaited<ReturnType<typeof usersControllerCreate>>, TError = UsersControllerCreate400 | UsersControllerCreate403 | UsersControllerCreate404 | UsersControllerCreate409>(
+ createUserDto: CreateUserDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerCreate>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof usersControllerCreate>>,
           TError,
           Awaited<ReturnType<typeof usersControllerCreate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useUsersControllerCreate<
-  TData = Awaited<ReturnType<typeof usersControllerCreate>>,
-  TError = void,
->(
-  createUserDto: CreateUserDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerCreate<TData = Awaited<ReturnType<typeof usersControllerCreate>>, TError = UsersControllerCreate400 | UsersControllerCreate403 | UsersControllerCreate404 | UsersControllerCreate409>(
+ createUserDto: CreateUserDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Xodim yaratish (ADMIN — o'z do'koniga SELLER, SUPERADMIN — ADMIN/SELLER)
  */
 
-export function useUsersControllerCreate<
-  TData = Awaited<ReturnType<typeof usersControllerCreate>>,
-  TError = void,
->(
-  createUserDto: CreateUserDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerCreate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getUsersControllerCreateQueryOptions(
-    createUserDto,
-    options,
-  );
+export function useUsersControllerCreate<TData = Awaited<ReturnType<typeof usersControllerCreate>>, TError = UsersControllerCreate400 | UsersControllerCreate403 | UsersControllerCreate404 | UsersControllerCreate409>(
+ createUserDto: CreateUserDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerCreate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getUsersControllerCreateQueryOptions(createUserDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-/**
- * @summary Xodim ma'lumoti
- */
-export const usersControllerFindOne = (id: number, signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/users/${id}`,
-    method: "GET",
-    signal,
-  });
-};
 
-export const getUsersControllerFindOneMutationKey = () =>
-  ["usersControllerFindOne"] as const;
 
-export const getUsersControllerFindOneMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof usersControllerFindOne>>,
-    TError,
-    UsersControllerFindOneMutationVariables,
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof usersControllerFindOne>>,
-  TError,
-  UsersControllerFindOneMutationVariables,
-  TContext
-> => {
-  const mutationKey = getUsersControllerFindOneMutationKey();
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof usersControllerFindOne>>,
-    UsersControllerFindOneMutationVariables
-  > = (props) => {
-    const { id } = props ?? {};
 
-    return usersControllerFindOne(id);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type UsersControllerFindOneMutationResult = NonNullable<
-  Awaited<ReturnType<typeof usersControllerFindOne>>
->;
-
-export type UsersControllerFindOneMutationError = unknown;
-export type UsersControllerFindOneMutationVariables = { id: number };
 
 /**
  * @summary Xodim ma'lumoti
  */
-export const useUsersControllerFindOne = <TError = unknown, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof usersControllerFindOne>>,
-      TError,
-      UsersControllerFindOneMutationVariables,
-      TContext
-    >;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof usersControllerFindOne>>,
-  TError,
-  UsersControllerFindOneMutationVariables,
-  TContext
-> => {
-  return useMutation(
-    getUsersControllerFindOneMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const usersControllerFindOne = (
+    id: number,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<UsersControllerFindOne200>(
+      {url: `/api/v1/users/${id}`, method: 'GET', signal
+    },
+      );
+    }
+
+
+
+
+export const getUsersControllerFindOneMutationKey = () => ['usersControllerFindOne'] as const;
+
+export const getUsersControllerFindOneMutationOptions = <TError = UsersControllerFindOne401 | UsersControllerFindOne403 | UsersControllerFindOne404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof usersControllerFindOne>>, TError,UsersControllerFindOneMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof usersControllerFindOne>>, TError,UsersControllerFindOneMutationVariables, TContext> => {
+
+const mutationKey = getUsersControllerFindOneMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof usersControllerFindOne>>, UsersControllerFindOneMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  usersControllerFindOne(id,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UsersControllerFindOneMutationResult = NonNullable<Awaited<ReturnType<typeof usersControllerFindOne>>>
+
+    export type UsersControllerFindOneMutationError = UsersControllerFindOne401 | UsersControllerFindOne403 | UsersControllerFindOne404
+    export type UsersControllerFindOneMutationVariables = {id: number}
+
+    /**
+ * @summary Xodim ma'lumoti
+ */
+export const useUsersControllerFindOne = <TError = UsersControllerFindOne401 | UsersControllerFindOne403 | UsersControllerFindOne404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof usersControllerFindOne>>, TError,UsersControllerFindOneMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof usersControllerFindOne>>,
+        TError,
+        UsersControllerFindOneMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUsersControllerFindOneMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Xodimni tahrirlash / bloklash (status)
  */
 export const usersControllerUpdate = (
-  id: number,
-  updateUserDto: UpdateUserDto,
-  signal?: AbortSignal,
+    id: number,
+    updateUserDto: UpdateUserDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/users/${id}`,
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    data: updateUserDto,
-    signal,
-  });
-};
 
-export const getUsersControllerUpdateQueryKey = (
-  id: number,
-  updateUserDto?: UpdateUserDto,
+
+      return apiMutator<UsersControllerUpdate200>(
+      {url: `/api/v1/users/${id}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateUserDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getUsersControllerUpdateQueryKey = (id: number,
+    updateUserDto?: UpdateUserDto,) => {
+    return [
+    'PATCH', `/api/v1/users/${id}`, updateUserDto
+    ] as const;
+    }
+
+
+export const getUsersControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof usersControllerUpdate>>, TError = UsersControllerUpdate400 | UsersControllerUpdate403 | UsersControllerUpdate404 | UsersControllerUpdate409>(id: number,
+    updateUserDto: UpdateUserDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdate>>, TError, TData>>, }
 ) => {
-  return ["PATCH", `/api/v1/users/${id}`, updateUserDto] as const;
-};
 
-export const getUsersControllerUpdateQueryOptions = <
-  TData = Awaited<ReturnType<typeof usersControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateUserDto: UpdateUserDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerUpdate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getUsersControllerUpdateQueryKey(id, updateUserDto);
+  const queryKey =  queryOptions?.queryKey ?? getUsersControllerUpdateQueryKey(id,updateUserDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof usersControllerUpdate>>
-  > = ({ signal }) => usersControllerUpdate(id, updateUserDto, signal);
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof usersControllerUpdate>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type UsersControllerUpdateQueryResult = NonNullable<
-  Awaited<ReturnType<typeof usersControllerUpdate>>
->;
-export type UsersControllerUpdateQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof usersControllerUpdate>>> = ({ signal }) => usersControllerUpdate(id,updateUserDto, signal);
 
-export function useUsersControllerUpdate<
-  TData = Awaited<ReturnType<typeof usersControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateUserDto: UpdateUserDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerUpdate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdate>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type UsersControllerUpdateQueryResult = NonNullable<Awaited<ReturnType<typeof usersControllerUpdate>>>
+export type UsersControllerUpdateQueryError = UsersControllerUpdate400 | UsersControllerUpdate403 | UsersControllerUpdate404 | UsersControllerUpdate409
+
+
+export function useUsersControllerUpdate<TData = Awaited<ReturnType<typeof usersControllerUpdate>>, TError = UsersControllerUpdate400 | UsersControllerUpdate403 | UsersControllerUpdate404 | UsersControllerUpdate409>(
+ id: number,
+    updateUserDto: UpdateUserDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdate>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof usersControllerUpdate>>,
           TError,
           Awaited<ReturnType<typeof usersControllerUpdate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useUsersControllerUpdate<
-  TData = Awaited<ReturnType<typeof usersControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateUserDto: UpdateUserDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerUpdate>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerUpdate<TData = Awaited<ReturnType<typeof usersControllerUpdate>>, TError = UsersControllerUpdate400 | UsersControllerUpdate403 | UsersControllerUpdate404 | UsersControllerUpdate409>(
+ id: number,
+    updateUserDto: UpdateUserDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdate>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof usersControllerUpdate>>,
           TError,
           Awaited<ReturnType<typeof usersControllerUpdate>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useUsersControllerUpdate<
-  TData = Awaited<ReturnType<typeof usersControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateUserDto: UpdateUserDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerUpdate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerUpdate<TData = Awaited<ReturnType<typeof usersControllerUpdate>>, TError = UsersControllerUpdate400 | UsersControllerUpdate403 | UsersControllerUpdate404 | UsersControllerUpdate409>(
+ id: number,
+    updateUserDto: UpdateUserDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Xodimni tahrirlash / bloklash (status)
  */
 
-export function useUsersControllerUpdate<
-  TData = Awaited<ReturnType<typeof usersControllerUpdate>>,
-  TError = unknown,
->(
-  id: number,
-  updateUserDto: UpdateUserDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerUpdate>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getUsersControllerUpdateQueryOptions(
-    id,
-    updateUserDto,
-    options,
-  );
+export function useUsersControllerUpdate<TData = Awaited<ReturnType<typeof usersControllerUpdate>>, TError = UsersControllerUpdate400 | UsersControllerUpdate403 | UsersControllerUpdate404 | UsersControllerUpdate409>(
+ id: number,
+    updateUserDto: UpdateUserDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerUpdate>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getUsersControllerUpdateQueryOptions(id,updateUserDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
 /**
  * @summary Foydalanuvchini o'chirish (faqat SUPERADMIN)
  */
-export const usersControllerRemove = (id: number, signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/users/${id}`,
-    method: "DELETE",
-    signal,
-  });
-};
-
-export const getUsersControllerRemoveQueryKey = (id: number) => {
-  return ["DELETE", `/api/v1/users/${id}`] as const;
-};
-
-export const getUsersControllerRemoveQueryOptions = <
-  TData = Awaited<ReturnType<typeof usersControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
+export const usersControllerRemove = (
+    id: number,
+ signal?: AbortSignal
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getUsersControllerRemoveQueryKey(id);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof usersControllerRemove>>
-  > = ({ signal }) => usersControllerRemove(id, signal);
+      return apiMutator<UsersControllerRemove200>(
+      {url: `/api/v1/users/${id}`, method: 'DELETE', signal
+    },
+      );
+    }
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof usersControllerRemove>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type UsersControllerRemoveQueryResult = NonNullable<
-  Awaited<ReturnType<typeof usersControllerRemove>>
->;
-export type UsersControllerRemoveQueryError = unknown;
 
-export function useUsersControllerRemove<
-  TData = Awaited<ReturnType<typeof usersControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerRemove>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+export const getUsersControllerRemoveQueryKey = (id: number,) => {
+    return [
+    'DELETE', `/api/v1/users/${id}`
+    ] as const;
+    }
+
+
+export const getUsersControllerRemoveQueryOptions = <TData = Awaited<ReturnType<typeof usersControllerRemove>>, TError = UsersControllerRemove403 | UsersControllerRemove404>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerRemove>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getUsersControllerRemoveQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof usersControllerRemove>>> = ({ signal }) => usersControllerRemove(id, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof usersControllerRemove>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type UsersControllerRemoveQueryResult = NonNullable<Awaited<ReturnType<typeof usersControllerRemove>>>
+export type UsersControllerRemoveQueryError = UsersControllerRemove403 | UsersControllerRemove404
+
+
+export function useUsersControllerRemove<TData = Awaited<ReturnType<typeof usersControllerRemove>>, TError = UsersControllerRemove403 | UsersControllerRemove404>(
+ id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerRemove>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof usersControllerRemove>>,
           TError,
           Awaited<ReturnType<typeof usersControllerRemove>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useUsersControllerRemove<
-  TData = Awaited<ReturnType<typeof usersControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerRemove>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerRemove<TData = Awaited<ReturnType<typeof usersControllerRemove>>, TError = UsersControllerRemove403 | UsersControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerRemove>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof usersControllerRemove>>,
           TError,
           Awaited<ReturnType<typeof usersControllerRemove>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useUsersControllerRemove<
-  TData = Awaited<ReturnType<typeof usersControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerRemove<TData = Awaited<ReturnType<typeof usersControllerRemove>>, TError = UsersControllerRemove403 | UsersControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerRemove>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Foydalanuvchini o'chirish (faqat SUPERADMIN)
  */
 
-export function useUsersControllerRemove<
-  TData = Awaited<ReturnType<typeof usersControllerRemove>>,
-  TError = unknown,
->(
-  id: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerRemove>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getUsersControllerRemoveQueryOptions(id, options);
+export function useUsersControllerRemove<TData = Awaited<ReturnType<typeof usersControllerRemove>>, TError = UsersControllerRemove403 | UsersControllerRemove404>(
+ id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerRemove>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getUsersControllerRemoveQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * @summary Xodim parolini tiklash (barcha sessiyalari bekor qilinadi)
  */
 export const usersControllerResetPassword = (
-  id: number,
-  resetUserPasswordDto: ResetUserPasswordDto,
-  signal?: AbortSignal,
+    id: number,
+    resetUserPasswordDto: ResetUserPasswordDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/users/${id}/password`,
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    data: resetUserPasswordDto,
-    signal,
-  });
-};
 
-export const getUsersControllerResetPasswordQueryKey = (
-  id: number,
-  resetUserPasswordDto?: ResetUserPasswordDto,
+
+      return apiMutator<UsersControllerResetPassword200>(
+      {url: `/api/v1/users/${id}/password`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: resetUserPasswordDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getUsersControllerResetPasswordQueryKey = (id: number,
+    resetUserPasswordDto?: ResetUserPasswordDto,) => {
+    return [
+    'PATCH', `/api/v1/users/${id}/password`, resetUserPasswordDto
+    ] as const;
+    }
+
+
+export const getUsersControllerResetPasswordQueryOptions = <TData = Awaited<ReturnType<typeof usersControllerResetPassword>>, TError = UsersControllerResetPassword400 | UsersControllerResetPassword403 | UsersControllerResetPassword404>(id: number,
+    resetUserPasswordDto: ResetUserPasswordDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerResetPassword>>, TError, TData>>, }
 ) => {
-  return [
-    "PATCH",
-    `/api/v1/users/${id}/password`,
-    resetUserPasswordDto,
-  ] as const;
-};
 
-export const getUsersControllerResetPasswordQueryOptions = <
-  TData = Awaited<ReturnType<typeof usersControllerResetPassword>>,
-  TError = unknown,
->(
-  id: number,
-  resetUserPasswordDto: ResetUserPasswordDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerResetPassword>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getUsersControllerResetPasswordQueryKey(id, resetUserPasswordDto);
+  const queryKey =  queryOptions?.queryKey ?? getUsersControllerResetPasswordQueryKey(id,resetUserPasswordDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof usersControllerResetPassword>>
-  > = ({ signal }) =>
-    usersControllerResetPassword(id, resetUserPasswordDto, signal);
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: id !== null && id !== undefined,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof usersControllerResetPassword>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type UsersControllerResetPasswordQueryResult = NonNullable<
-  Awaited<ReturnType<typeof usersControllerResetPassword>>
->;
-export type UsersControllerResetPasswordQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof usersControllerResetPassword>>> = ({ signal }) => usersControllerResetPassword(id,resetUserPasswordDto, signal);
 
-export function useUsersControllerResetPassword<
-  TData = Awaited<ReturnType<typeof usersControllerResetPassword>>,
-  TError = unknown,
->(
-  id: number,
-  resetUserPasswordDto: ResetUserPasswordDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerResetPassword>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof usersControllerResetPassword>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type UsersControllerResetPasswordQueryResult = NonNullable<Awaited<ReturnType<typeof usersControllerResetPassword>>>
+export type UsersControllerResetPasswordQueryError = UsersControllerResetPassword400 | UsersControllerResetPassword403 | UsersControllerResetPassword404
+
+
+export function useUsersControllerResetPassword<TData = Awaited<ReturnType<typeof usersControllerResetPassword>>, TError = UsersControllerResetPassword400 | UsersControllerResetPassword403 | UsersControllerResetPassword404>(
+ id: number,
+    resetUserPasswordDto: ResetUserPasswordDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerResetPassword>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof usersControllerResetPassword>>,
           TError,
           Awaited<ReturnType<typeof usersControllerResetPassword>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useUsersControllerResetPassword<
-  TData = Awaited<ReturnType<typeof usersControllerResetPassword>>,
-  TError = unknown,
->(
-  id: number,
-  resetUserPasswordDto: ResetUserPasswordDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerResetPassword>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerResetPassword<TData = Awaited<ReturnType<typeof usersControllerResetPassword>>, TError = UsersControllerResetPassword400 | UsersControllerResetPassword403 | UsersControllerResetPassword404>(
+ id: number,
+    resetUserPasswordDto: ResetUserPasswordDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerResetPassword>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof usersControllerResetPassword>>,
           TError,
           Awaited<ReturnType<typeof usersControllerResetPassword>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useUsersControllerResetPassword<
-  TData = Awaited<ReturnType<typeof usersControllerResetPassword>>,
-  TError = unknown,
->(
-  id: number,
-  resetUserPasswordDto: ResetUserPasswordDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerResetPassword>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersControllerResetPassword<TData = Awaited<ReturnType<typeof usersControllerResetPassword>>, TError = UsersControllerResetPassword400 | UsersControllerResetPassword403 | UsersControllerResetPassword404>(
+ id: number,
+    resetUserPasswordDto: ResetUserPasswordDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerResetPassword>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Xodim parolini tiklash (barcha sessiyalari bekor qilinadi)
  */
 
-export function useUsersControllerResetPassword<
-  TData = Awaited<ReturnType<typeof usersControllerResetPassword>>,
-  TError = unknown,
->(
-  id: number,
-  resetUserPasswordDto: ResetUserPasswordDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof usersControllerResetPassword>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getUsersControllerResetPasswordQueryOptions(
-    id,
-    resetUserPasswordDto,
-    options,
-  );
+export function useUsersControllerResetPassword<TData = Awaited<ReturnType<typeof usersControllerResetPassword>>, TError = UsersControllerResetPassword400 | UsersControllerResetPassword403 | UsersControllerResetPassword404>(
+ id: number,
+    resetUserPasswordDto: ResetUserPasswordDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersControllerResetPassword>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getUsersControllerResetPasswordQueryOptions(id,resetUserPasswordDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+

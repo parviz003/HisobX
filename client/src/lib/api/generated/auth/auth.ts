@@ -16,9 +16,25 @@
  * **Rate limiting:** sign-in/OTP/parol tiklash — 3 so'rov/daqiqa (IP + telefon);
  * autentifikatsiyalangan foydalanuvchi — 120/daqiqa, anonim — 30/daqiqa (IP).
  * 429 javobida `Retry-After` header qaytariladi.
+ *
+ * **Javob formati:** muvaffaqiyat — `{ statusCode, data }`;
+ * xato — `{ statusCode, message, code, data }`. Frontend mantiqini
+ * barqaror `code` qiymatiga bog'lang, `message` faqat ko'rsatish uchun.
+ *
+ * **Ro'yxatlar:** barcha ro'yxat endpointlari bir xil shaklda qaytaradi —
+ * `{ items: [...], meta: { total, page, limit, totalPages } }`.
+ * `page` (standart 1) va `limit` (standart 20, ko'pi bilan 100) query parametrlari.
+ *
+ * **Telefon raqamlar** barcha javoblarda E.164 formatida: `+998901234567`.
+ * Kirishda `998901234567` yoki `901234567` ham qabul qilinadi va shu formatga keltiriladi.
+ *
+ * **Qurilma limiti:** har bir FOYDALANUVCHI uchun `DEVICE_LIMIT_PER_USER` (standart 3).
+ * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import {
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -28,28 +44,53 @@ import type {
   QueryKey,
   UndefinedInitialDataOptions,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
 import type {
+  AuthControllerConfirmSignIn200,
+  AuthControllerConfirmSignIn400,
+  AuthControllerConfirmSignIn403,
+  AuthControllerConfirmSignIn404,
+  AuthControllerConfirmSignIn429,
+  AuthControllerForgotPassword200,
+  AuthControllerForgotPassword400,
+  AuthControllerForgotPassword429,
+  AuthControllerRefreshToken200,
+  AuthControllerRefreshToken401,
+  AuthControllerRefreshToken403,
+  AuthControllerResendOtp200,
+  AuthControllerResendOtp400,
+  AuthControllerResendOtp429,
+  AuthControllerResetPassword200,
+  AuthControllerResetPassword400,
+  AuthControllerResetPassword429,
+  AuthControllerSignIn200,
+  AuthControllerSignIn400,
+  AuthControllerSignIn403,
+  AuthControllerSignIn429,
+  AuthControllerSignOut200,
+  AuthControllerSignUp201,
+  AuthControllerSignUp400,
+  AuthControllerSignUp409,
   PhoneDto,
   ResetPasswordDto,
   SignInDto,
   SignUpDto,
-  VerifyOTPDto,
-} from "../model";
+  VerifyOTPDto
+} from '../model';
 
-import { apiMutator } from "../../client";
+import { apiMutator } from '../../client';
 
-const withQueryKey = <T extends object, K>(
-  query: T,
-  queryKey: K,
-): T & { queryKey: K } => {
+
+
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
   const result = { queryKey } as T & { queryKey: K };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === "queryKey") continue;
+    if (key === 'queryKey') continue;
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
@@ -63,1257 +104,749 @@ const withQueryKey = <T extends object, K>(
  * @summary Yangi do'kon va administratorni ro'yxatdan o'tkazish
  */
 export const authControllerSignUp = (
-  signUpDto: SignUpDto,
-  signal?: AbortSignal,
+    signUpDto: SignUpDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/auth/signup`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: signUpDto,
-    signal,
-  });
-};
 
-export const getAuthControllerSignUpQueryKey = (signUpDto?: SignUpDto) => {
-  return ["POST", `/api/v1/auth/signup`, signUpDto] as const;
-};
 
-export const getAuthControllerSignUpQueryOptions = <
-  TData = Awaited<ReturnType<typeof authControllerSignUp>>,
-  TError = unknown,
->(
-  signUpDto: SignUpDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerSignUp>>,
-        TError,
-        TData
-      >
-    >;
-  },
+      return apiMutator<AuthControllerSignUp201>(
+      {url: `/api/v1/auth/signup`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: signUpDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getAuthControllerSignUpQueryKey = (signUpDto?: SignUpDto,) => {
+    return [
+    'POST', `/api/v1/auth/signup`, signUpDto
+    ] as const;
+    }
+
+
+export const getAuthControllerSignUpQueryOptions = <TData = Awaited<ReturnType<typeof authControllerSignUp>>, TError = AuthControllerSignUp400 | AuthControllerSignUp409>(signUpDto: SignUpDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignUp>>, TError, TData>>, }
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getAuthControllerSignUpQueryKey(signUpDto);
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof authControllerSignUp>>
-  > = ({ signal }) => authControllerSignUp(signUpDto, signal);
+  const queryKey =  queryOptions?.queryKey ?? getAuthControllerSignUpQueryKey(signUpDto);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof authControllerSignUp>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type AuthControllerSignUpQueryResult = NonNullable<
-  Awaited<ReturnType<typeof authControllerSignUp>>
->;
-export type AuthControllerSignUpQueryError = unknown;
 
-export function useAuthControllerSignUp<
-  TData = Awaited<ReturnType<typeof authControllerSignUp>>,
-  TError = unknown,
->(
-  signUpDto: SignUpDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerSignUp>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof authControllerSignUp>>> = ({ signal }) => authControllerSignUp(signUpDto, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof authControllerSignUp>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AuthControllerSignUpQueryResult = NonNullable<Awaited<ReturnType<typeof authControllerSignUp>>>
+export type AuthControllerSignUpQueryError = AuthControllerSignUp400 | AuthControllerSignUp409
+
+
+export function useAuthControllerSignUp<TData = Awaited<ReturnType<typeof authControllerSignUp>>, TError = AuthControllerSignUp400 | AuthControllerSignUp409>(
+ signUpDto: SignUpDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignUp>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerSignUp>>,
           TError,
           Awaited<ReturnType<typeof authControllerSignUp>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerSignUp<
-  TData = Awaited<ReturnType<typeof authControllerSignUp>>,
-  TError = unknown,
->(
-  signUpDto: SignUpDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerSignUp>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerSignUp<TData = Awaited<ReturnType<typeof authControllerSignUp>>, TError = AuthControllerSignUp400 | AuthControllerSignUp409>(
+ signUpDto: SignUpDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignUp>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerSignUp>>,
           TError,
           Awaited<ReturnType<typeof authControllerSignUp>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerSignUp<
-  TData = Awaited<ReturnType<typeof authControllerSignUp>>,
-  TError = unknown,
->(
-  signUpDto: SignUpDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerSignUp>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerSignUp<TData = Awaited<ReturnType<typeof authControllerSignUp>>, TError = AuthControllerSignUp400 | AuthControllerSignUp409>(
+ signUpDto: SignUpDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignUp>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Yangi do'kon va administratorni ro'yxatdan o'tkazish
  */
 
-export function useAuthControllerSignUp<
-  TData = Awaited<ReturnType<typeof authControllerSignUp>>,
-  TError = unknown,
->(
-  signUpDto: SignUpDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerSignUp>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getAuthControllerSignUpQueryOptions(signUpDto, options);
+export function useAuthControllerSignUp<TData = Awaited<ReturnType<typeof authControllerSignUp>>, TError = AuthControllerSignUp400 | AuthControllerSignUp409>(
+ signUpDto: SignUpDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignUp>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getAuthControllerSignUpQueryOptions(signUpDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * @summary Tizimga kirish (OTP yuboriladi)
  */
 export const authControllerSignIn = (
-  signInDto: SignInDto,
-  signal?: AbortSignal,
+    signInDto: SignInDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/auth/signin`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: signInDto,
-    signal,
-  });
-};
 
-export const getAuthControllerSignInQueryKey = (signInDto?: SignInDto) => {
-  return ["POST", `/api/v1/auth/signin`, signInDto] as const;
-};
 
-export const getAuthControllerSignInQueryOptions = <
-  TData = Awaited<ReturnType<typeof authControllerSignIn>>,
-  TError = unknown,
->(
-  signInDto: SignInDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerSignIn>>,
-        TError,
-        TData
-      >
-    >;
-  },
+      return apiMutator<AuthControllerSignIn200>(
+      {url: `/api/v1/auth/signin`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: signInDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getAuthControllerSignInQueryKey = (signInDto?: SignInDto,) => {
+    return [
+    'POST', `/api/v1/auth/signin`, signInDto
+    ] as const;
+    }
+
+
+export const getAuthControllerSignInQueryOptions = <TData = Awaited<ReturnType<typeof authControllerSignIn>>, TError = AuthControllerSignIn400 | AuthControllerSignIn403 | AuthControllerSignIn429>(signInDto: SignInDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignIn>>, TError, TData>>, }
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getAuthControllerSignInQueryKey(signInDto);
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof authControllerSignIn>>
-  > = ({ signal }) => authControllerSignIn(signInDto, signal);
+  const queryKey =  queryOptions?.queryKey ?? getAuthControllerSignInQueryKey(signInDto);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof authControllerSignIn>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type AuthControllerSignInQueryResult = NonNullable<
-  Awaited<ReturnType<typeof authControllerSignIn>>
->;
-export type AuthControllerSignInQueryError = unknown;
 
-export function useAuthControllerSignIn<
-  TData = Awaited<ReturnType<typeof authControllerSignIn>>,
-  TError = unknown,
->(
-  signInDto: SignInDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerSignIn>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof authControllerSignIn>>> = ({ signal }) => authControllerSignIn(signInDto, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof authControllerSignIn>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AuthControllerSignInQueryResult = NonNullable<Awaited<ReturnType<typeof authControllerSignIn>>>
+export type AuthControllerSignInQueryError = AuthControllerSignIn400 | AuthControllerSignIn403 | AuthControllerSignIn429
+
+
+export function useAuthControllerSignIn<TData = Awaited<ReturnType<typeof authControllerSignIn>>, TError = AuthControllerSignIn400 | AuthControllerSignIn403 | AuthControllerSignIn429>(
+ signInDto: SignInDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignIn>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerSignIn>>,
           TError,
           Awaited<ReturnType<typeof authControllerSignIn>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerSignIn<
-  TData = Awaited<ReturnType<typeof authControllerSignIn>>,
-  TError = unknown,
->(
-  signInDto: SignInDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerSignIn>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerSignIn<TData = Awaited<ReturnType<typeof authControllerSignIn>>, TError = AuthControllerSignIn400 | AuthControllerSignIn403 | AuthControllerSignIn429>(
+ signInDto: SignInDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignIn>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerSignIn>>,
           TError,
           Awaited<ReturnType<typeof authControllerSignIn>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerSignIn<
-  TData = Awaited<ReturnType<typeof authControllerSignIn>>,
-  TError = unknown,
->(
-  signInDto: SignInDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerSignIn>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerSignIn<TData = Awaited<ReturnType<typeof authControllerSignIn>>, TError = AuthControllerSignIn400 | AuthControllerSignIn403 | AuthControllerSignIn429>(
+ signInDto: SignInDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignIn>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Tizimga kirish (OTP yuboriladi)
  */
 
-export function useAuthControllerSignIn<
-  TData = Awaited<ReturnType<typeof authControllerSignIn>>,
-  TError = unknown,
->(
-  signInDto: SignInDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerSignIn>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getAuthControllerSignInQueryOptions(signInDto, options);
+export function useAuthControllerSignIn<TData = Awaited<ReturnType<typeof authControllerSignIn>>, TError = AuthControllerSignIn400 | AuthControllerSignIn403 | AuthControllerSignIn429>(
+ signInDto: SignInDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignIn>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getAuthControllerSignInQueryOptions(signInDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
 /**
- * @summary OTP kodni tasdiqlash va kirish (Cookie o‘rnatiladi)
+ * Muvaffaqiyatda `accessToken` va `refreshToken` httpOnly cookie sifatida yoziladi — javob body'sida token qaytarilmaydi.
+ * @summary OTP kodni tasdiqlash va kirish (Cookie o'rnatiladi)
  */
 export const authControllerConfirmSignIn = (
-  verifyOTPDto: VerifyOTPDto,
-  signal?: AbortSignal,
+    verifyOTPDto: VerifyOTPDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/auth/confirm`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: verifyOTPDto,
-    signal,
-  });
-};
 
-export const getAuthControllerConfirmSignInQueryKey = (
-  verifyOTPDto?: VerifyOTPDto,
+
+      return apiMutator<AuthControllerConfirmSignIn200>(
+      {url: `/api/v1/auth/confirm`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: verifyOTPDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getAuthControllerConfirmSignInQueryKey = (verifyOTPDto?: VerifyOTPDto,) => {
+    return [
+    'POST', `/api/v1/auth/confirm`, verifyOTPDto
+    ] as const;
+    }
+
+
+export const getAuthControllerConfirmSignInQueryOptions = <TData = Awaited<ReturnType<typeof authControllerConfirmSignIn>>, TError = AuthControllerConfirmSignIn400 | AuthControllerConfirmSignIn403 | AuthControllerConfirmSignIn404 | AuthControllerConfirmSignIn429>(verifyOTPDto: VerifyOTPDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerConfirmSignIn>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/auth/confirm`, verifyOTPDto] as const;
-};
 
-export const getAuthControllerConfirmSignInQueryOptions = <
-  TData = Awaited<ReturnType<typeof authControllerConfirmSignIn>>,
-  TError = unknown,
->(
-  verifyOTPDto: VerifyOTPDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerConfirmSignIn>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getAuthControllerConfirmSignInQueryKey(verifyOTPDto);
+  const queryKey =  queryOptions?.queryKey ?? getAuthControllerConfirmSignInQueryKey(verifyOTPDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof authControllerConfirmSignIn>>
-  > = ({ signal }) => authControllerConfirmSignIn(verifyOTPDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof authControllerConfirmSignIn>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type AuthControllerConfirmSignInQueryResult = NonNullable<
-  Awaited<ReturnType<typeof authControllerConfirmSignIn>>
->;
-export type AuthControllerConfirmSignInQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof authControllerConfirmSignIn>>> = ({ signal }) => authControllerConfirmSignIn(verifyOTPDto, signal);
 
-export function useAuthControllerConfirmSignIn<
-  TData = Awaited<ReturnType<typeof authControllerConfirmSignIn>>,
-  TError = unknown,
->(
-  verifyOTPDto: VerifyOTPDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerConfirmSignIn>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof authControllerConfirmSignIn>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AuthControllerConfirmSignInQueryResult = NonNullable<Awaited<ReturnType<typeof authControllerConfirmSignIn>>>
+export type AuthControllerConfirmSignInQueryError = AuthControllerConfirmSignIn400 | AuthControllerConfirmSignIn403 | AuthControllerConfirmSignIn404 | AuthControllerConfirmSignIn429
+
+
+export function useAuthControllerConfirmSignIn<TData = Awaited<ReturnType<typeof authControllerConfirmSignIn>>, TError = AuthControllerConfirmSignIn400 | AuthControllerConfirmSignIn403 | AuthControllerConfirmSignIn404 | AuthControllerConfirmSignIn429>(
+ verifyOTPDto: VerifyOTPDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerConfirmSignIn>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerConfirmSignIn>>,
           TError,
           Awaited<ReturnType<typeof authControllerConfirmSignIn>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerConfirmSignIn<
-  TData = Awaited<ReturnType<typeof authControllerConfirmSignIn>>,
-  TError = unknown,
->(
-  verifyOTPDto: VerifyOTPDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerConfirmSignIn>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerConfirmSignIn<TData = Awaited<ReturnType<typeof authControllerConfirmSignIn>>, TError = AuthControllerConfirmSignIn400 | AuthControllerConfirmSignIn403 | AuthControllerConfirmSignIn404 | AuthControllerConfirmSignIn429>(
+ verifyOTPDto: VerifyOTPDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerConfirmSignIn>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerConfirmSignIn>>,
           TError,
           Awaited<ReturnType<typeof authControllerConfirmSignIn>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerConfirmSignIn<
-  TData = Awaited<ReturnType<typeof authControllerConfirmSignIn>>,
-  TError = unknown,
->(
-  verifyOTPDto: VerifyOTPDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerConfirmSignIn>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerConfirmSignIn<TData = Awaited<ReturnType<typeof authControllerConfirmSignIn>>, TError = AuthControllerConfirmSignIn400 | AuthControllerConfirmSignIn403 | AuthControllerConfirmSignIn404 | AuthControllerConfirmSignIn429>(
+ verifyOTPDto: VerifyOTPDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerConfirmSignIn>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary OTP kodni tasdiqlash va kirish (Cookie o‘rnatiladi)
+ * @summary OTP kodni tasdiqlash va kirish (Cookie o'rnatiladi)
  */
 
-export function useAuthControllerConfirmSignIn<
-  TData = Awaited<ReturnType<typeof authControllerConfirmSignIn>>,
-  TError = unknown,
->(
-  verifyOTPDto: VerifyOTPDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerConfirmSignIn>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getAuthControllerConfirmSignInQueryOptions(
-    verifyOTPDto,
-    options,
-  );
+export function useAuthControllerConfirmSignIn<TData = Awaited<ReturnType<typeof authControllerConfirmSignIn>>, TError = AuthControllerConfirmSignIn400 | AuthControllerConfirmSignIn403 | AuthControllerConfirmSignIn404 | AuthControllerConfirmSignIn429>(
+ verifyOTPDto: VerifyOTPDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerConfirmSignIn>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getAuthControllerConfirmSignInQueryOptions(verifyOTPDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * @summary Sign-in OTP kodini qayta yuborish (parol tekshiruvidan o'tgan urinish uchun)
  */
 export const authControllerResendOtp = (
-  phoneDto: PhoneDto,
-  signal?: AbortSignal,
+    phoneDto: PhoneDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/auth/resend-otp`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: phoneDto,
-    signal,
-  });
-};
 
-export const getAuthControllerResendOtpQueryKey = (phoneDto?: PhoneDto) => {
-  return ["POST", `/api/v1/auth/resend-otp`, phoneDto] as const;
-};
 
-export const getAuthControllerResendOtpQueryOptions = <
-  TData = Awaited<ReturnType<typeof authControllerResendOtp>>,
-  TError = unknown,
->(
-  phoneDto: PhoneDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerResendOtp>>,
-        TError,
-        TData
-      >
-    >;
-  },
+      return apiMutator<AuthControllerResendOtp200>(
+      {url: `/api/v1/auth/resend-otp`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: phoneDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getAuthControllerResendOtpQueryKey = (phoneDto?: PhoneDto,) => {
+    return [
+    'POST', `/api/v1/auth/resend-otp`, phoneDto
+    ] as const;
+    }
+
+
+export const getAuthControllerResendOtpQueryOptions = <TData = Awaited<ReturnType<typeof authControllerResendOtp>>, TError = AuthControllerResendOtp400 | AuthControllerResendOtp429>(phoneDto: PhoneDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerResendOtp>>, TError, TData>>, }
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getAuthControllerResendOtpQueryKey(phoneDto);
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof authControllerResendOtp>>
-  > = ({ signal }) => authControllerResendOtp(phoneDto, signal);
+  const queryKey =  queryOptions?.queryKey ?? getAuthControllerResendOtpQueryKey(phoneDto);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof authControllerResendOtp>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type AuthControllerResendOtpQueryResult = NonNullable<
-  Awaited<ReturnType<typeof authControllerResendOtp>>
->;
-export type AuthControllerResendOtpQueryError = unknown;
 
-export function useAuthControllerResendOtp<
-  TData = Awaited<ReturnType<typeof authControllerResendOtp>>,
-  TError = unknown,
->(
-  phoneDto: PhoneDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerResendOtp>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof authControllerResendOtp>>> = ({ signal }) => authControllerResendOtp(phoneDto, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof authControllerResendOtp>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AuthControllerResendOtpQueryResult = NonNullable<Awaited<ReturnType<typeof authControllerResendOtp>>>
+export type AuthControllerResendOtpQueryError = AuthControllerResendOtp400 | AuthControllerResendOtp429
+
+
+export function useAuthControllerResendOtp<TData = Awaited<ReturnType<typeof authControllerResendOtp>>, TError = AuthControllerResendOtp400 | AuthControllerResendOtp429>(
+ phoneDto: PhoneDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerResendOtp>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerResendOtp>>,
           TError,
           Awaited<ReturnType<typeof authControllerResendOtp>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerResendOtp<
-  TData = Awaited<ReturnType<typeof authControllerResendOtp>>,
-  TError = unknown,
->(
-  phoneDto: PhoneDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerResendOtp>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerResendOtp<TData = Awaited<ReturnType<typeof authControllerResendOtp>>, TError = AuthControllerResendOtp400 | AuthControllerResendOtp429>(
+ phoneDto: PhoneDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerResendOtp>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerResendOtp>>,
           TError,
           Awaited<ReturnType<typeof authControllerResendOtp>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerResendOtp<
-  TData = Awaited<ReturnType<typeof authControllerResendOtp>>,
-  TError = unknown,
->(
-  phoneDto: PhoneDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerResendOtp>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerResendOtp<TData = Awaited<ReturnType<typeof authControllerResendOtp>>, TError = AuthControllerResendOtp400 | AuthControllerResendOtp429>(
+ phoneDto: PhoneDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerResendOtp>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Sign-in OTP kodini qayta yuborish (parol tekshiruvidan o'tgan urinish uchun)
  */
 
-export function useAuthControllerResendOtp<
-  TData = Awaited<ReturnType<typeof authControllerResendOtp>>,
-  TError = unknown,
->(
-  phoneDto: PhoneDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerResendOtp>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getAuthControllerResendOtpQueryOptions(
-    phoneDto,
-    options,
-  );
+export function useAuthControllerResendOtp<TData = Awaited<ReturnType<typeof authControllerResendOtp>>, TError = AuthControllerResendOtp400 | AuthControllerResendOtp429>(
+ phoneDto: PhoneDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerResendOtp>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getAuthControllerResendOtpQueryOptions(phoneDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * @summary Parolni tiklash uchun OTP so'rash (javob raqam mavjudligini oshkor qilmaydi)
  */
 export const authControllerForgotPassword = (
-  phoneDto: PhoneDto,
-  signal?: AbortSignal,
+    phoneDto: PhoneDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/auth/forgot-password`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: phoneDto,
-    signal,
-  });
-};
 
-export const getAuthControllerForgotPasswordQueryKey = (
-  phoneDto?: PhoneDto,
+
+      return apiMutator<AuthControllerForgotPassword200>(
+      {url: `/api/v1/auth/forgot-password`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: phoneDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getAuthControllerForgotPasswordQueryKey = (phoneDto?: PhoneDto,) => {
+    return [
+    'POST', `/api/v1/auth/forgot-password`, phoneDto
+    ] as const;
+    }
+
+
+export const getAuthControllerForgotPasswordQueryOptions = <TData = Awaited<ReturnType<typeof authControllerForgotPassword>>, TError = AuthControllerForgotPassword400 | AuthControllerForgotPassword429>(phoneDto: PhoneDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerForgotPassword>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/auth/forgot-password`, phoneDto] as const;
-};
 
-export const getAuthControllerForgotPasswordQueryOptions = <
-  TData = Awaited<ReturnType<typeof authControllerForgotPassword>>,
-  TError = unknown,
->(
-  phoneDto: PhoneDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerForgotPassword>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getAuthControllerForgotPasswordQueryKey(phoneDto);
+  const queryKey =  queryOptions?.queryKey ?? getAuthControllerForgotPasswordQueryKey(phoneDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof authControllerForgotPassword>>
-  > = ({ signal }) => authControllerForgotPassword(phoneDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof authControllerForgotPassword>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type AuthControllerForgotPasswordQueryResult = NonNullable<
-  Awaited<ReturnType<typeof authControllerForgotPassword>>
->;
-export type AuthControllerForgotPasswordQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof authControllerForgotPassword>>> = ({ signal }) => authControllerForgotPassword(phoneDto, signal);
 
-export function useAuthControllerForgotPassword<
-  TData = Awaited<ReturnType<typeof authControllerForgotPassword>>,
-  TError = unknown,
->(
-  phoneDto: PhoneDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerForgotPassword>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof authControllerForgotPassword>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AuthControllerForgotPasswordQueryResult = NonNullable<Awaited<ReturnType<typeof authControllerForgotPassword>>>
+export type AuthControllerForgotPasswordQueryError = AuthControllerForgotPassword400 | AuthControllerForgotPassword429
+
+
+export function useAuthControllerForgotPassword<TData = Awaited<ReturnType<typeof authControllerForgotPassword>>, TError = AuthControllerForgotPassword400 | AuthControllerForgotPassword429>(
+ phoneDto: PhoneDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerForgotPassword>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerForgotPassword>>,
           TError,
           Awaited<ReturnType<typeof authControllerForgotPassword>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerForgotPassword<
-  TData = Awaited<ReturnType<typeof authControllerForgotPassword>>,
-  TError = unknown,
->(
-  phoneDto: PhoneDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerForgotPassword>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerForgotPassword<TData = Awaited<ReturnType<typeof authControllerForgotPassword>>, TError = AuthControllerForgotPassword400 | AuthControllerForgotPassword429>(
+ phoneDto: PhoneDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerForgotPassword>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerForgotPassword>>,
           TError,
           Awaited<ReturnType<typeof authControllerForgotPassword>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerForgotPassword<
-  TData = Awaited<ReturnType<typeof authControllerForgotPassword>>,
-  TError = unknown,
->(
-  phoneDto: PhoneDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerForgotPassword>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerForgotPassword<TData = Awaited<ReturnType<typeof authControllerForgotPassword>>, TError = AuthControllerForgotPassword400 | AuthControllerForgotPassword429>(
+ phoneDto: PhoneDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerForgotPassword>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Parolni tiklash uchun OTP so'rash (javob raqam mavjudligini oshkor qilmaydi)
  */
 
-export function useAuthControllerForgotPassword<
-  TData = Awaited<ReturnType<typeof authControllerForgotPassword>>,
-  TError = unknown,
->(
-  phoneDto: PhoneDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerForgotPassword>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getAuthControllerForgotPasswordQueryOptions(
-    phoneDto,
-    options,
-  );
+export function useAuthControllerForgotPassword<TData = Awaited<ReturnType<typeof authControllerForgotPassword>>, TError = AuthControllerForgotPassword400 | AuthControllerForgotPassword429>(
+ phoneDto: PhoneDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerForgotPassword>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getAuthControllerForgotPasswordQueryOptions(phoneDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 /**
  * @summary OTP bilan parolni tiklash (barcha sessiyalar bekor qilinadi)
  */
 export const authControllerResetPassword = (
-  resetPasswordDto: ResetPasswordDto,
-  signal?: AbortSignal,
+    resetPasswordDto: ResetPasswordDto,
+ signal?: AbortSignal
 ) => {
-  return apiMutator<void>({
-    url: `/api/v1/auth/reset-password`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: resetPasswordDto,
-    signal,
-  });
-};
 
-export const getAuthControllerResetPasswordQueryKey = (
-  resetPasswordDto?: ResetPasswordDto,
+
+      return apiMutator<AuthControllerResetPassword200>(
+      {url: `/api/v1/auth/reset-password`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: resetPasswordDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getAuthControllerResetPasswordQueryKey = (resetPasswordDto?: ResetPasswordDto,) => {
+    return [
+    'POST', `/api/v1/auth/reset-password`, resetPasswordDto
+    ] as const;
+    }
+
+
+export const getAuthControllerResetPasswordQueryOptions = <TData = Awaited<ReturnType<typeof authControllerResetPassword>>, TError = AuthControllerResetPassword400 | AuthControllerResetPassword429>(resetPasswordDto: ResetPasswordDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerResetPassword>>, TError, TData>>, }
 ) => {
-  return ["POST", `/api/v1/auth/reset-password`, resetPasswordDto] as const;
-};
 
-export const getAuthControllerResetPasswordQueryOptions = <
-  TData = Awaited<ReturnType<typeof authControllerResetPassword>>,
-  TError = unknown,
->(
-  resetPasswordDto: ResetPasswordDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerResetPassword>>,
-        TError,
-        TData
-      >
-    >;
-  },
-) => {
-  const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getAuthControllerResetPasswordQueryKey(resetPasswordDto);
+  const queryKey =  queryOptions?.queryKey ?? getAuthControllerResetPasswordQueryKey(resetPasswordDto);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof authControllerResetPassword>>
-  > = ({ signal }) => authControllerResetPassword(resetPasswordDto, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof authControllerResetPassword>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type AuthControllerResetPasswordQueryResult = NonNullable<
-  Awaited<ReturnType<typeof authControllerResetPassword>>
->;
-export type AuthControllerResetPasswordQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof authControllerResetPassword>>> = ({ signal }) => authControllerResetPassword(resetPasswordDto, signal);
 
-export function useAuthControllerResetPassword<
-  TData = Awaited<ReturnType<typeof authControllerResetPassword>>,
-  TError = unknown,
->(
-  resetPasswordDto: ResetPasswordDto,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerResetPassword>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof authControllerResetPassword>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AuthControllerResetPasswordQueryResult = NonNullable<Awaited<ReturnType<typeof authControllerResetPassword>>>
+export type AuthControllerResetPasswordQueryError = AuthControllerResetPassword400 | AuthControllerResetPassword429
+
+
+export function useAuthControllerResetPassword<TData = Awaited<ReturnType<typeof authControllerResetPassword>>, TError = AuthControllerResetPassword400 | AuthControllerResetPassword429>(
+ resetPasswordDto: ResetPasswordDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerResetPassword>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerResetPassword>>,
           TError,
           Awaited<ReturnType<typeof authControllerResetPassword>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerResetPassword<
-  TData = Awaited<ReturnType<typeof authControllerResetPassword>>,
-  TError = unknown,
->(
-  resetPasswordDto: ResetPasswordDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerResetPassword>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerResetPassword<TData = Awaited<ReturnType<typeof authControllerResetPassword>>, TError = AuthControllerResetPassword400 | AuthControllerResetPassword429>(
+ resetPasswordDto: ResetPasswordDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerResetPassword>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerResetPassword>>,
           TError,
           Awaited<ReturnType<typeof authControllerResetPassword>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerResetPassword<
-  TData = Awaited<ReturnType<typeof authControllerResetPassword>>,
-  TError = unknown,
->(
-  resetPasswordDto: ResetPasswordDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerResetPassword>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerResetPassword<TData = Awaited<ReturnType<typeof authControllerResetPassword>>, TError = AuthControllerResetPassword400 | AuthControllerResetPassword429>(
+ resetPasswordDto: ResetPasswordDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerResetPassword>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary OTP bilan parolni tiklash (barcha sessiyalar bekor qilinadi)
  */
 
-export function useAuthControllerResetPassword<
-  TData = Awaited<ReturnType<typeof authControllerResetPassword>>,
-  TError = unknown,
->(
-  resetPasswordDto: ResetPasswordDto,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerResetPassword>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getAuthControllerResetPasswordQueryOptions(
-    resetPasswordDto,
-    options,
-  );
+export function useAuthControllerResetPassword<TData = Awaited<ReturnType<typeof authControllerResetPassword>>, TError = AuthControllerResetPassword400 | AuthControllerResetPassword429>(
+ resetPasswordDto: ResetPasswordDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerResetPassword>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getAuthControllerResetPasswordQueryOptions(resetPasswordDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
 /**
+ * Qurilmaning `lastActiveAt` maydoni har muvaffaqiyatli refreshda yangilanadi.
  * @summary Access tokenni yangilash
  */
-export const authControllerRefreshToken = (signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/auth/refresh`,
-    method: "POST",
-    signal,
-  });
-};
+export const authControllerRefreshToken = (
+
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<AuthControllerRefreshToken200>(
+      {url: `/api/v1/auth/refresh`, method: 'POST', signal
+    },
+      );
+    }
+
+
+
 
 export const getAuthControllerRefreshTokenQueryKey = () => {
-  return ["POST", `/api/v1/auth/refresh`] as const;
-};
+    return [
+    'POST', `/api/v1/auth/refresh`
+    ] as const;
+    }
 
-export const getAuthControllerRefreshTokenQueryOptions = <
-  TData = Awaited<ReturnType<typeof authControllerRefreshToken>>,
-  TError = unknown,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof authControllerRefreshToken>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getAuthControllerRefreshTokenQueryKey();
+export const getAuthControllerRefreshTokenQueryOptions = <TData = Awaited<ReturnType<typeof authControllerRefreshToken>>, TError = AuthControllerRefreshToken401 | AuthControllerRefreshToken403>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerRefreshToken>>, TError, TData>>, }
+) => {
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof authControllerRefreshToken>>
-  > = ({ signal }) => authControllerRefreshToken(signal);
+const {query: queryOptions} = options ?? {};
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof authControllerRefreshToken>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+  const queryKey =  queryOptions?.queryKey ?? getAuthControllerRefreshTokenQueryKey();
 
-export type AuthControllerRefreshTokenQueryResult = NonNullable<
-  Awaited<ReturnType<typeof authControllerRefreshToken>>
->;
-export type AuthControllerRefreshTokenQueryError = unknown;
 
-export function useAuthControllerRefreshToken<
-  TData = Awaited<ReturnType<typeof authControllerRefreshToken>>,
-  TError = unknown,
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerRefreshToken>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof authControllerRefreshToken>>> = ({ signal }) => authControllerRefreshToken(signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof authControllerRefreshToken>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AuthControllerRefreshTokenQueryResult = NonNullable<Awaited<ReturnType<typeof authControllerRefreshToken>>>
+export type AuthControllerRefreshTokenQueryError = AuthControllerRefreshToken401 | AuthControllerRefreshToken403
+
+
+export function useAuthControllerRefreshToken<TData = Awaited<ReturnType<typeof authControllerRefreshToken>>, TError = AuthControllerRefreshToken401 | AuthControllerRefreshToken403>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerRefreshToken>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerRefreshToken>>,
           TError,
           Awaited<ReturnType<typeof authControllerRefreshToken>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerRefreshToken<
-  TData = Awaited<ReturnType<typeof authControllerRefreshToken>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerRefreshToken>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerRefreshToken<TData = Awaited<ReturnType<typeof authControllerRefreshToken>>, TError = AuthControllerRefreshToken401 | AuthControllerRefreshToken403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerRefreshToken>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerRefreshToken>>,
           TError,
           Awaited<ReturnType<typeof authControllerRefreshToken>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerRefreshToken<
-  TData = Awaited<ReturnType<typeof authControllerRefreshToken>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerRefreshToken>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerRefreshToken<TData = Awaited<ReturnType<typeof authControllerRefreshToken>>, TError = AuthControllerRefreshToken401 | AuthControllerRefreshToken403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerRefreshToken>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Access tokenni yangilash
  */
 
-export function useAuthControllerRefreshToken<
-  TData = Awaited<ReturnType<typeof authControllerRefreshToken>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerRefreshToken>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getAuthControllerRefreshTokenQueryOptions(options);
+export function useAuthControllerRefreshToken<TData = Awaited<ReturnType<typeof authControllerRefreshToken>>, TError = AuthControllerRefreshToken401 | AuthControllerRefreshToken403>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerRefreshToken>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getAuthControllerRefreshTokenQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
 /**
- * @summary Tizimdan chiqish va qurilma sessiyasini o‘chirish
+ * @summary Tizimdan chiqish va qurilma sessiyasini o'chirish
  */
-export const authControllerSignOut = (signal?: AbortSignal) => {
-  return apiMutator<void>({
-    url: `/api/v1/auth/signout`,
-    method: "POST",
-    signal,
-  });
-};
+export const authControllerSignOut = (
+
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<AuthControllerSignOut200>(
+      {url: `/api/v1/auth/signout`, method: 'POST', signal
+    },
+      );
+    }
+
+
+
 
 export const getAuthControllerSignOutQueryKey = () => {
-  return ["POST", `/api/v1/auth/signout`] as const;
-};
+    return [
+    'POST', `/api/v1/auth/signout`
+    ] as const;
+    }
 
-export const getAuthControllerSignOutQueryOptions = <
-  TData = Awaited<ReturnType<typeof authControllerSignOut>>,
-  TError = unknown,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof authControllerSignOut>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getAuthControllerSignOutQueryKey();
+export const getAuthControllerSignOutQueryOptions = <TData = Awaited<ReturnType<typeof authControllerSignOut>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignOut>>, TError, TData>>, }
+) => {
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof authControllerSignOut>>
-  > = ({ signal }) => authControllerSignOut(signal);
+const {query: queryOptions} = options ?? {};
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof authControllerSignOut>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+  const queryKey =  queryOptions?.queryKey ?? getAuthControllerSignOutQueryKey();
 
-export type AuthControllerSignOutQueryResult = NonNullable<
-  Awaited<ReturnType<typeof authControllerSignOut>>
->;
-export type AuthControllerSignOutQueryError = unknown;
 
-export function useAuthControllerSignOut<
-  TData = Awaited<ReturnType<typeof authControllerSignOut>>,
-  TError = unknown,
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerSignOut>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof authControllerSignOut>>> = ({ signal }) => authControllerSignOut(signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof authControllerSignOut>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AuthControllerSignOutQueryResult = NonNullable<Awaited<ReturnType<typeof authControllerSignOut>>>
+export type AuthControllerSignOutQueryError = unknown
+
+
+export function useAuthControllerSignOut<TData = Awaited<ReturnType<typeof authControllerSignOut>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignOut>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerSignOut>>,
           TError,
           Awaited<ReturnType<typeof authControllerSignOut>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerSignOut<
-  TData = Awaited<ReturnType<typeof authControllerSignOut>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerSignOut>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerSignOut<TData = Awaited<ReturnType<typeof authControllerSignOut>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignOut>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof authControllerSignOut>>,
           TError,
           Awaited<ReturnType<typeof authControllerSignOut>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useAuthControllerSignOut<
-  TData = Awaited<ReturnType<typeof authControllerSignOut>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerSignOut>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAuthControllerSignOut<TData = Awaited<ReturnType<typeof authControllerSignOut>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignOut>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Tizimdan chiqish va qurilma sessiyasini o‘chirish
+ * @summary Tizimdan chiqish va qurilma sessiyasini o'chirish
  */
 
-export function useAuthControllerSignOut<
-  TData = Awaited<ReturnType<typeof authControllerSignOut>>,
-  TError = unknown,
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof authControllerSignOut>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getAuthControllerSignOutQueryOptions(options);
+export function useAuthControllerSignOut<TData = Awaited<ReturnType<typeof authControllerSignOut>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignOut>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getAuthControllerSignOutQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
