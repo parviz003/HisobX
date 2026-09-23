@@ -215,13 +215,27 @@ cash, expenses, reports (daily/monthly), telegram.
    `/reports/top-products?days=&limit=`, `/reports/seller-today`.
 10. **Kutishga qo'yilgan savdolar** — faqat lokal (localStorage), backend kerak emas.
 
-### Kontraktdagi ma'lum bo'shliqlar
+### Kontrakt holati (Blok A dan keyin)
 
-- Swagger'da **javob (response) sxemalari umuman yo'q** — orval barcha hooklar uchun `unknown`
-  qaytaradi. Javob tiplari vaqtincha qo'lda e'lon qilingan (`TODO(backend)` bilan).
-- Bir qancha DTO bo'sh: `CreateSaleDto`, `CreateCustomerDto`, `CreateInventoryDto`,
-  `MakePaymentDto`, `UpdateProductDto`, `CreateCategoryDto`, `UpdateCategoryDto`, `UpdateStoreDto`.
-- `role` enum'ida `MANAGER` yo'q (faqat `ADMIN`, `SELLER`).
+- **Javob sxemalari endi Swagger'da bor** — orval haqiqiy tiplarni generatsiya qiladi
+  (`ProductListItemDto`, `PaginationMetaDto`, ...). Qo'lda yozilgan javob tiplari
+  o'rniga generatsiyadan foydalaniladi (`src/features/*/api/types.ts` faqat
+  `unit` ni toraytiradi va qulay nom beradi).
+- **Sahifalash yagona:** barcha ro'yxatlar `{ items, meta: { total, page, limit, totalPages } }`.
+  Frontend'da bitta joy: `src/lib/api/pagination.ts` va `src/hooks/use-paginated-query.ts`.
+  Ro'yxat sahifalari `useInfiniteQuery` ni o'zi sozlamaydi.
+- **Pul va miqdor `number`** — backend `DecimalSerializerInterceptor` orqali o'giradi.
+  Frontend tarafda yagona normallashtirish — `toAmount()` (`src/lib/format.ts`).
+  Kodning boshqa joyida `Number()` yozilmaydi.
+- `role` enum'ida `MANAGER` hali yo'q (faqat `ADMIN`, `SELLER`) — Blok B.
+
+### Backend'dan kerak (aniqlangan bo'shliqlar)
+
+- `/products` da `lowStock` filtri yo'q — "kam qolgan" filtri yuklangan sahifalar ustida ishlaydi.
+- `/products?search=` faqat nom bo'yicha qidiradi, **barcode bo'yicha emas**.
+- `/inventory/stock` da saralash va "kam qolgan" filtri yo'q.
+- `/inventory/transactions` da **sana oralig'i filtri yo'q** (`startDate`/`endDate`) — Blok C-9 talab qiladi.
+- `CreateProductDto` da `isActive` yo'q — mahsulotni faol/nofaol qilib bo'lmaydi.
 
 ### Haqiqiy javob shakllari (2-bosqichda kuzatilgan)
 
