@@ -66,6 +66,8 @@ export function useConfirmOtp(redirectTo: string | null) {
         devCode: response.code ?? null,
         // Yangi kod — urinishlar ham yangilanadi.
         attemptsLeft: flow?.attemptsLeft ?? 3,
+        qrToken: 'qrToken' in response ? response.qrToken : flow?.qrToken,
+        qrBotUrl: 'qrBotUrl' in response ? response.qrBotUrl : flow?.qrBotUrl,
       });
       toast.success(t('otp.resent'));
     },

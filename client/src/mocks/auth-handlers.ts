@@ -152,6 +152,13 @@ export const authHandlers = [
 
   http.delete(`${BASE}/device/:id`, () => ok({ success: true })),
 
+  http.get(`${BASE}/auth/qr-status`, ({ request }) => {
+    const url = new URL(request.url);
+    const token = url.searchParams.get('token');
+    if (!token) return ok({ status: 'invalid' });
+    return ok({ status: 'pending' });
+  }),
+
   // Backendsiz sinashda ulanish oqimi ham to'liq ishlashi uchun
   telegramLinkHandler,
 ];

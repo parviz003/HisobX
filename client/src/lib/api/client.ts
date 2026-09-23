@@ -10,7 +10,7 @@ import { emitSessionEvent, getImpersonatedStoreId } from './session';
 const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 /** Refresh oqimi bu yo'llarga hech qachon qo'llanmaydi (aylanma bo'lmasligi uchun). */
-const AUTH_BYPASS = ['/auth/refresh', '/auth/signout', '/auth/signin', '/auth/confirm'];
+const AUTH_BYPASS = ['/auth/refresh', '/auth/signout', '/auth/signin', '/auth/confirm', '/auth/qr-status'];
 
 type RetriableConfig = InternalAxiosRequestConfig & { _retried?: boolean };
 

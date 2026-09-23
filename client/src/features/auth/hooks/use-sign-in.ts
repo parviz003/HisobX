@@ -37,6 +37,8 @@ export function useSignIn() {
         resendAvailableAt: response.resendAvailableAt,
         windowExpiresAt: response.windowExpiresAt ?? null,
         devCode: response.code ?? null,
+        qrToken: response.qrToken ?? null,
+        qrBotUrl: response.qrBotUrl ?? null,
       });
       void navigate('/login/otp');
     },

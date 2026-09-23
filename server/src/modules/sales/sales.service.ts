@@ -11,10 +11,14 @@ import { successRes } from '../../common/helper/success-response';
 import { pageParams, paginate } from '../../common/helper/paginate';
 import { hideCostFields } from '../../common/helper/cost-visibility';
 import { IPayload } from '../../common/interface';
+import { TelegramNotificationService } from '../telegram/telegram-notification.service';
 
 @Injectable()
 export class SalesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly telegramNotificationService: TelegramNotificationService,
+  ) {}
 
   async create(storeId: number, userId: number, createSaleDto: CreateSaleDto) {
     const {
@@ -34,7 +38,8 @@ export class SalesService {
       throw new BadRequestException('Customer is required for credit sales');
     }
 
-    return this.prisma.$transaction(async (prisma) => {
+    const { sale, productMap } = await this.prisma.$transaction(
+      async (prisma) => {
       // 1. Validate and get products
       const productIds = items.map((i) => i.productId);
       const products = await prisma.product.findMany({
@@ -161,8 +166,68 @@ export class SalesService {
         });
       }
 
-      return successRes(sale, 201);
+      return { sale, productMap };
     });
+
+    // Fire-and-forget Telegram notification
+    void (async () => {
+      try {
+        const [seller, customer] = await Promise.all([
+          this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { fullName: true, name: true },
+          }),
+          customerId
+            ? this.prisma.customer.findUnique({
+                where: { id: customerId },
+                select: { name: true, phone: true },
+              })
+            : null,
+        ]);
+
+        await this.telegramNotificationService.notifySale(storeId, {
+          saleNumber: sale.saleNumber,
+          totalAmount: Number(sale.totalAmount),
+          subtotal: Number(sale.subtotal),
+          discountPercent: Number(sale.discountPercent),
+          discountAmount: Number(sale.discountAmount),
+          paymentType: sale.paymentType,
+          customerName: customer?.name || null,
+          customerPhone: customer?.phone || null,
+          sellerName: seller?.fullName || seller?.name || null,
+          items: items.map((item) => {
+            const product = productMap.get(item.productId);
+            return {
+              name: product?.name || 'Mahsulot',
+              quantity: item.quantity,
+              price: Number(product?.sellingPrice || 0),
+              unit: product?.unit || 'dona',
+              total: Number(product?.sellingPrice || 0) * item.quantity,
+            };
+          }),
+        }, userId);
+
+        // Check for low stock on affected products
+        for (const item of items) {
+          const product = productMap.get(item.productId);
+          if (product) {
+            const currentStock = product.stock - item.quantity;
+            if (currentStock <= product.minStock) {
+              await this.telegramNotificationService.notifyLowStock(storeId, {
+                name: product.name,
+                stock: currentStock,
+                minStock: product.minStock,
+                unit: product.unit,
+              });
+            }
+          }
+        }
+      } catch (err: any) {
+        // Safe fire-and-forget error handling
+      }
+    })();
+
+    return successRes(sale, 201);
   }
 
   async findAll(storeId: number, actor: IPayload, query: QuerySaleDto) {
@@ -281,6 +346,16 @@ export class SalesService {
           },
         });
       } else if (sale.paymentType === PaymentType.CREDIT) {
+        const debts = await prisma.debt.findMany({
+          where: { saleId: sale.id, deletedAt: null },
+          include: { debtPayments: { where: { deletedAt: null } } },
+        });
+        const hasPayments = debts.some((d) => d.debtPayments.length > 0);
+        if (hasPayments) {
+          throw new BadRequestException(
+            "Bu qarz bo'yicha to'lov qilingan, savdoni bekor qilib bo'lmaydi",
+          );
+        }
         await prisma.debt.updateMany({
           where: { saleId: sale.id },
           data: { deletedAt: new Date() },

@@ -8,8 +8,13 @@ export const staffKeys = {
 
 export const staffApi = {
   list: async (signal?: AbortSignal): Promise<StaffUser[]> => {
-    const { data } = await api.get<StaffUser[]>('/users', { signal });
-    return data;
+    const { data } = await api.get<any>('/users', {
+      params: { limit: 100 },
+      signal,
+    });
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.items)) return data.items;
+    return [];
   },
 
   create: async (values: StaffInput): Promise<StaffUser> => {

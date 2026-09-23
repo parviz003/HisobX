@@ -200,3 +200,37 @@ export class AccountStatusDto {
   @ApiProperty({ enum: Status })
   status!: Status;
 }
+
+/** `GET /auth/qr-status` */
+export class QrLoginStatusResponseDto {
+  @ApiProperty({
+    type: String,
+    enum: ['pending', 'confirmed', 'expired', 'invalid'],
+    example: 'pending',
+  })
+  status!: string;
+
+  @ApiPropertyOptional({ type: Number, example: 7 })
+  userId?: number;
+
+  @ApiPropertyOptional({ type: Number, example: 1 })
+  deviceId?: number;
+
+  @ApiPropertyOptional({ type: String, example: 'Chrome Desktop Device' })
+  device?: string;
+
+  @ApiPropertyOptional({ enum: Role, example: Role.ADMIN })
+  role?: Role;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, example: 1 })
+  storeId?: number | null;
+
+  @ApiPropertyOptional({ type: String, example: '+998901234567' })
+  phone?: string;
+
+  @ApiPropertyOptional({ type: String, example: 'Ali Valiyev' })
+  fullName?: string;
+
+  @ApiPropertyOptional({ type: String, example: '2026-09-23T09:00:00.000Z' })
+  createdAt?: Date;
+}

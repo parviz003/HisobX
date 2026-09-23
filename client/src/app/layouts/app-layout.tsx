@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, MoreHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { BrandLogo } from '@/components/common/brand-logo';
 import { OfflineBanner } from '@/components/common/offline-banner';
 import { useAuth } from '@/features/auth/hooks/use-auth';
+import { notificationsApi, notificationKeys } from '@/features/notifications/api/notifications-api';
 import { api } from '@/lib/api/client';
 import { emitSessionEvent, setImpersonatedStoreId } from '@/lib/api/session';
 import { AppSidebar } from './app-sidebar';
@@ -41,9 +42,18 @@ export function AppLayout() {
 
   const effectiveRole = role === 'SUPERADMIN' && Boolean(impersonatedStoreId) ? 'MANAGER' : role;
 
+  const { data: unreadNotifications } = useQuery({
+    queryKey: notificationKeys.list(false),
+    queryFn: ({ signal }) => notificationsApi.list(false, signal),
+    enabled: Boolean(role && (role !== 'SUPERADMIN' || impersonatedStoreId)),
+    refetchInterval: 30000,
+  });
+
+  const unreadCount = unreadNotifications?.items?.length ?? 0;
+
   return (
     <div className="bg-background flex min-h-dvh">
-      <AppSidebar role={effectiveRole} />
+      <AppSidebar role={effectiveRole} onSignOut={() => void signOut()} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <OfflineBanner />
@@ -79,21 +89,14 @@ export function AppLayout() {
           <Button
             variant="ghost"
             size="icon"
-            className="min-h-touch"
+            className="min-h-touch relative"
             aria-label={t('nav:notifications')}
             onClick={() => void navigate('/notifications')}
           >
             <Bell className="size-5" aria-hidden />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="min-h-touch hidden md:inline-flex"
-            aria-label={t('nav:openMenu')}
-            onClick={() => setMoreOpen(true)}
-          >
-            <MoreHorizontal className="size-5" aria-hidden />
+            {unreadCount > 0 && (
+              <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-destructive ring-2 ring-card" />
+            )}
           </Button>
         </header>
 

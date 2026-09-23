@@ -30,6 +30,8 @@ export type AuthFlow = {
   linkToken: string | null;
   botUrl: string | null;
   linkExpiresAt: string | null;
+  qrToken?: string | null;
+  qrBotUrl?: string | null;
 };
 
 export const DEFAULT_OTP_ATTEMPTS = 3;

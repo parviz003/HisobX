@@ -172,24 +172,31 @@ export class UsersService {
   }
 
   async findAll(actor: IPayload, query: QueryUserDto) {
-    const where: Prisma.UserWhereInput =
+    const targetStoreId =
       actor.role === Role.SUPERADMIN
-        ? {
-            ...(query.storeId ? { storeId: query.storeId } : {}),
-            ...(query.role ? { role: query.role } : {}),
-            ...(query.status ? { status: query.status } : {}),
-          }
+        ? actor.storeId || query.storeId
+        : actor.storeId;
+
+    const allowedRoles =
+      actor.role === Role.SUPERADMIN
+        ? undefined
+        : this.manageableRoles(actor.role);
+
+    const where: Prisma.UserWhereInput = {
+      ...(targetStoreId ? { storeId: targetStoreId } : {}),
+      ...(query.status ? { status: query.status } : {}),
+      ...(actor.role === Role.SUPERADMIN
+        ? query.role
+          ? { role: query.role }
+          : {}
         : {
-            // Do'kon xodimi uchun storeId har doim o'z do'koni.
-            // MANAGER -> ADMIN va SELLER, ADMIN -> faqat SELLER.
-            storeId: actor.storeId,
             role: query.role
-              ? this.manageableRoles(actor.role).includes(query.role)
+              ? allowedRoles!.includes(query.role)
                 ? query.role
                 : Role.SUPERADMIN // mos kelmaydigan filtr -> bo'sh natija
-              : { in: this.manageableRoles(actor.role) },
-            ...(query.status ? { status: query.status } : {}),
-          };
+              : { in: allowedRoles },
+          }),
+    };
 
     const { page, limit, skip, take } = pageParams(query);
     const [total, items] = await Promise.all([
@@ -347,6 +354,7 @@ export class UsersService {
 
     return successRes({ message: "Foydalanuvchi o'chirildi", id });
   }
+
 
   /**
    * Aktyor boshqarishi mumkin bo'lgan foydalanuvchini yuklaydi.

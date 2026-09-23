@@ -10,6 +10,8 @@ import {
   type TelegramUpdate,
 } from '../../infrastructure/lib/TelegramApi';
 import { TelegramLinkService } from './telegram-link.service';
+import { PrismaService } from '../../config/database/prisma.service';
+import { RedisService } from '../../config/redis/redis.service';
 
 /** Long polling oynasi (sekund) — Telegram tavsiya etgan oraliq. */
 const POLL_TIMEOUT_SECONDS = 25;
@@ -18,9 +20,6 @@ const RETRY_DELAY_MS = 3000;
 
 /**
  * Botning yangilanishlarini o'qiydi (localhost uchun polling).
- *
- * Token sozlanmagan bo'lsa ilova YIQILMAYDI — ogohlantirish logi bilan
- * botsiz ishlayveradi (topshiriq B-5).
  */
 @Injectable()
 export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
@@ -28,7 +27,11 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
   private offset = 0;
   private running = false;
 
-  constructor(private readonly links: TelegramLinkService) {}
+  constructor(
+    private readonly links: TelegramLinkService,
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
+  ) {}
 
   onModuleInit() {
     if (!TelegramApi.isConfigured) {
@@ -76,7 +79,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** Bitta yangilanish. Bot faqat `/start` va kontaktga javob beradi. */
+  /** Bitta yangilanish. */
   async handle(update: TelegramUpdate) {
     const message = update.message;
     if (!message || message.from?.is_bot) return;
@@ -95,7 +98,61 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
 
     if (message.text?.startsWith('/start')) {
       const token = message.text.split(/\s+/)[1];
+      if (token && (token.startsWith('qr_') || token.startsWith('login_'))) {
+        const qrToken = token.replace(/^(qr_|login_)/, '');
+        await this.handleLoginQr(chatId, qrToken);
+        return;
+      }
       await this.links.handleStart(chatId, token);
     }
+  }
+
+  /**
+   * QR kod skanerlanganda kompyuterdagi sessiyani tasdiqlaydi
+   */
+  private async handleLoginQr(chatId: number, qrToken: string) {
+    if (!qrToken) return;
+    const key = `auth:qr:${qrToken}`;
+    const raw = await this.redis.client.get(key);
+
+    if (!raw) {
+      await TelegramApi.sendMessage(
+        chatId,
+        '⚠️ <b>Kirish havolasining muddati tugagan.</b>\n\nIltimos, kompyuter ekranida qaytadan kiring.',
+      );
+      return;
+    }
+
+    const data = JSON.parse(raw) as {
+      userId: number;
+      phone: string;
+      status: string;
+    };
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: data.userId },
+      select: { id: true, fullName: true, telegramChatId: true },
+    });
+
+    if (!user || user.telegramChatId !== String(chatId)) {
+      await TelegramApi.sendMessage(
+        chatId,
+        '⚠️ <b>Ruxsat berilmadi:</b> Ushbu HisobX hisobi sizning Telegramingizga biriktirilmagan.',
+      );
+      return;
+    }
+
+    // Redisda holatni tasdiqlangan qilamiz
+    await this.redis.client.set(
+      key,
+      JSON.stringify({ ...data, status: 'confirmed' }),
+      'EX',
+      300,
+    );
+
+    await TelegramApi.sendMessage(
+      chatId,
+      `✅ <b>HisobX: Kirish tasdiqlandi!</b>\n\nSalom, <b>${user.fullName || 'Foydalanuvchi'}</b>!\nKompyuteringiz orqali tizimga muvaffaqiyatli kirdingiz.`,
+    );
   }
 }

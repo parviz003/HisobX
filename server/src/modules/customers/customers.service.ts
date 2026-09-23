@@ -42,9 +42,28 @@ export class CustomersService {
         orderBy: { createdAt: 'desc' },
         skip,
         take,
+        include: {
+          debts: {
+            where: { isPaid: false, deletedAt: null },
+            select: { remainingAmount: true },
+          },
+        },
       }),
     ]);
-    return successRes(paginate(items, total, { page, limit }));
+
+    const mapped = items.map((customer) => {
+      const totalDebt = customer.debts.reduce(
+        (sum, debt) => sum + Number(debt.remainingAmount),
+        0,
+      );
+      const { debts, ...rest } = customer;
+      return {
+        ...rest,
+        totalDebt,
+      };
+    });
+
+    return successRes(paginate(mapped, total, { page, limit }));
   }
 
   async findOne(storeId: number, id: number) {

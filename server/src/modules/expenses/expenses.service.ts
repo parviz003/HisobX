@@ -15,10 +15,14 @@ import { CashTransactionType, Prisma } from '@prisma/client';
 import { successRes } from '../../common/helper/success-response';
 import { pageParams, paginate } from '../../common/helper/paginate';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { TelegramNotificationService } from '../telegram/telegram-notification.service';
 
 @Injectable()
 export class ExpensesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly telegramNotificationService: TelegramNotificationService,
+  ) {}
 
   // Category methods
   async findAllCategories(storeId: number, query?: PaginationQueryDto) {
@@ -88,7 +92,7 @@ export class ExpensesService {
 
   // Expense methods
   async create(storeId: number, userId: number, dto: CreateExpenseDto) {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const category = await tx.expenseCategory.findFirst({
         where: { id: dto.expenseCategoryId, storeId },
       });
@@ -132,8 +136,25 @@ export class ExpensesService {
         },
       });
 
-      return successRes(expense, 201);
+      return { expense, newBalance, categoryName: category.name };
     });
+
+    // Fire-and-forget Telegram notification
+    void (async () => {
+      try {
+        await this.telegramNotificationService.notifyExpense(storeId, {
+          categoryName: result.categoryName,
+          amount: Number(dto.amount),
+          userName: result.expense.user?.fullName || null,
+          balance: result.newBalance,
+          note: dto.note || null,
+        }, userId);
+      } catch (err: any) {
+        // Safe error handling
+      }
+    })();
+
+    return successRes(result.expense, 201);
   }
 
   async findAll(storeId: number, query: QueryExpenseDto) {

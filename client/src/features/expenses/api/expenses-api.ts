@@ -30,8 +30,13 @@ export const expensesApi = {
   },
 
   listCategories: async (signal?: AbortSignal): Promise<ExpenseCategory[]> => {
-    const { data } = await api.get<ExpenseCategory[]>('/expenses/categories', { signal });
-    return data;
+    const { data } = await api.get<any>('/expenses/categories', {
+      params: { limit: 100 },
+      signal,
+    });
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.items)) return data.items;
+    return [];
   },
 
   createCategory: async (values: ExpenseCategoryInput): Promise<ExpenseCategory> => {

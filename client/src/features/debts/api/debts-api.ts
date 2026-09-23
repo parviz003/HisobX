@@ -20,8 +20,13 @@ export const debtsApi = {
   },
 
   overdue: async (signal?: AbortSignal): Promise<OverdueGroup[]> => {
-    const { data } = await api.get<OverdueGroup[]>('/debts/overdue', { signal });
-    return data;
+    const { data } = await api.get<any>('/debts/overdue', {
+      params: { limit: 100 },
+      signal,
+    });
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.items)) return data.items;
+    return [];
   },
 
   byId: async (id: number, signal?: AbortSignal): Promise<DebtDetail> => {

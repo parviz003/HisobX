@@ -132,7 +132,6 @@ export function StaffFormDialog({ open, onOpenChange, staffUser }: Props) {
             <SelectContent>
               <SelectItem value="SELLER">Sotuvchi (Faqat POS savdo va qarzlar)</SelectItem>
               <SelectItem value="ADMIN">Administrator (Ombor, tovarlar, hisobotlar)</SelectItem>
-              <SelectItem value="MANAGER">Bosh Menejer (To'liq do'kon nazorati)</SelectItem>
             </SelectContent>
           </Select>
         </div>

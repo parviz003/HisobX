@@ -3,18 +3,143 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../../config/database/prisma.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { env } from '../../config';
-import { NotificationType, SaleStatus } from '@prisma/client';
+import { NotificationType, Role, SaleStatus } from '@prisma/client';
+
+export interface SaleNotificationItem {
+  name: string;
+  quantity: number;
+  price: number | string;
+  unit?: string | null;
+  total?: number | string;
+}
+
+export interface SaleNotificationData {
+  saleNumber: number;
+  totalAmount: number | string;
+  subtotal?: number | string;
+  discountPercent?: number;
+  discountAmount?: number | string;
+  paymentType: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  sellerName?: string | null;
+  items: SaleNotificationItem[];
+}
+
+export interface LowStockNotificationData {
+  name: string;
+  stock: number;
+  minStock: number;
+  unit?: string | null;
+}
+
+export interface DebtPaymentNotificationData {
+  customerName: string;
+  customerPhone?: string | null;
+  amount: number | string;
+  remainingAmount: number | string;
+  isPaid: boolean;
+  note?: string | null;
+  saleNumber?: number | null;
+}
+
+export interface ExpenseNotificationData {
+  categoryName: string;
+  amount: number | string;
+  userName?: string | null;
+  balance?: number | string | null;
+  note?: string | null;
+}
 
 @Injectable()
 export class TelegramNotificationService {
   private readonly logger = new Logger(TelegramNotificationService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Bildirishnoma qabul qilishi kerak bo'lgan Telegram chat ID larini aniqlaydi:
+   * 1. Shu do'konga tegishli ADMIN va MANAGER foydalanuvchilar (o'z Telegramini ulaganlar)
+   * 2. Amalni bajargan xodim (actorUserId) — agar Telegramini ulagan bo'lsa
+   * 3. Do'konning maxsus guruhi (store.telegramChatId) — agar alohida guruh sifatida sozlangan bo'lsa
+   * MUHIM: Begona do'konlarning savdolari Superadminga bormaydi!
+   */
+  async getRecipientChatIds(
+    storeId: number,
+    options?: {
+      actorUserId?: number;
+      roles?: Role[];
+    },
+  ): Promise<string[]> {
+    try {
+      const targetRoles = options?.roles ?? [Role.ADMIN, Role.MANAGER];
+      const chatIds = new Set<string>();
+
+      const store = await this.prisma.store.findUnique({
+        where: { id: storeId },
+        select: {
+          telegramChatId: true,
+          users: {
+            where: {
+              isActive: true,
+              telegramChatId: { not: null },
+            },
+            select: {
+              id: true,
+              role: true,
+              telegramChatId: true,
+            },
+          },
+        },
+      });
+
+      if (!store) return [];
+
+      // 1. Shu do'konning adminlari va menejerlariga
+      for (const u of store.users) {
+        if (u.telegramChatId && targetRoles.includes(u.role)) {
+          chatIds.add(u.telegramChatId);
+        }
+      }
+
+      // 2. Amalni bajargan xodim (sotuvchi) o'z hisobiga
+      if (options?.actorUserId) {
+        const actor = store.users.find((u) => u.id === options.actorUserId);
+        if (actor?.telegramChatId) {
+          chatIds.add(actor.telegramChatId);
+        } else {
+          const actorUser = await this.prisma.user.findUnique({
+            where: { id: options.actorUserId },
+            select: { telegramChatId: true },
+          });
+          if (actorUser?.telegramChatId) {
+            chatIds.add(actorUser.telegramChatId);
+          }
+        }
+      }
+
+      // 3. Do'kon guruhi (agar sozlangan bo'lsa va superadmin shaxsiy chati bo'lmasa)
+      if (store.telegramChatId) {
+        const superAdminId = env.TELEGRAM.ID ? String(env.TELEGRAM.ID) : null;
+        const isSuperAdminPersonalChat = store.telegramChatId === superAdminId;
+        const hasStoreUsers = store.users.length > 0;
+
+        // Agar do'konda foydalanuvchilar bo'lsa, superadminga yubormaymiz
+        if (!isSuperAdminPersonalChat || !hasStoreUsers) {
+          chatIds.add(store.telegramChatId);
+        }
+      }
+
+      return Array.from(chatIds);
+    } catch (err: any) {
+      this.logger.error(`getRecipientChatIds xatosi: ${err.message}`);
+      return [];
+    }
+  }
 
   async sendToChat(chatId: string, message: string): Promise<boolean> {
     if (!env.TELEGRAM.TOKEN || !chatId) {
@@ -41,8 +166,212 @@ export class TelegramNotificationService {
   }
 
   /**
+   * Barcha tegishli qabul qiluvchilarga xabar yuboradi
+   */
+  async sendToRecipients(
+    chatIds: string[],
+    message: string,
+  ): Promise<number> {
+    if (chatIds.length === 0) {
+      this.logger.log('Yuborish uchun faol Telegram chat topilmadi');
+      return 0;
+    }
+
+    let sentCount = 0;
+    for (const chatId of chatIds) {
+      const ok = await this.sendToChat(chatId, message);
+      if (ok) sentCount++;
+    }
+    return sentCount;
+  }
+
+  /**
+   * Real vaqtdagi yangi savdo bildirishnomasi
+   */
+  async notifySale(
+    storeId: number,
+    data: SaleNotificationData,
+    actorUserId?: number,
+  ): Promise<void> {
+    try {
+      const chatIds = await this.getRecipientChatIds(storeId, { actorUserId });
+      if (chatIds.length === 0) return;
+
+      const store = await this.prisma.store.findUnique({
+        where: { id: storeId },
+        select: { name: true },
+      });
+      const storeName = store?.name || "Do'kon";
+
+      const paymentLabel =
+        data.paymentType === 'CASH' ? '💵 Naqd pul' : '📋 Nasiya (Qarz)';
+      const timeStr = new Date().toLocaleTimeString('uz-UZ', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const dateStr = new Date().toISOString().split('T')[0];
+
+      let itemsText = '';
+      for (const item of data.items.slice(0, 8)) {
+        const itemTotal =
+          item.total !== undefined
+            ? Number(item.total)
+            : Number(item.price) * item.quantity;
+        itemsText += `  • <b>${item.name}</b>: ${item.quantity} ${item.unit || 'dona'} × ${Number(item.price).toLocaleString('uz-UZ')} = ${itemTotal.toLocaleString('uz-UZ')} so‘m\n`;
+      }
+      if (data.items.length > 8) {
+        itemsText += `  • <i>... va yana ${data.items.length - 8} ta mahsulot</i>\n`;
+      }
+
+      const msg = `
+🛒 <b>${storeName}: Yangi savdo #${data.saleNumber}</b>
+
+💰 <b>Jami summa:</b> ${Number(data.totalAmount).toLocaleString('uz-UZ')} so‘m
+💳 <b>To‘lov:</b> ${paymentLabel}
+${data.customerName ? `👤 <b>Mijoz:</b> ${data.customerName} ${data.customerPhone ? `(${data.customerPhone})` : ''}\n` : ''}${data.sellerName ? `👨‍💼 <b>Sotuvchi:</b> ${data.sellerName}\n` : ''}${data.discountPercent ? `🎁 <b>Chegirma:</b> ${data.discountPercent}%\n` : ''}
+📦 <b>Mahsulotlar:</b>
+${itemsText}
+⏰ <b>Vaqt:</b> ${dateStr} ${timeStr}
+      `.trim();
+
+      await this.sendToRecipients(chatIds, msg);
+    } catch (err: any) {
+      this.logger.error(`notifySale xatosi: ${err.message}`);
+    }
+  }
+
+  /**
+   * Mahsulot zaxirasi kritik kamayganda real-vaqt ogohlantirish
+   */
+  async notifyLowStock(
+    storeId: number,
+    product: LowStockNotificationData,
+  ): Promise<void> {
+    try {
+      const chatIds = await this.getRecipientChatIds(storeId);
+      const store = await this.prisma.store.findUnique({
+        where: { id: storeId },
+        select: { name: true },
+      });
+      const storeName = store?.name || "Do'kon";
+
+      const msg = `
+⚠️ <b>${storeName}: Zaxira ogohlantirishi! (Kam qoldi)</b>
+
+📦 <b>Mahsulot:</b> ${product.name}
+📊 <b>Qolgan qoldiq:</b> ${product.stock} ${product.unit || 'dona'}
+📉 <b>Minimal chegara:</b> ${product.minStock} ${product.unit || 'dona'}
+
+❗️ <i>Iltimos, mahsulot zaxirasini o‘z vaqtida to‘ldiring!</i>
+      `.trim();
+
+      if (chatIds.length > 0) {
+        await this.sendToRecipients(chatIds, msg);
+      }
+
+      await this.prisma.notification.create({
+        data: {
+          storeId,
+          type: NotificationType.LOW_STOCK,
+          title: 'Zaxira ogohlantirishi',
+          message: `${product.name} mahsulotidan atigi ${product.stock} ${product.unit || 'dona'} qoldi (minimal chegara: ${product.minStock})`,
+          isSent: chatIds.length > 0,
+        },
+      });
+    } catch (err: any) {
+      this.logger.error(`notifyLowStock xatosi: ${err.message}`);
+    }
+  }
+
+  /**
+   * Qarz to'lovi qabul qilinganda xabarnoma
+   */
+  async notifyDebtPayment(
+    storeId: number,
+    data: DebtPaymentNotificationData,
+    actorUserId?: number,
+  ): Promise<void> {
+    try {
+      const chatIds = await this.getRecipientChatIds(storeId, { actorUserId });
+      const store = await this.prisma.store.findUnique({
+        where: { id: storeId },
+        select: { name: true },
+      });
+      const storeName = store?.name || "Do'kon";
+
+      const timeStr = new Date().toLocaleTimeString('uz-UZ', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const dateStr = new Date().toISOString().split('T')[0];
+
+      const msg = `
+💳 <b>${storeName}: Qarz to‘lovi qabul qilindi</b>
+
+👤 <b>Mijoz:</b> ${data.customerName} ${data.customerPhone ? `(${data.customerPhone})` : ''}
+💵 <b>To‘langan summa:</b> ${Number(data.amount).toLocaleString('uz-UZ')} so‘m
+${data.isPaid ? '✅ <b>Qarz to‘liq yopildi!</b>' : `📊 <b>Qolgan qarz:</b> ${Number(data.remainingAmount).toLocaleString('uz-UZ')} so‘m`}
+${data.note ? `📝 <b>Izoh:</b> ${data.note}\n` : ''}${data.saleNumber ? `🧾 <b>Savdo:</b> #${data.saleNumber}\n` : ''}⏰ <b>Vaqt:</b> ${dateStr} ${timeStr}
+      `.trim();
+
+      if (chatIds.length > 0) {
+        await this.sendToRecipients(chatIds, msg);
+      }
+
+      await this.prisma.notification.create({
+        data: {
+          storeId,
+          type: NotificationType.DEBT_REMINDER,
+          title: 'Qarz to‘lovi qabul qilindi',
+          message: `${data.customerName}: ${Number(data.amount).toLocaleString('uz-UZ')} so‘m to‘landi. ${data.isPaid ? 'Qarz to‘liq yopildi' : `Qolgan qarz: ${Number(data.remainingAmount).toLocaleString('uz-UZ')} so‘m`}`,
+          isSent: chatIds.length > 0,
+        },
+      });
+    } catch (err: any) {
+      this.logger.error(`notifyDebtPayment xatosi: ${err.message}`);
+    }
+  }
+
+  /**
+   * Xarajat kiritilganda xabarnoma
+   */
+  async notifyExpense(
+    storeId: number,
+    data: ExpenseNotificationData,
+    actorUserId?: number,
+  ): Promise<void> {
+    try {
+      const chatIds = await this.getRecipientChatIds(storeId, { actorUserId });
+      if (chatIds.length === 0) return;
+
+      const store = await this.prisma.store.findUnique({
+        where: { id: storeId },
+        select: { name: true },
+      });
+      const storeName = store?.name || "Do'kon";
+
+      const timeStr = new Date().toLocaleTimeString('uz-UZ', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const dateStr = new Date().toISOString().split('T')[0];
+
+      const msg = `
+💸 <b>${storeName}: Yangi xarajat kiritildi</b>
+
+📁 <b>Toifa:</b> ${data.categoryName}
+💵 <b>Summa:</b> ${Number(data.amount).toLocaleString('uz-UZ')} so‘m
+${data.userName ? `👤 <b>Kiritdi:</b> ${data.userName}\n` : ''}${data.balance !== undefined && data.balance !== null ? `💰 <b>Kassada qolgan qoldiq:</b> ${Number(data.balance).toLocaleString('uz-UZ')} so‘m\n` : ''}${data.note ? `📝 <b>Izoh:</b> ${data.note}\n` : ''}⏰ <b>Vaqt:</b> ${dateStr} ${timeStr}
+      `.trim();
+
+      await this.sendToRecipients(chatIds, msg);
+    } catch (err: any) {
+      this.logger.error(`notifyExpense xatosi: ${err.message}`);
+    }
+  }
+
+  /**
    * Do'kon guruhiga qo'lda test xabar yuboradi.
-   * telegramChatId sozlanmagan bo'lsa yoki Telegram rad etsa xatolik qaytaradi.
    */
   async sendTestMessage(storeId: number, message: string) {
     const store = await this.prisma.store.findUnique({
@@ -50,25 +379,22 @@ export class TelegramNotificationService {
       select: { id: true, name: true, telegramChatId: true },
     });
     if (!store) throw new NotFoundException("Do'kon topilmadi");
-    if (!store.telegramChatId) {
+
+    const chatIds = await this.getRecipientChatIds(storeId);
+    if (chatIds.length === 0) {
       throw new BadRequestException(
-        "Do'kon uchun telegramChatId sozlanmagan. PATCH /stores/me orqali qo'shing",
+        "Do'kon xodimlari yoki administratori Telegramini ulamagan. Profil yoki sozlamalardan Telegramni ulang",
       );
     }
 
-    const sent = await this.sendToChat(
-      store.telegramChatId,
-      `\u{1F9EA} <b>${store.name} \u2014 test xabar</b>\n\n${message}`,
+    const count = await this.sendToRecipients(
+      chatIds,
+      `🧪 <b>${store.name} — test xabar</b>\n\n${message}`,
     );
-    if (!sent) {
-      throw new ServiceUnavailableException(
-        "Telegramga xabar yuborib bo'lmadi",
-      );
-    }
 
     return {
-      message: "Xabar muvaffaqiyatli jo'natildi",
-      chatId: store.telegramChatId,
+      message: `${count} ta shaxsiy/guruh chatiga xabar muvaffaqiyatli jo'natildi`,
+      chatIds,
     };
   }
 
@@ -77,18 +403,13 @@ export class TelegramNotificationService {
   async checkDebtReminders() {
     this.logger.log('Qarzdorlik eslatmalari tekshirilmoqda...');
     const now = new Date();
-    const threeDaysLater = new Date();
-    threeDaysLater.setDate(now.getDate() + 3);
 
     const stores = await this.prisma.store.findMany({
-      where: { isActive: true, telegramChatId: { not: null } },
-      select: { id: true, name: true, telegramChatId: true },
+      where: { isActive: true },
+      select: { id: true, name: true },
     });
 
     for (const store of stores) {
-      if (!store.telegramChatId) continue;
-
-      // Muddati o'tgan qarzlar
       const overdueDebts = await this.prisma.debt.findMany({
         where: {
           storeId: store.id,
@@ -100,14 +421,16 @@ export class TelegramNotificationService {
       });
 
       if (overdueDebts.length > 0) {
-        let msg = `⚠️ <b>${store.name}: Muddati o‘tgan qarzlar (${overdueDebts.length} ta)</b>\n\n`;
-        for (const d of overdueDebts.slice(0, 5)) {
-          msg += `👤 <b>${d.customer.name}</b> (${d.customer.phone || 'Tel yo‘q'})\n`;
-          msg += `💰 Qarz: ${Number(d.remainingAmount).toLocaleString('uz-UZ')} so‘m\n`;
-          msg += `📅 Muddat: ${d.dueDate ? d.dueDate.toISOString().split('T')[0] : 'Noma‘lum'}\n\n`;
+        const chatIds = await this.getRecipientChatIds(store.id);
+        if (chatIds.length > 0) {
+          let msg = `⚠️ <b>${store.name}: Muddati o‘tgan qarzlar (${overdueDebts.length} ta)</b>\n\n`;
+          for (const d of overdueDebts.slice(0, 5)) {
+            msg += `👤 <b>${d.customer.name}</b> (${d.customer.phone || 'Tel yo‘q'})\n`;
+            msg += `💰 Qarz: ${Number(d.remainingAmount).toLocaleString('uz-UZ')} so‘m\n`;
+            msg += `📅 Muddat: ${d.dueDate ? d.dueDate.toISOString().split('T')[0] : 'Noma‘lum'}\n\n`;
+          }
+          await this.sendToRecipients(chatIds, msg);
         }
-
-        await this.sendToChat(store.telegramChatId, msg);
 
         await this.prisma.notification.create({
           data: {
@@ -115,7 +438,7 @@ export class TelegramNotificationService {
             type: NotificationType.DEBT_OVERDUE,
             title: 'Muddati o‘tgan qarzlar',
             message: `${overdueDebts.length} ta mijozning qarzdorlik muddati o‘tgan`,
-            isSent: true,
+            isSent: chatIds.length > 0,
           },
         });
       }
@@ -127,13 +450,11 @@ export class TelegramNotificationService {
   async checkLowStock() {
     this.logger.log('Kam qolgan mahsulotlar tekshirilmoqda...');
     const stores = await this.prisma.store.findMany({
-      where: { isActive: true, telegramChatId: { not: null } },
-      select: { id: true, name: true, telegramChatId: true },
+      where: { isActive: true },
+      select: { id: true, name: true },
     });
 
     for (const store of stores) {
-      if (!store.telegramChatId) continue;
-
       const lowStockProducts = await this.prisma.product.findMany({
         where: {
           storeId: store.id,
@@ -144,12 +465,14 @@ export class TelegramNotificationService {
       const alerts = lowStockProducts.filter((p) => p.stock <= p.minStock);
 
       if (alerts.length > 0) {
-        let msg = `📦 <b>${store.name}: Tugab borayotgan mahsulotlar (${alerts.length} ta)</b>\n\n`;
-        for (const p of alerts.slice(0, 5)) {
-          msg += `• <b>${p.name}</b>: Qoldiq ${p.stock} ${p.unit} (Min: ${p.minStock})\n`;
+        const chatIds = await this.getRecipientChatIds(store.id);
+        if (chatIds.length > 0) {
+          let msg = `📦 <b>${store.name}: Tugab borayotgan mahsulotlar (${alerts.length} ta)</b>\n\n`;
+          for (const p of alerts.slice(0, 5)) {
+            msg += `• <b>${p.name}</b>: Qoldiq ${p.stock} ${p.unit} (Min: ${p.minStock})\n`;
+          }
+          await this.sendToRecipients(chatIds, msg);
         }
-
-        await this.sendToChat(store.telegramChatId, msg);
 
         await this.prisma.notification.create({
           data: {
@@ -157,7 +480,7 @@ export class TelegramNotificationService {
             type: NotificationType.LOW_STOCK,
             title: 'Zaxira ogohlantirishi',
             message: `${alerts.length} ta mahsulot zaxirasi kritik darajada kam`,
-            isSent: true,
+            isSent: chatIds.length > 0,
           },
         });
       }
@@ -176,12 +499,13 @@ export class TelegramNotificationService {
     endOfDay.setHours(23, 59, 59, 999);
 
     const stores = await this.prisma.store.findMany({
-      where: { isActive: true, telegramChatId: { not: null } },
-      select: { id: true, name: true, telegramChatId: true },
+      where: { isActive: true },
+      select: { id: true, name: true },
     });
 
     for (const store of stores) {
-      if (!store.telegramChatId) continue;
+      const chatIds = await this.getRecipientChatIds(store.id);
+      if (chatIds.length === 0) continue;
 
       const [sales, expenses, lastCashTx] = await Promise.all([
         this.prisma.sale.findMany({
@@ -235,7 +559,7 @@ export class TelegramNotificationService {
 💰 <b>Kassadagi qoldiq:</b> ${currentCash.toLocaleString('uz-UZ')} so‘m
       `.trim();
 
-      await this.sendToChat(store.telegramChatId, msg);
+      await this.sendToRecipients(chatIds, msg);
 
       await this.prisma.notification.create({
         data: {

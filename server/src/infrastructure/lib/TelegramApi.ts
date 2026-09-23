@@ -19,6 +19,7 @@ export interface TelegramUpdate {
 
 type ReplyMarkup = {
   keyboard?: { text: string; request_contact?: boolean }[][];
+  inline_keyboard?: { text: string; url?: string; callback_data?: string }[][];
   resize_keyboard?: boolean;
   one_time_keyboard?: boolean;
   remove_keyboard?: boolean;
