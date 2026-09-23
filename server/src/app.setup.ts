@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { OpenAPIObject } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { AllExceptionsFilter } from './common/filters/all-exception.filter';
+import { DecimalSerializerInterceptor } from './common/interceptors/decimal-serializer.interceptor';
 import { BusinessException } from './common/errors/business.exception';
 import { ErrorCode } from './common/errors/error-codes';
 import { ErrorResponseDto } from './common/swagger';
@@ -21,6 +22,8 @@ export const API_PREFIX = '/api/v1';
 export function applyGlobalSetup(app: INestApplication) {
   app.useGlobalPipes(buildValidationPipe());
   app.useGlobalFilters(new AllExceptionsFilter());
+  // Pul va miqdor JSON'da `number` bo'lib chiqishi uchun (kontrakt talabi)
+  app.useGlobalInterceptors(new DecimalSerializerInterceptor());
   app.use(cookieParser());
   app.setGlobalPrefix(API_PREFIX);
 }
