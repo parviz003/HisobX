@@ -33,16 +33,20 @@
  * OpenAPI spec version: 1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -70,13 +74,11 @@ import type {
   AuthControllerSignIn403,
   AuthControllerSignIn429,
   AuthControllerSignOut200,
-  AuthControllerSignUp201,
-  AuthControllerSignUp400,
-  AuthControllerSignUp409,
+  AuthControllerTelegramLinkStatus200,
+  AuthControllerTelegramLinkStatusParams,
   PhoneDto,
   ResetPasswordDto,
   SignInDto,
-  SignUpDto,
   VerifyOTPDto
 } from '../model';
 
@@ -99,100 +101,6 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
-
-/**
- * @summary Yangi do'kon va administratorni ro'yxatdan o'tkazish
- */
-export const authControllerSignUp = (
-    signUpDto: SignUpDto,
- signal?: AbortSignal
-) => {
-
-
-      return apiMutator<AuthControllerSignUp201>(
-      {url: `/api/v1/auth/signup`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: signUpDto, signal
-    },
-      );
-    }
-
-
-
-
-export const getAuthControllerSignUpQueryKey = (signUpDto?: SignUpDto,) => {
-    return [
-    'POST', `/api/v1/auth/signup`, signUpDto
-    ] as const;
-    }
-
-
-export const getAuthControllerSignUpQueryOptions = <TData = Awaited<ReturnType<typeof authControllerSignUp>>, TError = AuthControllerSignUp400 | AuthControllerSignUp409>(signUpDto: SignUpDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignUp>>, TError, TData>>, }
-) => {
-
-const {query: queryOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getAuthControllerSignUpQueryKey(signUpDto);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof authControllerSignUp>>> = ({ signal }) => authControllerSignUp(signUpDto, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof authControllerSignUp>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type AuthControllerSignUpQueryResult = NonNullable<Awaited<ReturnType<typeof authControllerSignUp>>>
-export type AuthControllerSignUpQueryError = AuthControllerSignUp400 | AuthControllerSignUp409
-
-
-export function useAuthControllerSignUp<TData = Awaited<ReturnType<typeof authControllerSignUp>>, TError = AuthControllerSignUp400 | AuthControllerSignUp409>(
- signUpDto: SignUpDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignUp>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof authControllerSignUp>>,
-          TError,
-          Awaited<ReturnType<typeof authControllerSignUp>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAuthControllerSignUp<TData = Awaited<ReturnType<typeof authControllerSignUp>>, TError = AuthControllerSignUp400 | AuthControllerSignUp409>(
- signUpDto: SignUpDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignUp>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof authControllerSignUp>>,
-          TError,
-          Awaited<ReturnType<typeof authControllerSignUp>>
-        > , 'initialData'
-      >, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAuthControllerSignUp<TData = Awaited<ReturnType<typeof authControllerSignUp>>, TError = AuthControllerSignUp400 | AuthControllerSignUp409>(
- signUpDto: SignUpDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignUp>>, TError, TData>>, }
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary Yangi do'kon va administratorni ro'yxatdan o'tkazish
- */
-
-export function useAuthControllerSignUp<TData = Awaited<ReturnType<typeof authControllerSignUp>>, TError = AuthControllerSignUp400 | AuthControllerSignUp409>(
- signUpDto: SignUpDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerSignUp>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getAuthControllerSignUpQueryOptions(signUpDto,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
 
 /**
  * @summary Tizimga kirish (OTP yuboriladi)
@@ -478,6 +386,73 @@ export function useAuthControllerResendOtp<TData = Awaited<ReturnType<typeof aut
 
 
 /**
+ * Ilova bu yerni qisqa oraliqda so'rab turadi. Javob token mavjudligini oshkor qilmaydi: noto'g'ri yoki eskirgan tokenda ham `linked: false`.
+ * @summary Telegram hisobi ulandimi — sign-in oqimida kutish uchun
+ */
+export const authControllerTelegramLinkStatus = (
+    params: AuthControllerTelegramLinkStatusParams,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<AuthControllerTelegramLinkStatus200>(
+      {url: `/api/v1/auth/telegram-link-status`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+
+
+
+
+export const getAuthControllerTelegramLinkStatusMutationKey = () => ['authControllerTelegramLinkStatus'] as const;
+
+export const getAuthControllerTelegramLinkStatusMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerTelegramLinkStatus>>, TError,AuthControllerTelegramLinkStatusMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof authControllerTelegramLinkStatus>>, TError,AuthControllerTelegramLinkStatusMutationVariables, TContext> => {
+
+const mutationKey = getAuthControllerTelegramLinkStatusMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof authControllerTelegramLinkStatus>>, AuthControllerTelegramLinkStatusMutationVariables> = (props) => {
+          const {params} = props ?? {};
+
+          return  authControllerTelegramLinkStatus(params,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AuthControllerTelegramLinkStatusMutationResult = NonNullable<Awaited<ReturnType<typeof authControllerTelegramLinkStatus>>>
+
+    export type AuthControllerTelegramLinkStatusMutationError = unknown
+    export type AuthControllerTelegramLinkStatusMutationVariables = {params: AuthControllerTelegramLinkStatusParams}
+
+    /**
+ * @summary Telegram hisobi ulandimi — sign-in oqimida kutish uchun
+ */
+export const useAuthControllerTelegramLinkStatus = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerTelegramLinkStatus>>, TError,AuthControllerTelegramLinkStatusMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof authControllerTelegramLinkStatus>>,
+        TError,
+        AuthControllerTelegramLinkStatusMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAuthControllerTelegramLinkStatusMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Parolni tiklash uchun OTP so'rash (javob raqam mavjudligini oshkor qilmaydi)
  */
 export const authControllerForgotPassword = (

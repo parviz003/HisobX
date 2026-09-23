@@ -2,8 +2,8 @@
  * Ruxsatlar matritsasi — topshiriqning 1-bo'limidagi jadvalning YAGONA manbai.
  * UI shu yerga tayanadi; asosiy himoya baribir backend'da.
  *
- * TODO(backend): `MANAGER` roli backend'da hali yo'q (Swagger'da role enum =
- * ADMIN | SELLER). Kontrakt yangilangach, orval tiplari bilan solishtirib chiqiladi.
+ * Backend ham aynan shu matritsani guard va servislarida amalga oshiradi
+ * (`MANAGER` roli kontraktda mavjud).
  */
 export const ROLES = ['SUPERADMIN', 'MANAGER', 'ADMIN', 'SELLER'] as const;
 export type Role = (typeof ROLES)[number];

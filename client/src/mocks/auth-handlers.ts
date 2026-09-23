@@ -52,6 +52,20 @@ function otpPayload() {
 /** Mock sessiya holati (faqat brauzer xotirasida). */
 const session = { phone: null as string | null, signedIn: false, linkLinked: false };
 
+/** Telegram ulanish mock'i: 3-so'rovdan keyin "ulandi" deb javob beradi. */
+let linkPolls = 0;
+const telegramLinkHandler = http.get(`${BASE}/auth/telegram-link-status`, () => {
+  linkPolls += 1;
+  if (linkPolls < 3) return ok({ linked: false });
+  session.linkLinked = true;
+  linkPolls = 0;
+  return ok({
+    linked: true,
+    expiresAt: iso(60_000),
+    resendAvailableAt: iso(60_000),
+  });
+});
+
 export const authHandlers = [
   http.post(`${BASE}/auth/signin`, async ({ request }) => {
     const body = (await request.json()) as { phone?: string; password?: string };
@@ -137,18 +151,7 @@ export const authHandlers = [
   ),
 
   http.delete(`${BASE}/device/:id`, () => ok({ success: true })),
-];
 
-/** Telegram ulanish mock'i: 3-so'rovdan keyin "ulandi" deb javob beradi. */
-let linkPolls = 0;
-export const telegramLinkHandler = http.get(`${BASE}/auth/telegram-link-status`, () => {
-  linkPolls += 1;
-  if (linkPolls < 3) return ok({ linked: false });
-  session.linkLinked = true;
-  linkPolls = 0;
-  return ok({
-    linked: true,
-    expiresAt: iso(60_000),
-    resendAvailableAt: iso(60_000),
-  });
-});
+  // Backendsiz sinashda ulanish oqimi ham to'liq ishlashi uchun
+  telegramLinkHandler,
+];

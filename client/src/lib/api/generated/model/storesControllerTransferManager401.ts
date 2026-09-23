@@ -32,7 +32,10 @@
  * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
+import type { ErrorResponseDto } from './errorResponseDto';
+import type { StoresControllerTransferManager401Code } from './storesControllerTransferManager401Code';
 
-export type AuthControllerSignUp400Data = {
-  fields?: string[];
+export type StoresControllerTransferManager401 = ErrorResponseDto & {
+  statusCode?: number;
+  code?: StoresControllerTransferManager401Code;
 };

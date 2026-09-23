@@ -7,7 +7,6 @@ interface ImportMetaEnv {
   readonly VITE_APP_NAME: string;
   readonly VITE_USE_MOCKS: string;
   readonly VITE_MOCK_AUTH: string;
-  readonly VITE_TELEGRAM_BOT_URL: string;
 }
 
 interface ImportMeta {

@@ -188,31 +188,32 @@ Ro'yxatdan tashqari kutubxona qo'shilmaydi.
 Auth, device, users, stores, categories, products, inventory, customers, sales, debts,
 cash, expenses, reports (daily/monthly), telegram.
 
-**Swagger'da `POST /auth/signup` bor — ISHLATILMAYDI.**
+**`POST /auth/signup` Blok B da butunlay olib tashlandi — kontraktda ham yo'q.**
 
 ### 5.2. Hali yo'q, lekin kelishilgan (`TODO(backend)` + MSW mock)
 
 `VITE_USE_MOCKS=true` bo'lganda faqat shu yo'llar mock'dan, qolgani haqiqiy backend'dan
 (`onUnhandledRequest: 'bypass'`). Handlerlar — `src/mocks/handlers.ts`.
 
-1. **MANAGER roli** — `role` enum'iga qo'shiladi; `/stores/onboard` MANAGER yaratadi;
-   MANAGER → ADMIN va SELLER, ADMIN → faqat SELLER.
-2. **Signup olib tashlanadi.**
-3. **Telegram OTP:** `/auth/signin` javobi `{telegramLinked:true, expiresAt, resendAvailableAt}`
-   yoki `{telegramLinked:false, linkToken, botUrl, linkExpiresAt}`.
-   `GET /auth/telegram-link-status?token=` → `{linked, expiresAt?, resendAvailableAt?}`
-   (2 soniyada bir, maks 10 daqiqa).
-   `/auth/forgot-password` javobi raqam mavjudligini oshkor qilmaydi.
-4. **Kasr miqdor** — `kg`/`litr` uchun 3 xonagacha.
+**Blok B da BAJARILDI (mock'i olib tashlandi):**
+
+1. ~~MANAGER roli~~ — kontraktda bor; `/stores/onboard` MANAGER yaratadi,
+   `PATCH /stores/:id/manager` menejerlikni o'tkazadi.
+2. ~~Signup olib tashlanadi~~ — `POST /auth/signup` endi umuman yo'q.
+3. ~~Telegram OTP~~ — `/auth/signin` ikki variantda javob beradi,
+   `GET /auth/telegram-link-status?token=` ishlaydi.
+6. ~~Savdoni bekor qilish~~ — faqat MANAGER va ADMIN.
+
+**Hali mock'da:**
+
+4. **Kasr miqdor** — `kg`/`litr` uchun 3 xonagacha (Blok C).
 5. **Kassa tuzatish** — qo'lda faqat `OPENING` va `ADJUSTMENT`; ADJUSTMENT'da `amount` musbat
-   yoki manfiy, `note` majburiy; javobda `user.fullName`.
-6. **Savdoni bekor qilish** — faqat MANAGER va ADMIN.
-7. **Mijoz Telegram:** `POST /customers/:id/telegram-link` → `{linkToken, botUrl, expiresAt}`;
-   `telegramLinked: boolean`; `POST /customers/:id/remind` (kuniga 1 marta, aks holda 429).
-8. **Eslatmalar jadvali:** `GET/PATCH /stores/me/reminder-settings` →
-   `{enabled, daysBefore[], onDueDate, overdueEveryDays}`.
+   yoki manfiy, `note` majburiy; javobda `user.fullName` (Blok E).
+7. **Mijoz Telegram:** `POST /customers/:id/telegram-link`; `telegramLinked: boolean`;
+   `POST /customers/:id/remind` (kuniga 1 marta, aks holda 429) — Blok D.
+8. **Eslatmalar jadvali:** `GET/PATCH /stores/me/reminder-settings` (Blok E).
 9. **Dashboard:** `GET /reports/dashboard`, `/reports/sales-chart?days=`,
-   `/reports/top-products?days=&limit=`, `/reports/seller-today`.
+   `/reports/top-products?days=&limit=`, `/reports/seller-today` (Blok E).
 10. **Kutishga qo'yilgan savdolar** — faqat lokal (localStorage), backend kerak emas.
 
 ### Kontrakt holati (Blok A dan keyin)
@@ -227,7 +228,11 @@ cash, expenses, reports (daily/monthly), telegram.
 - **Pul va miqdor `number`** — backend `DecimalSerializerInterceptor` orqali o'giradi.
   Frontend tarafda yagona normallashtirish — `toAmount()` (`src/lib/format.ts`).
   Kodning boshqa joyida `Number()` yozilmaydi.
-- `role` enum'ida `MANAGER` hali yo'q (faqat `ADMIN`, `SELLER`) — Blok B.
+- **`MANAGER` roli kontraktda bor.** Rollar: SUPERADMIN, MANAGER, ADMIN, SELLER.
+- **OTP faqat Telegram orqali.** Ulanmagan hisobda `/auth/signin` kod emas,
+  `{telegramLinked:false, linkToken, botUrl, linkExpiresAt}` qaytaradi.
+- **Qurilma javobi to'liq:** `browser`, `os`, `deviceType`, `ip`, `lastActiveAt`,
+  `isCurrent`, `canRemoveAt` — "Joriy qurilma" belgisi endi ko'rsatiladi.
 
 ### Backend'dan kerak (aniqlangan bo'shliqlar)
 
@@ -236,24 +241,6 @@ cash, expenses, reports (daily/monthly), telegram.
 - `/inventory/stock` da saralash va "kam qolgan" filtri yo'q.
 - `/inventory/transactions` da **sana oralig'i filtri yo'q** (`startDate`/`endDate`) — Blok C-9 talab qiladi.
 - `CreateProductDto` da `isActive` yo'q — mahsulotni faol/nofaol qilib bo'lmaydi.
-
-### Haqiqiy javob shakllari (2-bosqichda kuzatilgan)
-
-Swagger'da hujjatlashtirilmagani uchun quyidagilar ishlayotgan backend javoblaridan olingan.
-Kontrakt to'ldirilgach orval tiplari bilan solishtirib chiqiladi.
-
-- `POST /auth/signin` → `{ phone, message, code, expiresAt, resendAvailableAt }`.
-  `telegramLinked` maydoni **yo'q** — kod uning yo'qligini "ulangan" deb qabul qiladi.
-- `POST /auth/confirm` → `{ userId, deviceId, device, role, storeId, createdAt }`,
-  cookie'lar (`accessToken`, `refreshToken`) `HttpOnly` sifatida o'rnatiladi.
-- `GET /users/me` → `{ id, fullName, name, phone, role, status, isActive, imageUrl,
-  storeId, store, createdAt, updatedAt }`. **`image` emas, `imageUrl`.**
-  `telegramLinked` **yo'q** (TODO(backend) 5.2-3).
-- `GET /device` → `[{ deviceId, device, createdAt }]`. **`id` emas, `deviceId`.**
-  `lastActiveAt`, `ip` va `isCurrent` **yo'q** — "Joriy qurilma" belgisini ko'rsatib
-  bo'lmaydi (TODO(backend)).
-- **429:** `Retry-After` header va `{ statusCode: 429, code: 'TOO_MANY_REQUESTS',
-  message, details: { retryAfter } }`. Sign-in uchun OTP qayta yuborish oynasi ~60 soniya.
 
 ### Mock rejimlari
 

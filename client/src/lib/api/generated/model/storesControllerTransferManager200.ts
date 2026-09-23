@@ -32,9 +32,9 @@
  * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
+import type { TransferManagerResponseDto } from './transferManagerResponseDto';
 
-export interface SignUpResponseDto {
-  message: string;
-  storeId: number;
-  userId: number;
-}
+export type StoresControllerTransferManager200 = {
+  statusCode: number;
+  data: TransferManagerResponseDto;
+};

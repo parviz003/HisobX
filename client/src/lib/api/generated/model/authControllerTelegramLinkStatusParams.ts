@@ -33,9 +33,6 @@
  * OpenAPI spec version: 1.0
  */
 
-export interface SignUpDto {
-  storeName: string;
-  fullName: string;
-  phone: string;
-  password: string;
-}
+export type AuthControllerTelegramLinkStatusParams = {
+token: string;
+};

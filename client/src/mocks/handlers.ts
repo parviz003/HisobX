@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { authHandlers, telegramLinkHandler } from './auth-handlers';
+import { authHandlers } from './auth-handlers';
 
 /**
  * Backend'da HALI YO'Q endpoint'lar uchun mock javoblar (topshiriq 5.2).
@@ -22,9 +22,11 @@ function ok<T>(data: T, statusCode = 200) {
 const useAuthMocks = import.meta.env.VITE_MOCK_AUTH === 'true';
 
 export const handlers = [
-  // TODO(backend) 5.2-3: Telegram ulanish holatini tekshirish
-  telegramLinkHandler,
-
+  /*
+   * Telegram ulash oqimi (`/auth/signin`, `/auth/telegram-link-status`) endi
+   * BACKEND'da bor — mock'i olib tashlandi. `VITE_MOCK_AUTH=true` faqat
+   * backendsiz sinash uchun butun kirish oqimini almashtiradi.
+   */
   ...(useAuthMocks ? authHandlers : []),
 
   // TODO(backend) 5.2-7: mijozni Telegramga ulash

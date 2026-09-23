@@ -32,10 +32,11 @@
  * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import type { AuthControllerSignUp409Code } from './authControllerSignUp409Code';
-import type { ErrorResponseDto } from './errorResponseDto';
 
-export type AuthControllerSignUp409 = ErrorResponseDto & {
-  statusCode?: number;
-  code?: AuthControllerSignUp409Code;
-};
+export type StoresControllerTransferManager401Code = typeof StoresControllerTransferManager401Code[keyof typeof StoresControllerTransferManager401Code];
+
+
+export const StoresControllerTransferManager401Code = {
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  SESSION_EXPIRED: 'SESSION_EXPIRED',
+} as const;

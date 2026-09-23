@@ -32,12 +32,8 @@
  * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import type { AuthControllerSignUp400Code } from './authControllerSignUp400Code';
-import type { AuthControllerSignUp400Data } from './authControllerSignUp400Data';
-import type { ErrorResponseDto } from './errorResponseDto';
 
-export type AuthControllerSignUp400 = ErrorResponseDto & {
-  statusCode?: number;
-  code?: AuthControllerSignUp400Code;
-  data?: AuthControllerSignUp400Data;
-};
+export interface TransferManagerDto {
+  /** Yangi menejer bo'ladigan foydalanuvchi IDsi. Shu do'konning xodimi bo'lishi shart. */
+  userId: number;
+}

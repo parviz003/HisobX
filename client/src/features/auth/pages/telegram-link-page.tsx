@@ -26,7 +26,8 @@ export default function TelegramLinkPage() {
   const flow = useAuthFlow();
 
   const token = flow?.linkToken ?? null;
-  const botUrl = flow?.botUrl ?? import.meta.env.VITE_TELEGRAM_BOT_URL ?? '';
+  // Manzilni backend beradi (`/auth/signin` javobidagi `botUrl`) — klientda sozlanmaydi.
+  const botUrl = flow?.botUrl ?? '';
   const secondsLeft = useCountdown(flow?.linkExpiresAt);
   const expired = Boolean(flow?.linkExpiresAt) && secondsLeft === 0;
 

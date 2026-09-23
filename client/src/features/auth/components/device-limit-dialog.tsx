@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { toApiError } from '@/lib/api/errors';
+import { deviceRemovalMessage } from '../api/device-limit';
 import { Button } from '@/components/ui/button';
 import { ResponsiveDialog } from '@/components/common/responsive-dialog';
 import { ErrorState } from '@/components/common/error-state';
@@ -52,6 +54,10 @@ export function DeviceLimitDialog({
       toast.success(t('auth:deviceLimit.removed'));
       await queryClient.invalidateQueries({ queryKey: authKeys.devices() });
       onFreed();
+    },
+    onError: (error) => {
+      const message = deviceRemovalMessage(toApiError(error));
+      toast.error(t(message.key, message.params));
     },
     onSettled: () => setRemovingId(null),
   });

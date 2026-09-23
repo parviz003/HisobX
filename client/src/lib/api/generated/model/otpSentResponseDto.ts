@@ -34,6 +34,8 @@
  */
 
 export interface OtpSentResponseDto {
+  /** Hisob Telegram botga ulangan — kod botga yuborildi. `false` bo'lsa javob `TelegramLinkResponseDto` shaklida keladi. */
+  telegramLinked: boolean;
   phone: string;
   message: string;
   /** Faqat development muhitida qaytariladi */

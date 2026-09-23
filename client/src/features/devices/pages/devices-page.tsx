@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
+import { toApiError } from '@/lib/api/errors';
+import { deviceRemovalMessage } from '@/features/auth/api/device-limit';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -29,6 +31,10 @@ export default function DevicesPage() {
     onSuccess: async () => {
       toast.success(t('auth:deviceLimit.removed'));
       await queryClient.invalidateQueries({ queryKey: authKeys.devices() });
+    },
+    onError: (error) => {
+      const message = deviceRemovalMessage(toApiError(error));
+      toast.error(t(message.key, message.params));
     },
     onSettled: () => setPendingId(null),
   });

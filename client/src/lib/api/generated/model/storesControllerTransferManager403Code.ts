@@ -33,9 +33,9 @@
  * OpenAPI spec version: 1.0
  */
 
-export type AuthControllerSignUp409Code = typeof AuthControllerSignUp409Code[keyof typeof AuthControllerSignUp409Code];
+export type StoresControllerTransferManager403Code = typeof StoresControllerTransferManager403Code[keyof typeof StoresControllerTransferManager403Code];
 
 
-export const AuthControllerSignUp409Code = {
-  PHONE_TAKEN: 'PHONE_TAKEN',
+export const StoresControllerTransferManager403Code = {
+  FORBIDDEN: 'FORBIDDEN',
 } as const;

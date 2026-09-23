@@ -37,6 +37,6 @@ import type { UserResponseDto } from './userResponseDto';
 
 export interface OnboardStoreResponseDto {
   store: StoreResponseDto;
-  /** Yaratilgan do'kon rahbari (maxfiy maydonlarsiz) */
-  admin: UserResponseDto;
+  /** Yaratilgan do'kon menejeri (MANAGER, maxfiy maydonlarsiz). Har do'konda aynan bitta MANAGER bo'ladi. */
+  manager: UserResponseDto;
 }

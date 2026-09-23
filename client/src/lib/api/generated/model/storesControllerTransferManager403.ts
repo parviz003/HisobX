@@ -32,13 +32,10 @@
  * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
+import type { ErrorResponseDto } from './errorResponseDto';
+import type { StoresControllerTransferManager403Code } from './storesControllerTransferManager403Code';
 
-export type ConfirmSignInResponseDtoRole = typeof ConfirmSignInResponseDtoRole[keyof typeof ConfirmSignInResponseDtoRole];
-
-
-export const ConfirmSignInResponseDtoRole = {
-  SUPERADMIN: 'SUPERADMIN',
-  MANAGER: 'MANAGER',
-  ADMIN: 'ADMIN',
-  SELLER: 'SELLER',
-} as const;
+export type StoresControllerTransferManager403 = ErrorResponseDto & {
+  statusCode?: number;
+  code?: StoresControllerTransferManager403Code;
+};

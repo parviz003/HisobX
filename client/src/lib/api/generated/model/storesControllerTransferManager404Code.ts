@@ -33,9 +33,9 @@
  * OpenAPI spec version: 1.0
  */
 
-export type AuthControllerSignUp400Code = typeof AuthControllerSignUp400Code[keyof typeof AuthControllerSignUp400Code];
+export type StoresControllerTransferManager404Code = typeof StoresControllerTransferManager404Code[keyof typeof StoresControllerTransferManager404Code];
 
 
-export const AuthControllerSignUp400Code = {
-  VALIDATION_ERROR: 'VALIDATION_ERROR',
+export const StoresControllerTransferManager404Code = {
+  USER_NOT_FOUND: 'USER_NOT_FOUND',
 } as const;

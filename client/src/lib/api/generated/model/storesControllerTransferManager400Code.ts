@@ -33,12 +33,9 @@
  * OpenAPI spec version: 1.0
  */
 
-export type ConfirmSignInResponseDtoRole = typeof ConfirmSignInResponseDtoRole[keyof typeof ConfirmSignInResponseDtoRole];
+export type StoresControllerTransferManager400Code = typeof StoresControllerTransferManager400Code[keyof typeof StoresControllerTransferManager400Code];
 
 
-export const ConfirmSignInResponseDtoRole = {
-  SUPERADMIN: 'SUPERADMIN',
-  MANAGER: 'MANAGER',
-  ADMIN: 'ADMIN',
-  SELLER: 'SELLER',
+export const StoresControllerTransferManager400Code = {
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
 } as const;

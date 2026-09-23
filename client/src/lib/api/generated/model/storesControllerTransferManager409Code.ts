@@ -33,12 +33,9 @@
  * OpenAPI spec version: 1.0
  */
 
-export type ConfirmSignInResponseDtoRole = typeof ConfirmSignInResponseDtoRole[keyof typeof ConfirmSignInResponseDtoRole];
+export type StoresControllerTransferManager409Code = typeof StoresControllerTransferManager409Code[keyof typeof StoresControllerTransferManager409Code];
 
 
-export const ConfirmSignInResponseDtoRole = {
-  SUPERADMIN: 'SUPERADMIN',
-  MANAGER: 'MANAGER',
-  ADMIN: 'ADMIN',
-  SELLER: 'SELLER',
+export const StoresControllerTransferManager409Code = {
+  MANAGER_ALREADY_EXISTS: 'MANAGER_ALREADY_EXISTS',
 } as const;

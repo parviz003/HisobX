@@ -38,6 +38,7 @@ export type UsersControllerFindAllRole = typeof UsersControllerFindAllRole[keyof
 
 export const UsersControllerFindAllRole = {
   SUPERADMIN: 'SUPERADMIN',
+  MANAGER: 'MANAGER',
   ADMIN: 'ADMIN',
   SELLER: 'SELLER',
 } as const;

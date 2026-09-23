@@ -33,12 +33,10 @@
  * OpenAPI spec version: 1.0
  */
 
-export type ConfirmSignInResponseDtoRole = typeof ConfirmSignInResponseDtoRole[keyof typeof ConfirmSignInResponseDtoRole];
-
-
-export const ConfirmSignInResponseDtoRole = {
-  SUPERADMIN: 'SUPERADMIN',
-  MANAGER: 'MANAGER',
-  ADMIN: 'ADMIN',
-  SELLER: 'SELLER',
-} as const;
+export interface TelegramLinkResponseDto {
+  telegramLinked: boolean;
+  phone: string;
+  linkToken: string;
+  botUrl: string;
+  linkExpiresAt: string;
+}

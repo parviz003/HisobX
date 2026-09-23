@@ -80,6 +80,12 @@ import type {
   StoresControllerRemove401,
   StoresControllerRemove403,
   StoresControllerRemove404,
+  StoresControllerTransferManager200,
+  StoresControllerTransferManager400,
+  StoresControllerTransferManager401,
+  StoresControllerTransferManager403,
+  StoresControllerTransferManager404,
+  StoresControllerTransferManager409,
   StoresControllerUpdateById200,
   StoresControllerUpdateById400,
   StoresControllerUpdateById401,
@@ -90,6 +96,7 @@ import type {
   StoresControllerUpdateStore401,
   StoresControllerUpdateStore403,
   StoresControllerUpdateStore404,
+  TransferManagerDto,
   UpdateStoreDto
 } from '../model';
 
@@ -516,6 +523,108 @@ export function useStoresControllerOnboard<TData = Awaited<ReturnType<typeof sto
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getStoresControllerOnboardQueryOptions(onboardStoreDto,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * Yangi meneger MANAGER bo'ladi, eskisi ADMIN — bitta tranzaksiyada. Foydalanuvchi shu do'konning xodimi bo'lishi shart.
+ * @summary Menejerlikni boshqa xodimga o'tkazish (faqat SUPERADMIN)
+ */
+export const storesControllerTransferManager = (
+    id: number,
+    transferManagerDto: TransferManagerDto,
+ signal?: AbortSignal
+) => {
+
+
+      return apiMutator<StoresControllerTransferManager200>(
+      {url: `/api/v1/stores/${id}/manager`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: transferManagerDto, signal
+    },
+      );
+    }
+
+
+
+
+export const getStoresControllerTransferManagerQueryKey = (id: number,
+    transferManagerDto?: TransferManagerDto,) => {
+    return [
+    'PATCH', `/api/v1/stores/${id}/manager`, transferManagerDto
+    ] as const;
+    }
+
+
+export const getStoresControllerTransferManagerQueryOptions = <TData = Awaited<ReturnType<typeof storesControllerTransferManager>>, TError = StoresControllerTransferManager400 | StoresControllerTransferManager401 | StoresControllerTransferManager403 | StoresControllerTransferManager404 | StoresControllerTransferManager409>(id: number,
+    transferManagerDto: TransferManagerDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerTransferManager>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getStoresControllerTransferManagerQueryKey(id,transferManagerDto);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof storesControllerTransferManager>>> = ({ signal }) => storesControllerTransferManager(id,transferManagerDto, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof storesControllerTransferManager>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type StoresControllerTransferManagerQueryResult = NonNullable<Awaited<ReturnType<typeof storesControllerTransferManager>>>
+export type StoresControllerTransferManagerQueryError = StoresControllerTransferManager400 | StoresControllerTransferManager401 | StoresControllerTransferManager403 | StoresControllerTransferManager404 | StoresControllerTransferManager409
+
+
+export function useStoresControllerTransferManager<TData = Awaited<ReturnType<typeof storesControllerTransferManager>>, TError = StoresControllerTransferManager400 | StoresControllerTransferManager401 | StoresControllerTransferManager403 | StoresControllerTransferManager404 | StoresControllerTransferManager409>(
+ id: number,
+    transferManagerDto: TransferManagerDto, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerTransferManager>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof storesControllerTransferManager>>,
+          TError,
+          Awaited<ReturnType<typeof storesControllerTransferManager>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStoresControllerTransferManager<TData = Awaited<ReturnType<typeof storesControllerTransferManager>>, TError = StoresControllerTransferManager400 | StoresControllerTransferManager401 | StoresControllerTransferManager403 | StoresControllerTransferManager404 | StoresControllerTransferManager409>(
+ id: number,
+    transferManagerDto: TransferManagerDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerTransferManager>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof storesControllerTransferManager>>,
+          TError,
+          Awaited<ReturnType<typeof storesControllerTransferManager>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStoresControllerTransferManager<TData = Awaited<ReturnType<typeof storesControllerTransferManager>>, TError = StoresControllerTransferManager400 | StoresControllerTransferManager401 | StoresControllerTransferManager403 | StoresControllerTransferManager404 | StoresControllerTransferManager409>(
+ id: number,
+    transferManagerDto: TransferManagerDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerTransferManager>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Menejerlikni boshqa xodimga o'tkazish (faqat SUPERADMIN)
+ */
+
+export function useStoresControllerTransferManager<TData = Awaited<ReturnType<typeof storesControllerTransferManager>>, TError = StoresControllerTransferManager400 | StoresControllerTransferManager401 | StoresControllerTransferManager403 | StoresControllerTransferManager404 | StoresControllerTransferManager409>(
+ id: number,
+    transferManagerDto: TransferManagerDto, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof storesControllerTransferManager>>, TError, TData>>, }
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getStoresControllerTransferManagerQueryOptions(id,transferManagerDto,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

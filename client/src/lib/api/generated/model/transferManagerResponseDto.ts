@@ -32,9 +32,14 @@
  * Limit to'lganda `DEVICE_LIMIT_REACHED` va `data.devices` ro'yxati qaytadi.
  * OpenAPI spec version: 1.0
  */
-import type { SignUpResponseDto } from './signUpResponseDto';
+import type { UserResponseDto } from './userResponseDto';
 
-export type AuthControllerSignUp201 = {
-  statusCode: number;
-  data: SignUpResponseDto;
-};
+export interface TransferManagerResponseDto {
+  /** Yangi meneger */
+  manager: UserResponseDto;
+  /**
+     * Avvalgi meneger IDsi (endi ADMIN). Meneger bo'lmagan bo'lsa null.
+     * @nullable
+     */
+  previousManagerId: number | null;
+}

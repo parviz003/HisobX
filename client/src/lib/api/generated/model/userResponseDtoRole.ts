@@ -38,6 +38,7 @@ export type UserResponseDtoRole = typeof UserResponseDtoRole[keyof typeof UserRe
 
 export const UserResponseDtoRole = {
   SUPERADMIN: 'SUPERADMIN',
+  MANAGER: 'MANAGER',
   ADMIN: 'ADMIN',
   SELLER: 'SELLER',
 } as const;

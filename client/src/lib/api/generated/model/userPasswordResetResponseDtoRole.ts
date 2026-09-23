@@ -38,6 +38,7 @@ export type UserPasswordResetResponseDtoRole = typeof UserPasswordResetResponseD
 
 export const UserPasswordResetResponseDtoRole = {
   SUPERADMIN: 'SUPERADMIN',
+  MANAGER: 'MANAGER',
   ADMIN: 'ADMIN',
   SELLER: 'SELLER',
 } as const;

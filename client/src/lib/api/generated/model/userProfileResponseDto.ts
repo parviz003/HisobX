@@ -55,4 +55,6 @@ export interface UserProfileResponseDto {
   updatedAt: string;
   /** @nullable */
   store?: UserStoreDto | null;
+  /** Hisob Telegram botga ulanganmi. Chat IDsi hech qachon qaytarilmaydi. */
+  telegramLinked: boolean;
 }
