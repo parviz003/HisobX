@@ -31,7 +31,7 @@ import {
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
-  @Roles('ADMIN')
+  @Roles('MANAGER', 'ADMIN')
   @Post()
   @ApiOperation({ summary: 'Yangi toifa yaratish' })
   @ApiSuccess(CategoryResponseDto, {
@@ -48,7 +48,7 @@ export class CategoriesController {
     return this.categoriesService.create(storeId, createCategoryDto);
   }
 
-  @Roles('ADMIN', 'SELLER')
+  @Roles('MANAGER', 'ADMIN', 'SELLER')
   @Get()
   @ApiOperation({ summary: "Toifalar ro'yxati (sahifalangan)" })
   @ApiPaginatedSuccess(CategoryResponseDto, { description: 'Toifalar' })
@@ -61,7 +61,7 @@ export class CategoriesController {
     return this.categoriesService.findAll(storeId, query);
   }
 
-  @Roles('ADMIN')
+  @Roles('MANAGER', 'ADMIN')
   @Patch(':id')
   @ApiOperation({ summary: 'Toifani tahrirlash' })
   @ApiParam({ name: 'id', type: Number, example: 3 })
@@ -78,7 +78,7 @@ export class CategoriesController {
     return this.categoriesService.update(storeId, id, updateCategoryDto);
   }
 
-  @Roles('ADMIN')
+  @Roles('MANAGER', 'ADMIN')
   @Delete(':id')
   @ApiOperation({ summary: "Toifani o'chirish" })
   @ApiParam({ name: 'id', type: Number, example: 3 })

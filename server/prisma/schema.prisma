@@ -8,6 +8,7 @@ datasource db {
 
 enum Role {
   SUPERADMIN
+  MANAGER
   ADMIN
   SELLER
 }
@@ -89,6 +90,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// Telegram hisobi: OTP kodlar shu chatga yuboriladi.
+  telegramChatId   String?   @unique
+  telegramLinkedAt DateTime?
+
   storeId Int?
   store   Store? @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
@@ -99,6 +104,10 @@ model User {
 
   @@index([storeId])
 }
+
+/// Har do'konda ko'pi bilan BITTA MANAGER bo'lishi qisman unikal indeks bilan
+/// kafolatlanadi (migratsiyadagi `User_storeId_manager_key`). Prisma qisman
+/// indeksni e'lon qila olmaydi, shuning uchun u SQL migratsiyasida turadi.
 
 model Devices {
   deviceId               Int       @id @default(autoincrement())

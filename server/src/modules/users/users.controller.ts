@@ -144,7 +144,7 @@ export class UsersController {
 
   /* ----------------------------- XODIMLAR BOSHQARUVI ----------------------------- */
 
-  @Roles(Role.SUPERADMIN, Role.ADMIN)
+  @Roles(Role.SUPERADMIN, Role.MANAGER, Role.ADMIN)
   @Get()
   @ApiOperation({
     summary:
@@ -157,7 +157,7 @@ export class UsersController {
     return this.usersService.findAll(actor, query);
   }
 
-  @Roles(Role.SUPERADMIN, Role.ADMIN)
+  @Roles(Role.SUPERADMIN, Role.MANAGER, Role.ADMIN)
   @Post()
   @ApiOperation({
     summary:
@@ -181,7 +181,7 @@ export class UsersController {
     return this.usersService.create(actor, dto);
   }
 
-  @Roles(Role.SUPERADMIN, Role.ADMIN)
+  @Roles(Role.SUPERADMIN, Role.MANAGER, Role.ADMIN)
   @Get(':id')
   @ApiOperation({ summary: "Xodim ma'lumoti" })
   @ApiParam({ name: 'id', type: Number, example: 3 })
@@ -195,7 +195,7 @@ export class UsersController {
     return this.usersService.findOne(actor, id);
   }
 
-  @Roles(Role.SUPERADMIN, Role.ADMIN)
+  @Roles(Role.SUPERADMIN, Role.MANAGER, Role.ADMIN)
   @Patch(':id')
   @ApiOperation({ summary: 'Xodimni tahrirlash / bloklash (status)' })
   @ApiParam({ name: 'id', type: Number, example: 3 })
@@ -212,7 +212,7 @@ export class UsersController {
     return this.usersService.update(actor, id, dto);
   }
 
-  @Roles(Role.SUPERADMIN, Role.ADMIN)
+  @Roles(Role.SUPERADMIN, Role.MANAGER, Role.ADMIN)
   @Patch(':id/password')
   @ApiOperation({
     summary: 'Xodim parolini tiklash (barcha sessiyalari bekor qilinadi)',

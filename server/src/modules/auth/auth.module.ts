@@ -4,9 +4,10 @@ import { AuthController } from './auth.controller';
 import { DeviceService } from './device.service';
 import { DeviceController } from './device.controller';
 import { OtpModule } from '../otp/otp.module';
+import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
-  imports: [OtpModule],
+  imports: [OtpModule, TelegramModule],
   controllers: [AuthController, DeviceController],
   providers: [AuthService, DeviceService],
   exports: [AuthService, DeviceService],

@@ -37,6 +37,9 @@ process.env.OTP_MAX_ATTEMPTS = '3';
 process.env.DEVICE_LIMIT_PER_USER = '3';
 process.env.DEVICE_REMOVAL_MIN_AGE_HOURS = '24';
 
-// Telegramga xabar yuborilmasin
+// Telegramga haqiqiy so'rov ketmasin va bot polling'i ishga tushmasin
 process.env.BOT_TOKEN = '';
+process.env.TELEGRAM_BOT_TOKEN = '';
+process.env.TELEGRAM_BOT_USERNAME = 'hisobx_test_bot';
+process.env.TELEGRAM_MODE = 'off';
 process.env.CHAT_ID = '';

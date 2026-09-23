@@ -15,6 +15,7 @@ import { StoresService } from './stores.service';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { OnboardStoreDto } from './dto/onboard-store.dto';
+import { TransferManagerDto } from './dto/transfer-manager.dto';
 import { QueryStoreDto } from './dto/query-store.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -28,6 +29,7 @@ import {
 } from '../../common/swagger';
 import {
   OnboardStoreResponseDto,
+  TransferManagerResponseDto,
   StoreListItemResponseDto,
   StoreResponseDto,
 } from './dto/store-response.dto';
@@ -37,7 +39,7 @@ import {
 export class StoresController {
   constructor(private readonly storesService: StoresService) {}
 
-  @Roles(Role.ADMIN, Role.SELLER)
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SELLER)
   @Get('me')
   @ApiOperation({ summary: "Joriy do'kon ma'lumotlarini olish" })
   @ApiSuccess(StoreResponseDto, { description: "Do'kon ma'lumotlari" })
@@ -47,7 +49,7 @@ export class StoresController {
     return this.storesService.getStore(storeId);
   }
 
-  @Roles(Role.ADMIN)
+  @Roles(Role.MANAGER)
   @Patch('me')
   @ApiOperation({ summary: "Do'kon ma'lumotlarini tahrirlash" })
   @ApiSuccess(StoreResponseDto, { description: "Do'kon yangilandi" })
@@ -106,6 +108,27 @@ export class StoresController {
   @ApiAuthErrors()
   onboard(@Body() dto: OnboardStoreDto) {
     return this.storesService.onboard(dto);
+  }
+
+  @Roles(Role.SUPERADMIN)
+  @Patch(':id/manager')
+  @ApiOperation({
+    summary: "Menejerlikni boshqa xodimga o'tkazish (faqat SUPERADMIN)",
+    description:
+      "Yangi meneger MANAGER bo'ladi, eskisi ADMIN — bitta tranzaksiyada. " +
+      "Foydalanuvchi shu do'konning xodimi bo'lishi shart.",
+  })
+  @ApiParam({ name: 'id', type: Number, example: 1 })
+  @ApiSuccess(TransferManagerResponseDto, { description: 'Yangi meneger' })
+  @ApiValidationError()
+  @ApiError(404, 'USER_NOT_FOUND', "Bu do'konda bunday xodim yo'q")
+  @ApiError(409, 'MANAGER_ALREADY_EXISTS', 'Bu xodim allaqachon meneger')
+  @ApiAuthErrors()
+  transferManager(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: TransferManagerDto,
+  ) {
+    return this.storesService.transferManager(id, dto.userId);
   }
 
   @Roles(Role.SUPERADMIN)

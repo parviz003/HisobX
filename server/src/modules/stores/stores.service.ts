@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -11,6 +12,8 @@ import { OnboardStoreDto } from './dto/onboard-store.dto';
 import { QueryStoreDto } from './dto/query-store.dto';
 import { Crypt } from '../../infrastructure/lib/Crypt';
 import { successRes } from '../../common/helper/success-response';
+import { BusinessException } from '../../common/errors/business.exception';
+import { ErrorCode } from '../../common/errors/error-codes';
 import { pageParams, paginate } from '../../common/helper/paginate';
 
 /** Admin javobida parol kabi maxfiy maydonlar qaytmaydi */
@@ -104,21 +107,77 @@ export class StoresService {
         },
       });
 
-      const admin = await tx.user.create({
+      // Do'kon rahbari MANAGER rolida yaratiladi — har do'konda aynan bitta.
+      const manager = await tx.user.create({
         data: {
           fullName: dto.admin.fullName,
           phone: dto.admin.phone,
           password: hashedPassword,
-          role: Role.ADMIN,
+          role: Role.MANAGER,
           storeId: store.id,
         },
         select: adminSelect,
       });
 
-      return { store, admin };
+      return { store, manager };
     });
 
     return successRes(result, 201);
+  }
+
+  /**
+   * Menejerlikni boshqa xodimga o'tkazish (faqat SUPERADMIN).
+   *
+   * Eski meneger ADMIN bo'ladi, yangisi MANAGER — ikkalasi ham BITTA
+   * tranzaksiyada, aks holda do'kon menejersiz yoki ikkita menejerli qolardi.
+   * Baza darajasida ham kafolat bor: `User_storeId_manager_key` qisman indeksi.
+   */
+  async transferManager(storeId: number, userId: number) {
+    await this.getStore(storeId);
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const next = await tx.user.findUnique({ where: { id: userId } });
+      if (!next || next.storeId !== storeId) {
+        throw BusinessException.notFound(
+          ErrorCode.USER_NOT_FOUND,
+          "Bu do'konda bunday xodim topilmadi",
+        );
+      }
+      if (next.role === Role.MANAGER) {
+        throw BusinessException.conflict(
+          ErrorCode.MANAGER_ALREADY_EXISTS,
+          'Bu xodim allaqachon meneger',
+        );
+      }
+      if (next.role === Role.SUPERADMIN) {
+        throw new ForbiddenException('SUPERADMIN meneger bo‘la olmaydi');
+      }
+
+      const current = await tx.user.findFirst({
+        where: { storeId, role: Role.MANAGER },
+      });
+
+      // Avval eskisini tushiramiz — qisman unikal indeks ikkita MANAGER'ga yo'l qo'ymaydi.
+      if (current) {
+        await tx.user.update({
+          where: { id: current.id },
+          data: { role: Role.ADMIN },
+        });
+      }
+
+      const manager = await tx.user.update({
+        where: { id: userId },
+        data: { role: Role.MANAGER },
+        select: adminSelect,
+      });
+
+      return {
+        manager,
+        previousManagerId: current?.id ?? null,
+      };
+    });
+
+    return successRes(result);
   }
 
   async remove(storeId: number) {

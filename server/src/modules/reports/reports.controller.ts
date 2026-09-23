@@ -15,7 +15,7 @@ import {
 } from './dto/report-response.dto';
 
 @ApiTags('Reports')
-@Roles(Role.ADMIN)
+@Roles(Role.MANAGER, Role.ADMIN)
 @Controller('reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}

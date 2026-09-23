@@ -22,6 +22,7 @@ import {
 } from './dto/product-response.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Role } from '@prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ImageValidationPipe } from '../../common/pipes/image-validation.pipe';
 import {
@@ -73,7 +74,7 @@ const PRODUCT_BODY = (required: string[]) => ({
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  @Roles('ADMIN')
+  @Roles('MANAGER', 'ADMIN')
   @Post()
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
@@ -94,7 +95,7 @@ export class ProductsController {
     return this.productsService.create(storeId, createProductDto, image);
   }
 
-  @Roles('ADMIN', 'SELLER')
+  @Roles('MANAGER', 'ADMIN', 'SELLER')
   @Get()
   @ApiOperation({ summary: 'Barcha mahsulotlarni qidirish va sahifalash' })
   @ApiPaginatedSuccess(ProductListItemDto, {
@@ -104,12 +105,13 @@ export class ProductsController {
   @ApiAuthErrors()
   findAll(
     @CurrentUser('storeId') storeId: number,
+    @CurrentUser('role') role: Role,
     @Query() query: QueryProductDto,
   ) {
-    return this.productsService.findAll(storeId, query);
+    return this.productsService.findAll(storeId, role, query);
   }
 
-  @Roles('ADMIN', 'SELLER')
+  @Roles('MANAGER', 'ADMIN', 'SELLER')
   @Get(':id')
   @ApiOperation({ summary: 'Mahsulot tafsilotlari' })
   @ApiParam({ name: 'id', type: Number, example: 7 })
@@ -118,12 +120,13 @@ export class ProductsController {
   @ApiAuthErrors()
   findOne(
     @CurrentUser('storeId') storeId: number,
+    @CurrentUser('role') role: Role,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    return this.productsService.findOne(storeId, id);
+    return this.productsService.findOne(storeId, role, id);
   }
 
-  @Roles('ADMIN')
+  @Roles('MANAGER', 'ADMIN')
   @Patch(':id')
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
@@ -144,7 +147,7 @@ export class ProductsController {
     return this.productsService.update(storeId, id, updateProductDto, image);
   }
 
-  @Roles('ADMIN')
+  @Roles('MANAGER', 'ADMIN')
   @Delete(':id')
   @ApiOperation({
     summary: "Mahsulotni o'chirish (soft delete va rasmni tozalash)",

@@ -34,7 +34,7 @@ export class InventoryController {
   @ApiValidationError()
   @ApiError(404, 'NOT_FOUND', 'Mahsulot topilmadi')
   @ApiAuthErrors()
-  @Roles(Role.ADMIN)
+  @Roles(Role.MANAGER, Role.ADMIN)
   purchase(
     @CurrentUser('storeId') storeId: number,
     @Body() dto: CreateInventoryDto,
@@ -52,7 +52,7 @@ export class InventoryController {
   @ApiError(400, 'BAD_REQUEST', "Yetarli zaxira yo'q")
   @ApiError(404, 'NOT_FOUND', 'Mahsulot topilmadi')
   @ApiAuthErrors()
-  @Roles(Role.ADMIN)
+  @Roles(Role.MANAGER, Role.ADMIN)
   writeOff(
     @CurrentUser('storeId') storeId: number,
     @Body() dto: CreateInventoryDto,
@@ -69,7 +69,7 @@ export class InventoryController {
   @ApiValidationError()
   @ApiError(404, 'NOT_FOUND', 'Mahsulot topilmadi')
   @ApiAuthErrors()
-  @Roles(Role.ADMIN)
+  @Roles(Role.MANAGER, Role.ADMIN)
   openingStock(
     @CurrentUser('storeId') storeId: number,
     @Body() dto: CreateInventoryDto,
@@ -84,7 +84,7 @@ export class InventoryController {
   })
   @ApiValidationError()
   @ApiAuthErrors()
-  @Roles(Role.ADMIN, Role.SELLER)
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SELLER)
   getTransactions(
     @CurrentUser('storeId') storeId: number,
     @Query() query: QueryInventoryDto,
@@ -99,7 +99,7 @@ export class InventoryController {
   })
   @ApiValidationError()
   @ApiAuthErrors()
-  @Roles(Role.ADMIN, Role.SELLER)
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SELLER)
   getStockLevels(
     @CurrentUser('storeId') storeId: number,
     @Query() query: PaginationQueryDto,

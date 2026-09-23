@@ -35,7 +35,7 @@ import {
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
-  @Roles(Role.ADMIN, Role.SELLER)
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SELLER)
   @Post()
   @ApiOperation({ summary: "Yangi mijoz qo'shish" })
   @ApiSuccess(CustomerResponseDto, {
@@ -51,7 +51,7 @@ export class CustomersController {
     return this.customersService.create(storeId, createCustomerDto);
   }
 
-  @Roles(Role.ADMIN, Role.SELLER)
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SELLER)
   @Get()
   @ApiOperation({ summary: "Mijozlar ro'yxati (qidiruv va sahifalash bilan)" })
   @ApiPaginatedSuccess(CustomerResponseDto, { description: 'Mijozlar' })
@@ -61,7 +61,7 @@ export class CustomersController {
     return this.customersService.findAll(storeId, query);
   }
 
-  @Roles(Role.ADMIN, Role.SELLER)
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SELLER)
   @Get(':id')
   @ApiOperation({
     summary: 'Mijoz tafsilotlari',
@@ -75,7 +75,7 @@ export class CustomersController {
     return this.customersService.findOne(storeId, id);
   }
 
-  @Roles(Role.ADMIN, Role.SELLER)
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SELLER)
   @Patch(':id')
   @ApiOperation({ summary: 'Mijozni tahrirlash' })
   @ApiParam({ name: 'id', type: Number, example: 4 })
@@ -91,7 +91,7 @@ export class CustomersController {
     return this.customersService.update(storeId, id, updateCustomerDto);
   }
 
-  @Roles(Role.ADMIN)
+  @Roles(Role.MANAGER, Role.ADMIN)
   @Delete(':id')
   @ApiOperation({ summary: "Mijozni o'chirish (qarzi/savdosi bo'lmasa)" })
   @ApiParam({ name: 'id', type: Number, example: 4 })

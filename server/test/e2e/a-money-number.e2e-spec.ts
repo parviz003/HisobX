@@ -12,7 +12,13 @@ import {
   resetDatabase,
   resetRedis,
 } from '../support/app';
-import { SeededUser, Session, seedStore, seedUser, signIn } from '../support/auth';
+import {
+  SeededUser,
+  Session,
+  seedStore,
+  seedUser,
+  signIn,
+} from '../support/auth';
 
 /**
  * Blok A: pul va miqdor maydonlari JSON'da `number` bo'lib chiqadi.
@@ -22,7 +28,7 @@ import { SeededUser, Session, seedStore, seedUser, signIn } from '../support/aut
  * da, ya'ni bitta markaziy joyda; shu test o'sha joyning barcha modullar uchun
  * ishlayotganini tekshiradi.
  */
-describe('A — Pul va miqdor JSON\'da number (e2e)', () => {
+describe("A — Pul va miqdor JSON'da number (e2e)", () => {
   let ctx: TestContext;
   let storeId: number;
   let admin: SeededUser;
@@ -84,7 +90,9 @@ describe('A — Pul va miqdor JSON\'da number (e2e)', () => {
     }
 
     let checked = 0;
-    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    for (const [key, item] of Object.entries(
+      value as Record<string, unknown>,
+    )) {
       if (NUMERIC_KEYS.includes(key) && item !== null && item !== undefined) {
         // Xato chiqsa qaysi maydon ekani ko'rinib tursin
         expect(`${path}.${key}=${typeof item}`).toBe(`${path}.${key}=number`);

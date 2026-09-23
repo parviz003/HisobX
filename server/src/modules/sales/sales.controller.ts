@@ -16,6 +16,8 @@ import {
   UserId,
 } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { IPayload } from '../../common/interface';
 import { Role } from '@prisma/client';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import {
@@ -36,7 +38,7 @@ import {
 export class SalesController {
   constructor(private readonly salesService: SalesService) {}
 
-  @Roles(Role.ADMIN, Role.SELLER)
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SELLER)
   @Post()
   @ApiOperation({ summary: 'Savdo yaratish (naqd yoki nasiya)' })
   @ApiSuccess(SaleResponseDto, { status: 201, description: 'Savdo yaratildi' })
@@ -55,7 +57,7 @@ export class SalesController {
     return this.salesService.create(storeId, userId, createSaleDto);
   }
 
-  @Roles(Role.ADMIN, Role.SELLER)
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SELLER)
   @Get()
   @ApiOperation({ summary: "Savdolar ro'yxati (filtrlar bilan)" })
   @ApiPaginatedSuccess(SaleListItemDto, {
@@ -63,22 +65,30 @@ export class SalesController {
   })
   @ApiValidationError()
   @ApiAuthErrors()
-  findAll(@StoreId() storeId: number, @Query() query: QuerySaleDto) {
-    return this.salesService.findAll(storeId, query);
+  findAll(
+    @StoreId() storeId: number,
+    @CurrentUser() actor: IPayload,
+    @Query() query: QuerySaleDto,
+  ) {
+    return this.salesService.findAll(storeId, actor, query);
   }
 
-  @Roles(Role.ADMIN, Role.SELLER)
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SELLER)
   @Get(':id')
   @ApiOperation({ summary: 'Savdo tafsilotlari' })
   @ApiParam({ name: 'id', type: Number, example: 9 })
   @ApiSuccess(SaleDetailResponseDto, { description: 'Savdo' })
   @ApiError(404, 'NOT_FOUND', 'Savdo topilmadi')
   @ApiAuthErrors()
-  findOne(@StoreId() storeId: number, @Param('id', ParseIntPipe) id: number) {
-    return this.salesService.findOne(storeId, id);
+  findOne(
+    @StoreId() storeId: number,
+    @CurrentUser() actor: IPayload,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.salesService.findOne(storeId, actor, id);
   }
 
-  @Roles(Role.ADMIN, Role.SELLER)
+  @Roles(Role.MANAGER, Role.ADMIN)
   @Patch(':id/cancel')
   @ApiOperation({
     summary: 'Savdoni bekor qilish (zaxira va kassa qaytariladi)',

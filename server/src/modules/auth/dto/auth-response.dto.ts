@@ -3,6 +3,15 @@ import { Role, Status } from '@prisma/client';
 
 /** `POST /auth/signin`, `POST /auth/resend-otp` */
 export class OtpSentResponseDto {
+  @ApiProperty({
+    type: Boolean,
+    example: true,
+    description:
+      "Hisob Telegram botga ulangan — kod botga yuborildi. `false` bo'lsa " +
+      'javob `TelegramLinkResponseDto` shaklida keladi.',
+  })
+  telegramLinked!: boolean;
+
   @ApiProperty({ type: String, example: '+998901234567' })
   phone!: string;
 
@@ -21,6 +30,46 @@ export class OtpSentResponseDto {
 
   @ApiProperty({ type: String, example: '2026-09-23T09:01:00.000Z' })
   resendAvailableAt!: string;
+}
+
+/**
+ * `POST /auth/signin` — hisob hali Telegramga ULANMAGAN bo'lsa.
+ * Foydalanuvchi `botUrl` ni ochadi, raqamini tasdiqlaydi va kod botga keladi.
+ */
+export class TelegramLinkResponseDto {
+  @ApiProperty({ type: Boolean, example: false })
+  telegramLinked!: boolean;
+
+  @ApiProperty({ type: String, example: '+998901234567' })
+  phone!: string;
+
+  @ApiProperty({ type: String, example: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6' })
+  linkToken!: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'https://t.me/hisobx_bot?start=a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6',
+  })
+  botUrl!: string;
+
+  @ApiProperty({ type: String, example: '2026-09-23T09:10:00.000Z' })
+  linkExpiresAt!: string;
+}
+
+/** `GET /auth/telegram-link-status` */
+export class TelegramLinkStatusResponseDto {
+  @ApiProperty({
+    type: Boolean,
+    example: false,
+    description: "Hisob ulandimi. Ulangan bo'lsa kod ham yuborilgan bo'ladi.",
+  })
+  linked!: boolean;
+
+  @ApiPropertyOptional({ type: String, example: '2026-09-23T09:01:00.000Z' })
+  expiresAt?: string;
+
+  @ApiPropertyOptional({ type: String, example: '2026-09-23T09:01:00.000Z' })
+  resendAvailableAt?: string;
 }
 
 /** `POST /auth/forgot-password` — raqam mavjudligini oshkor qilmaydi */
@@ -84,21 +133,6 @@ export class RefreshResponseDto {
 
   @ApiProperty({ type: String, example: '2026-09-23T09:00:00.000Z' })
   createdAt!: Date;
-}
-
-/** `POST /auth/signup` */
-export class SignUpResponseDto {
-  @ApiProperty({
-    type: String,
-    example: "Do'kon va administrator muvaffaqiyatli yaratildi",
-  })
-  message!: string;
-
-  @ApiProperty({ type: Number, example: 1 })
-  storeId!: number;
-
-  @ApiProperty({ type: Number, example: 2 })
-  userId!: number;
 }
 
 /** Qurilma limiti xatosidagi (`DEVICE_LIMIT_REACHED`) va `GET /device` javobidagi qurilma */

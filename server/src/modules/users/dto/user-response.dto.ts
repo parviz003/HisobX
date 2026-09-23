@@ -58,6 +58,14 @@ export class UserResponseDto {
 export class UserProfileResponseDto extends UserResponseDto {
   @ApiPropertyOptional({ type: UserStoreDto, nullable: true })
   store?: UserStoreDto | null;
+
+  @ApiProperty({
+    type: Boolean,
+    example: false,
+    description:
+      'Hisob Telegram botga ulanganmi. Chat IDsi hech qachon qaytarilmaydi.',
+  })
+  telegramLinked!: boolean;
 }
 
 /** `PATCH /users/:id/password` */

@@ -1,136 +1,6 @@
 {
   "openapi": "3.0.0",
   "paths": {
-    "/api/v1/auth/signup": {
-      "post": {
-        "operationId": "AuthController_signUp",
-        "parameters": [
-          {
-            "name": "x-store-id",
-            "in": "header",
-            "required": false,
-            "description": "Faqat SUPERADMIN uchun: do'kon konteksti (GET amallari uchun)",
-            "schema": {
-              "type": "integer",
-              "example": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SignUpDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Do'kon yaratildi",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "statusCode",
-                    "data"
-                  ],
-                  "properties": {
-                    "statusCode": {
-                      "type": "integer",
-                      "example": 201
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/SignUpResponseDto"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "So'rov ma'lumotlari noto'g'ri (code: VALIDATION_ERROR)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ErrorResponseDto"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "statusCode": {
-                          "type": "integer",
-                          "example": 400
-                        },
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "VALIDATION_ERROR"
-                          ],
-                          "example": "VALIDATION_ERROR"
-                        },
-                        "data": {
-                          "type": "object",
-                          "properties": {
-                            "fields": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              },
-                              "example": [
-                                "phone noto‘g‘ri formatda"
-                              ]
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Telefon raqam band (code: PHONE_TAKEN)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ErrorResponseDto"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "statusCode": {
-                          "type": "integer",
-                          "example": 409
-                        },
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "PHONE_TAKEN"
-                          ],
-                          "example": "PHONE_TAKEN"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        },
-        "summary": "Yangi do'kon va administratorni ro'yxatdan o'tkazish",
-        "tags": [
-          "Auth"
-        ]
-      }
-    },
     "/api/v1/auth/signin": {
       "post": {
         "operationId": "AuthController_signIn",
@@ -158,7 +28,7 @@
         },
         "responses": {
           "200": {
-            "description": "Parol to'g'ri, tasdiqlash kodi yuborildi",
+            "description": "Parol to'g'ri. Hisob Telegramga ulangan bo'lsa kod botga yuboriladi (`telegramLinked: true`); ulanmagan bo'lsa javob `TelegramLinkResponseDto` shaklida keladi (`telegramLinked: false`) va kod YUBORILMAYDI — avval `botUrl` orqali hisob ulanishi kerak.",
             "content": {
               "application/json": {
                 "schema": {
@@ -643,6 +513,61 @@
           }
         },
         "summary": "Sign-in OTP kodini qayta yuborish (parol tekshiruvidan o'tgan urinish uchun)",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/telegram-link-status": {
+      "get": {
+        "description": "Ilova bu yerni qisqa oraliqda so'rab turadi. Javob token mavjudligini oshkor qilmaydi: noto'g'ri yoki eskirgan tokenda ham `linked: false`.",
+        "operationId": "AuthController_telegramLinkStatus",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-store-id",
+            "in": "header",
+            "required": false,
+            "description": "Faqat SUPERADMIN uchun: do'kon konteksti (GET amallari uchun)",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ulanish holati",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "statusCode",
+                    "data"
+                  ],
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TelegramLinkStatusResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Telegram hisobi ulandimi — sign-in oqimida kutish uchun",
         "tags": [
           "Auth"
         ]
@@ -1328,6 +1253,519 @@
         "summary": "Eski qurilmani o'chirish",
         "tags": [
           "Devices"
+        ]
+      }
+    },
+    "/api/v1/telegram/test": {
+      "post": {
+        "description": "Do'konning `telegramChatId` maydoni sozlangan bo'lishi kerak, aks holda 400 qaytadi. Telegram xabarni qabul qilmasa — 503.",
+        "operationId": "TelegramController_sendTest",
+        "parameters": [
+          {
+            "name": "x-store-id",
+            "in": "header",
+            "required": false,
+            "description": "Faqat SUPERADMIN uchun: do'kon konteksti (GET amallari uchun)",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestNotificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Xabar yuborildi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "statusCode",
+                    "data"
+                  ],
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/MessageResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "telegramChatId sozlanmagan (code: BAD_REQUEST)\n\nSo'rov ma'lumotlari noto'g'ri (code: VALIDATION_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 400
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_ERROR"
+                          ],
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "fields": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "example": [
+                                "phone noto‘g‘ri formatda"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sessiya yaroqsiz (code: UNAUTHORIZED | SESSION_EXPIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 401
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "UNAUTHORIZED",
+                            "SESSION_EXPIRED"
+                          ],
+                          "example": "UNAUTHORIZED"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ruxsat yetarli emas (code: FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 403
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "FORBIDDEN"
+                          ],
+                          "example": "FORBIDDEN"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Telegramga xabar yuborib bo'lmadi (code: SERVICE_UNAVAILABLE)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 503
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "SERVICE_UNAVAILABLE"
+                          ],
+                          "example": "SERVICE_UNAVAILABLE"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "summary": "Do'kon telegram guruhiga test xabar yuborish",
+        "tags": [
+          "Telegram Notifications"
+        ]
+      }
+    },
+    "/api/v1/telegram/trigger/debt-reminder": {
+      "post": {
+        "operationId": "TelegramController_triggerDebtReminder",
+        "parameters": [
+          {
+            "name": "x-store-id",
+            "in": "header",
+            "required": false,
+            "description": "Faqat SUPERADMIN uchun: do'kon konteksti (GET amallari uchun)",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bajarildi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "statusCode",
+                    "data"
+                  ],
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/MessageResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sessiya yaroqsiz (code: UNAUTHORIZED | SESSION_EXPIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 401
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "UNAUTHORIZED",
+                            "SESSION_EXPIRED"
+                          ],
+                          "example": "UNAUTHORIZED"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ruxsat yetarli emas (code: FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 403
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "FORBIDDEN"
+                          ],
+                          "example": "FORBIDDEN"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "summary": "Qarzdorlik eslatmalarini qo‘lda ishga tushirish",
+        "tags": [
+          "Telegram Notifications"
+        ]
+      }
+    },
+    "/api/v1/telegram/trigger/low-stock": {
+      "post": {
+        "operationId": "TelegramController_triggerLowStock",
+        "parameters": [
+          {
+            "name": "x-store-id",
+            "in": "header",
+            "required": false,
+            "description": "Faqat SUPERADMIN uchun: do'kon konteksti (GET amallari uchun)",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bajarildi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "statusCode",
+                    "data"
+                  ],
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/MessageResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sessiya yaroqsiz (code: UNAUTHORIZED | SESSION_EXPIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 401
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "UNAUTHORIZED",
+                            "SESSION_EXPIRED"
+                          ],
+                          "example": "UNAUTHORIZED"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ruxsat yetarli emas (code: FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 403
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "FORBIDDEN"
+                          ],
+                          "example": "FORBIDDEN"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "summary": "Kam qolgan mahsulotlar eslatmasini qo‘lda ishga tushirish",
+        "tags": [
+          "Telegram Notifications"
+        ]
+      }
+    },
+    "/api/v1/telegram/trigger/daily-summary": {
+      "post": {
+        "operationId": "TelegramController_triggerDailySummary",
+        "parameters": [
+          {
+            "name": "x-store-id",
+            "in": "header",
+            "required": false,
+            "description": "Faqat SUPERADMIN uchun: do'kon konteksti (GET amallari uchun)",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bajarildi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "statusCode",
+                    "data"
+                  ],
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/MessageResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sessiya yaroqsiz (code: UNAUTHORIZED | SESSION_EXPIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 401
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "UNAUTHORIZED",
+                            "SESSION_EXPIRED"
+                          ],
+                          "example": "UNAUTHORIZED"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ruxsat yetarli emas (code: FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 403
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "FORBIDDEN"
+                          ],
+                          "example": "FORBIDDEN"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "summary": "Kunlik yakuniy hisobotni qo‘lda yuborish",
+        "tags": [
+          "Telegram Notifications"
         ]
       }
     },
@@ -2211,6 +2649,237 @@
           }
         },
         "summary": "Do'kon va uning ADMIN'ini bitta tranzaksiyada yaratish (faqat SUPERADMIN)",
+        "tags": [
+          "Stores"
+        ]
+      }
+    },
+    "/api/v1/stores/{id}/manager": {
+      "patch": {
+        "description": "Yangi meneger MANAGER bo'ladi, eskisi ADMIN — bitta tranzaksiyada. Foydalanuvchi shu do'konning xodimi bo'lishi shart.",
+        "operationId": "StoresController_transferManager",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "x-store-id",
+            "in": "header",
+            "required": false,
+            "description": "Faqat SUPERADMIN uchun: do'kon konteksti (GET amallari uchun)",
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferManagerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Yangi meneger",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "statusCode",
+                    "data"
+                  ],
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TransferManagerResponseDto"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "So'rov ma'lumotlari noto'g'ri (code: VALIDATION_ERROR)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 400
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "VALIDATION_ERROR"
+                          ],
+                          "example": "VALIDATION_ERROR"
+                        },
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "fields": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "example": [
+                                "phone noto‘g‘ri formatda"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sessiya yaroqsiz (code: UNAUTHORIZED | SESSION_EXPIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 401
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "UNAUTHORIZED",
+                            "SESSION_EXPIRED"
+                          ],
+                          "example": "UNAUTHORIZED"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Ruxsat yetarli emas (code: FORBIDDEN)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 403
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "FORBIDDEN"
+                          ],
+                          "example": "FORBIDDEN"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Bu do'konda bunday xodim yo'q (code: USER_NOT_FOUND)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 404
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "USER_NOT_FOUND"
+                          ],
+                          "example": "USER_NOT_FOUND"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Bu xodim allaqachon meneger (code: MANAGER_ALREADY_EXISTS)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ErrorResponseDto"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 409
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": [
+                            "MANAGER_ALREADY_EXISTS"
+                          ],
+                          "example": "MANAGER_ALREADY_EXISTS"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "summary": "Menejerlikni boshqa xodimga o'tkazish (faqat SUPERADMIN)",
         "tags": [
           "Stores"
         ]
@@ -3470,6 +4139,7 @@
               "type": "string",
               "enum": [
                 "SUPERADMIN",
+                "MANAGER",
                 "ADMIN",
                 "SELLER"
               ]
@@ -11519,519 +12189,6 @@
           "Reports"
         ]
       }
-    },
-    "/api/v1/telegram/test": {
-      "post": {
-        "description": "Do'konning `telegramChatId` maydoni sozlangan bo'lishi kerak, aks holda 400 qaytadi. Telegram xabarni qabul qilmasa — 503.",
-        "operationId": "TelegramController_sendTest",
-        "parameters": [
-          {
-            "name": "x-store-id",
-            "in": "header",
-            "required": false,
-            "description": "Faqat SUPERADMIN uchun: do'kon konteksti (GET amallari uchun)",
-            "schema": {
-              "type": "integer",
-              "example": 1
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TestNotificationDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Xabar yuborildi",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "statusCode",
-                    "data"
-                  ],
-                  "properties": {
-                    "statusCode": {
-                      "type": "integer",
-                      "example": 200
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/MessageResponseDto"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "telegramChatId sozlanmagan (code: BAD_REQUEST)\n\nSo'rov ma'lumotlari noto'g'ri (code: VALIDATION_ERROR)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ErrorResponseDto"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "statusCode": {
-                          "type": "integer",
-                          "example": 400
-                        },
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "VALIDATION_ERROR"
-                          ],
-                          "example": "VALIDATION_ERROR"
-                        },
-                        "data": {
-                          "type": "object",
-                          "properties": {
-                            "fields": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              },
-                              "example": [
-                                "phone noto‘g‘ri formatda"
-                              ]
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sessiya yaroqsiz (code: UNAUTHORIZED | SESSION_EXPIRED)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ErrorResponseDto"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "statusCode": {
-                          "type": "integer",
-                          "example": 401
-                        },
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "UNAUTHORIZED",
-                            "SESSION_EXPIRED"
-                          ],
-                          "example": "UNAUTHORIZED"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Ruxsat yetarli emas (code: FORBIDDEN)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ErrorResponseDto"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "statusCode": {
-                          "type": "integer",
-                          "example": 403
-                        },
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "FORBIDDEN"
-                          ],
-                          "example": "FORBIDDEN"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Telegramga xabar yuborib bo'lmadi (code: SERVICE_UNAVAILABLE)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ErrorResponseDto"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "statusCode": {
-                          "type": "integer",
-                          "example": 503
-                        },
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "SERVICE_UNAVAILABLE"
-                          ],
-                          "example": "SERVICE_UNAVAILABLE"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        },
-        "summary": "Do'kon telegram guruhiga test xabar yuborish",
-        "tags": [
-          "Telegram Notifications"
-        ]
-      }
-    },
-    "/api/v1/telegram/trigger/debt-reminder": {
-      "post": {
-        "operationId": "TelegramController_triggerDebtReminder",
-        "parameters": [
-          {
-            "name": "x-store-id",
-            "in": "header",
-            "required": false,
-            "description": "Faqat SUPERADMIN uchun: do'kon konteksti (GET amallari uchun)",
-            "schema": {
-              "type": "integer",
-              "example": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Bajarildi",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "statusCode",
-                    "data"
-                  ],
-                  "properties": {
-                    "statusCode": {
-                      "type": "integer",
-                      "example": 200
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/MessageResponseDto"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sessiya yaroqsiz (code: UNAUTHORIZED | SESSION_EXPIRED)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ErrorResponseDto"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "statusCode": {
-                          "type": "integer",
-                          "example": 401
-                        },
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "UNAUTHORIZED",
-                            "SESSION_EXPIRED"
-                          ],
-                          "example": "UNAUTHORIZED"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Ruxsat yetarli emas (code: FORBIDDEN)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ErrorResponseDto"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "statusCode": {
-                          "type": "integer",
-                          "example": 403
-                        },
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "FORBIDDEN"
-                          ],
-                          "example": "FORBIDDEN"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        },
-        "summary": "Qarzdorlik eslatmalarini qo‘lda ishga tushirish",
-        "tags": [
-          "Telegram Notifications"
-        ]
-      }
-    },
-    "/api/v1/telegram/trigger/low-stock": {
-      "post": {
-        "operationId": "TelegramController_triggerLowStock",
-        "parameters": [
-          {
-            "name": "x-store-id",
-            "in": "header",
-            "required": false,
-            "description": "Faqat SUPERADMIN uchun: do'kon konteksti (GET amallari uchun)",
-            "schema": {
-              "type": "integer",
-              "example": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Bajarildi",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "statusCode",
-                    "data"
-                  ],
-                  "properties": {
-                    "statusCode": {
-                      "type": "integer",
-                      "example": 200
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/MessageResponseDto"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sessiya yaroqsiz (code: UNAUTHORIZED | SESSION_EXPIRED)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ErrorResponseDto"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "statusCode": {
-                          "type": "integer",
-                          "example": 401
-                        },
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "UNAUTHORIZED",
-                            "SESSION_EXPIRED"
-                          ],
-                          "example": "UNAUTHORIZED"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Ruxsat yetarli emas (code: FORBIDDEN)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ErrorResponseDto"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "statusCode": {
-                          "type": "integer",
-                          "example": 403
-                        },
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "FORBIDDEN"
-                          ],
-                          "example": "FORBIDDEN"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        },
-        "summary": "Kam qolgan mahsulotlar eslatmasini qo‘lda ishga tushirish",
-        "tags": [
-          "Telegram Notifications"
-        ]
-      }
-    },
-    "/api/v1/telegram/trigger/daily-summary": {
-      "post": {
-        "operationId": "TelegramController_triggerDailySummary",
-        "parameters": [
-          {
-            "name": "x-store-id",
-            "in": "header",
-            "required": false,
-            "description": "Faqat SUPERADMIN uchun: do'kon konteksti (GET amallari uchun)",
-            "schema": {
-              "type": "integer",
-              "example": 1
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Bajarildi",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "statusCode",
-                    "data"
-                  ],
-                  "properties": {
-                    "statusCode": {
-                      "type": "integer",
-                      "example": 200
-                    },
-                    "data": {
-                      "$ref": "#/components/schemas/MessageResponseDto"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Sessiya yaroqsiz (code: UNAUTHORIZED | SESSION_EXPIRED)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ErrorResponseDto"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "statusCode": {
-                          "type": "integer",
-                          "example": 401
-                        },
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "UNAUTHORIZED",
-                            "SESSION_EXPIRED"
-                          ],
-                          "example": "UNAUTHORIZED"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Ruxsat yetarli emas (code: FORBIDDEN)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/ErrorResponseDto"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "statusCode": {
-                          "type": "integer",
-                          "example": 403
-                        },
-                        "code": {
-                          "type": "string",
-                          "enum": [
-                            "FORBIDDEN"
-                          ],
-                          "example": "FORBIDDEN"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        },
-        "summary": "Kunlik yakuniy hisobotni qo‘lda yuborish",
-        "tags": [
-          "Telegram Notifications"
-        ]
-      }
     }
   },
   "info": {
@@ -12214,58 +12371,46 @@
           "path"
         ]
       },
-      "SignUpResponseDto": {
+      "TelegramLinkResponseDto": {
         "type": "object",
         "properties": {
-          "message": {
-            "type": "string",
-            "example": "Do'kon va administrator muvaffaqiyatli yaratildi"
-          },
-          "storeId": {
-            "type": "number",
-            "example": 1
-          },
-          "userId": {
-            "type": "number",
-            "example": 2
-          }
-        },
-        "required": [
-          "message",
-          "storeId",
-          "userId"
-        ]
-      },
-      "SignUpDto": {
-        "type": "object",
-        "properties": {
-          "storeName": {
-            "type": "string",
-            "example": "My Super Store"
-          },
-          "fullName": {
-            "type": "string",
-            "example": "Alisher Valiyev"
+          "telegramLinked": {
+            "type": "boolean",
+            "example": false
           },
           "phone": {
             "type": "string",
             "example": "+998901234567"
           },
-          "password": {
+          "linkToken": {
             "type": "string",
-            "example": "Password123!"
+            "example": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+          },
+          "botUrl": {
+            "type": "string",
+            "example": "https://t.me/hisobx_bot?start=a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+          },
+          "linkExpiresAt": {
+            "type": "string",
+            "example": "2026-09-23T09:10:00.000Z"
           }
         },
         "required": [
-          "storeName",
-          "fullName",
+          "telegramLinked",
           "phone",
-          "password"
+          "linkToken",
+          "botUrl",
+          "linkExpiresAt"
         ]
       },
       "OtpSentResponseDto": {
         "type": "object",
         "properties": {
+          "telegramLinked": {
+            "type": "boolean",
+            "example": true,
+            "description": "Hisob Telegram botga ulangan — kod botga yuborildi. `false` bo'lsa javob `TelegramLinkResponseDto` shaklida keladi."
+          },
           "phone": {
             "type": "string",
             "example": "+998901234567"
@@ -12289,6 +12434,7 @@
           }
         },
         "required": [
+          "telegramLinked",
           "phone",
           "message",
           "expiresAt",
@@ -12331,6 +12477,7 @@
             "type": "string",
             "enum": [
               "SUPERADMIN",
+              "MANAGER",
               "ADMIN",
               "SELLER"
             ],
@@ -12393,6 +12540,27 @@
         },
         "required": [
           "phone"
+        ]
+      },
+      "TelegramLinkStatusResponseDto": {
+        "type": "object",
+        "properties": {
+          "linked": {
+            "type": "boolean",
+            "example": false,
+            "description": "Hisob ulandimi. Ulangan bo'lsa kod ham yuborilgan bo'ladi."
+          },
+          "expiresAt": {
+            "type": "string",
+            "example": "2026-09-23T09:01:00.000Z"
+          },
+          "resendAvailableAt": {
+            "type": "string",
+            "example": "2026-09-23T09:01:00.000Z"
+          }
+        },
+        "required": [
+          "linked"
         ]
       },
       "ForgotPasswordResponseDto": {
@@ -12502,6 +12670,18 @@
         "required": [
           "message",
           "deviceId"
+        ]
+      },
+      "TestNotificationDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Salom, bu test xabar"
+          }
+        },
+        "required": [
+          "message"
         ]
       },
       "StoreResponseDto": {
@@ -12738,6 +12918,7 @@
             "type": "string",
             "enum": [
               "SUPERADMIN",
+              "MANAGER",
               "ADMIN",
               "SELLER"
             ],
@@ -12794,8 +12975,8 @@
           "store": {
             "$ref": "#/components/schemas/StoreResponseDto"
           },
-          "admin": {
-            "description": "Yaratilgan do'kon rahbari (maxfiy maydonlarsiz)",
+          "manager": {
+            "description": "Yaratilgan do'kon menejeri (MANAGER, maxfiy maydonlarsiz). Har do'konda aynan bitta MANAGER bo'ladi.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/UserResponseDto"
@@ -12805,7 +12986,7 @@
         },
         "required": [
           "store",
-          "admin"
+          "manager"
         ]
       },
       "OnboardStoreInfoDto": {
@@ -12863,6 +13044,42 @@
         "required": [
           "store",
           "admin"
+        ]
+      },
+      "TransferManagerResponseDto": {
+        "type": "object",
+        "properties": {
+          "manager": {
+            "description": "Yangi meneger",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserResponseDto"
+              }
+            ]
+          },
+          "previousManagerId": {
+            "type": "number",
+            "nullable": true,
+            "example": 7,
+            "description": "Avvalgi meneger IDsi (endi ADMIN). Meneger bo'lmagan bo'lsa null."
+          }
+        },
+        "required": [
+          "manager",
+          "previousManagerId"
+        ]
+      },
+      "TransferManagerDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "number",
+            "example": 12,
+            "description": "Yangi menejer bo'ladigan foydalanuvchi IDsi. Shu do'konning xodimi bo'lishi shart."
+          }
+        },
+        "required": [
+          "userId"
         ]
       },
       "DeletedResponseDto": {
@@ -12925,6 +13142,7 @@
             "type": "string",
             "enum": [
               "SUPERADMIN",
+              "MANAGER",
               "ADMIN",
               "SELLER"
             ],
@@ -12968,6 +13186,11 @@
                 "$ref": "#/components/schemas/UserStoreDto"
               }
             ]
+          },
+          "telegramLinked": {
+            "type": "boolean",
+            "example": false,
+            "description": "Hisob Telegram botga ulanganmi. Chat IDsi hech qachon qaytarilmaydi."
           }
         },
         "required": [
@@ -12981,7 +13204,8 @@
           "imageUrl",
           "storeId",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "telegramLinked"
         ]
       },
       "UpdateProfileDto": {
@@ -13120,6 +13344,7 @@
             "type": "string",
             "enum": [
               "SUPERADMIN",
+              "MANAGER",
               "ADMIN",
               "SELLER"
             ],
@@ -15059,18 +15284,6 @@
           "grossProfit",
           "expenses",
           "netProfit"
-        ]
-      },
-      "TestNotificationDto": {
-        "type": "object",
-        "properties": {
-          "message": {
-            "type": "string",
-            "example": "Salom, bu test xabar"
-          }
-        },
-        "required": [
-          "message"
         ]
       }
     }

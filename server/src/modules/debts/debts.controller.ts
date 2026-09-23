@@ -34,7 +34,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('Debts')
 @Controller('debts')
-@Roles(Role.ADMIN, Role.SELLER)
+@Roles(Role.MANAGER, Role.ADMIN, Role.SELLER)
 export class DebtsController {
   constructor(private readonly debtsService: DebtsService) {}
 

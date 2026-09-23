@@ -26,7 +26,7 @@ import {
 export class CashController {
   constructor(private readonly cashService: CashService) {}
 
-  @Roles(Role.ADMIN, Role.SELLER)
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SELLER)
   @Get('balance')
   @ApiOperation({ summary: "Joriy kassa balansini ko'rish" })
   @ApiSuccess(CashBalanceResponseDto, { description: 'Joriy balans' })
@@ -35,7 +35,7 @@ export class CashController {
     return this.cashService.getBalance(storeId);
   }
 
-  @Roles(Role.ADMIN)
+  @Roles(Role.MANAGER, Role.ADMIN)
   @Post('transaction')
   @ApiOperation({
     summary: 'Kassaga pul kiritish / chiqarish (Opening, Adjustment, Expense)',
@@ -55,7 +55,7 @@ export class CashController {
     return this.cashService.create(storeId, userId, dto);
   }
 
-  @Roles(Role.ADMIN, Role.SELLER)
+  @Roles(Role.MANAGER, Role.ADMIN, Role.SELLER)
   @Get('transactions')
   @ApiOperation({
     summary: 'Kassa operatsiyalari tarixini sahifalash va filtrlash',

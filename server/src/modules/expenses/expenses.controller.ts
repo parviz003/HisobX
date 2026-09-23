@@ -38,7 +38,7 @@ import {
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('Expenses')
-@Roles(Role.ADMIN)
+@Roles(Role.MANAGER, Role.ADMIN)
 @Controller('expenses')
 export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}

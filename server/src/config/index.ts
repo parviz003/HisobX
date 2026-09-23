@@ -14,8 +14,17 @@ export const env = {
     PASSWORD: String(process.env.SUPERADMIN_PASSWORD),
   },
   TELEGRAM: {
-    TOKEN: String(process.env.BOT_TOKEN),
+    /* Eski `BOT_TOKEN` nomi ham qo'llab-quvvatlanadi (mavjud .env fayllar uchun). */
+    TOKEN: String(
+      process.env.TELEGRAM_BOT_TOKEN ?? process.env.BOT_TOKEN ?? '',
+    ),
+    /** Bot username'i (@ belgisisiz) — `https://t.me/<username>?start=...` uchun */
+    BOT_USERNAME: String(process.env.TELEGRAM_BOT_USERNAME ?? ''),
+    /** `polling` — localhost uchun; boshqa qiymatda bot yangilanishlarni o'qimaydi */
+    MODE: String(process.env.TELEGRAM_MODE ?? 'polling'),
     ID: Number(process.env.CHAT_ID),
+    /** Hisobni ulash tokeni qancha yashaydi (sekund) */
+    LINK_TTL_SECONDS: Number(process.env.TELEGRAM_LINK_TTL_SECONDS ?? 600),
   },
   OTP: {
     // Amal qilish muddati (sekund)

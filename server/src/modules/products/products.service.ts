@@ -7,11 +7,12 @@ import { PrismaService } from '../../config/database/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import { File } from '../../infrastructure/lib/File';
 import { successRes } from '../../common/helper/success-response';
 import 'multer';
 import { pageParams, paginate } from '../../common/helper/paginate';
+import { hideCostFields } from '../../common/helper/cost-visibility';
 
 @Injectable()
 export class ProductsService {
@@ -51,7 +52,7 @@ export class ProductsService {
     return successRes(product, 201);
   }
 
-  async findAll(storeId: number, query: QueryProductDto) {
+  async findAll(storeId: number, role: Role, query: QueryProductDto) {
     const { categoryId, isActive, search } = query;
     const { page, limit, skip, take } = pageParams(query);
 
@@ -85,10 +86,12 @@ export class ProductsService {
       }),
     ]);
 
-    return successRes(paginate(items, total, { page, limit }));
+    return successRes(
+      hideCostFields(paginate(items, total, { page, limit }), role),
+    );
   }
 
-  async findOne(storeId: number, id: number) {
+  async findOne(storeId: number, role: Role, id: number) {
     const product = await this.prisma.product.findFirst({
       where: { id, storeId },
       include: {
@@ -97,7 +100,7 @@ export class ProductsService {
     });
 
     if (!product) throw new NotFoundException('Mahsulot topilmadi');
-    return successRes(product);
+    return successRes(hideCostFields(product, role));
   }
 
   async update(

@@ -40,6 +40,10 @@ export const ErrorCode = {
   USER_NOT_FOUND: 'USER_NOT_FOUND',
   STORE_NOT_FOUND: 'STORE_NOT_FOUND',
   STORE_INACTIVE: 'STORE_INACTIVE',
+
+  /* Menejerlik */
+  MANAGER_ALREADY_EXISTS: 'MANAGER_ALREADY_EXISTS',
+  MANAGER_NOT_FOUND: 'MANAGER_NOT_FOUND',
 } as const;
 
 export type ErrorCodeValue = (typeof ErrorCode)[keyof typeof ErrorCode];

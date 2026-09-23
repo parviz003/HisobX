@@ -6,9 +6,11 @@ import {
 import { PrismaService } from '../../config/database/prisma.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { QuerySaleDto } from './dto/query-sale.dto';
-import { PaymentType, SaleStatus, Prisma } from '@prisma/client';
+import { PaymentType, SaleStatus, Prisma, Role } from '@prisma/client';
 import { successRes } from '../../common/helper/success-response';
 import { pageParams, paginate } from '../../common/helper/paginate';
+import { hideCostFields } from '../../common/helper/cost-visibility';
+import { IPayload } from '../../common/interface';
 
 @Injectable()
 export class SalesService {
@@ -163,11 +165,14 @@ export class SalesService {
     });
   }
 
-  async findAll(storeId: number, query: QuerySaleDto) {
+  async findAll(storeId: number, actor: IPayload, query: QuerySaleDto) {
     const { status, paymentType, customerId, startDate, endDate } = query;
     const { page, limit, skip, take } = pageParams(query);
 
     const where: Prisma.SaleWhereInput = { storeId, deletedAt: null };
+
+    // SELLER faqat O'Z savdolarini ko'radi (ruxsatlar matritsasi)
+    if (actor.role === Role.SELLER) where.userId = actor.sub;
 
     if (status) where.status = status;
     if (paymentType) where.paymentType = paymentType;
@@ -193,12 +198,19 @@ export class SalesService {
       this.prisma.sale.count({ where }),
     ]);
 
-    return successRes(paginate(items, total, { page, limit }));
+    return successRes(
+      hideCostFields(paginate(items, total, { page, limit }), actor.role),
+    );
   }
 
-  async findOne(storeId: number, id: number) {
+  async findOne(storeId: number, actor: IPayload, id: number) {
     const sale = await this.prisma.sale.findFirst({
-      where: { id, storeId },
+      where: {
+        id,
+        storeId,
+        // Boshqa sotuvchining savdosi SELLER uchun umuman ko'rinmaydi
+        ...(actor.role === Role.SELLER ? { userId: actor.sub } : {}),
+      },
       include: {
         saleItems: {
           include: {
@@ -214,7 +226,7 @@ export class SalesService {
     });
 
     if (!sale) throw new NotFoundException('Savdo topilmadi');
-    return successRes(sale);
+    return successRes(hideCostFields(sale, actor.role));
   }
 
   async cancel(storeId: number, id: number, userId: number) {

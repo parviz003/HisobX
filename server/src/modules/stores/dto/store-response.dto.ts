@@ -55,7 +55,24 @@ export class OnboardStoreResponseDto {
 
   @ApiProperty({
     type: UserResponseDto,
-    description: "Yaratilgan do'kon rahbari (maxfiy maydonlarsiz)",
+    description:
+      "Yaratilgan do'kon menejeri (MANAGER, maxfiy maydonlarsiz). " +
+      "Har do'konda aynan bitta MANAGER bo'ladi.",
   })
-  admin!: UserResponseDto;
+  manager!: UserResponseDto;
+}
+
+/** `PATCH /stores/:id/manager` */
+export class TransferManagerResponseDto {
+  @ApiProperty({ type: UserResponseDto, description: 'Yangi meneger' })
+  manager!: UserResponseDto;
+
+  @ApiProperty({
+    type: Number,
+    nullable: true,
+    example: 7,
+    description:
+      "Avvalgi meneger IDsi (endi ADMIN). Meneger bo'lmagan bo'lsa null.",
+  })
+  previousManagerId!: number | null;
 }

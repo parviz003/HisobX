@@ -2,14 +2,15 @@ import {
   Res,
   Body,
   Controller,
+  Get,
   Post,
+  Query,
   Req,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignInDto } from './dto/sign-in.dto';
-import { SignUpDto } from './dto/sign-up.dto';
 import { PhoneDto } from './dto/phone.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import {
@@ -18,7 +19,8 @@ import {
   ForgotPasswordResponseDto,
   OtpSentResponseDto,
   RefreshResponseDto,
-  SignUpResponseDto,
+  TelegramLinkResponseDto,
+  TelegramLinkStatusResponseDto,
 } from './dto/auth-response.dto';
 import { VerifyOTPDto } from '../otp/dto/verify-otp.dto';
 import type { Response, Request } from 'express';
@@ -29,6 +31,7 @@ import {
   ApiTags,
   ApiOperation,
   ApiExtraModels,
+  ApiQuery,
   getSchemaPath,
 } from '@nestjs/swagger';
 import {
@@ -44,20 +47,10 @@ import {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Public()
-  @Post('signup')
-  @ApiOperation({
-    summary: "Yangi do'kon va administratorni ro'yxatdan o'tkazish",
-  })
-  @ApiSuccess(SignUpResponseDto, {
-    status: 201,
-    description: "Do'kon yaratildi",
-  })
-  @ApiValidationError()
-  @ApiError(409, 'PHONE_TAKEN', 'Telefon raqam band')
-  signUp(@Body() dto: SignUpDto) {
-    return this.authService.signUp(dto);
-  }
+  /*
+   * Signup YO'Q: foydalanuvchini faqat yuqori rol yaratadi.
+   * Do'kon va uning menejeri — `POST /stores/onboard` (SUPERADMIN).
+   */
 
   @Public()
   @StrictRateLimit()
@@ -65,8 +58,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Tizimga kirish (OTP yuboriladi)' })
   @ApiSuccess(OtpSentResponseDto, {
-    description: "Parol to'g'ri, tasdiqlash kodi yuborildi",
+    description:
+      "Parol to'g'ri. Hisob Telegramga ulangan bo'lsa kod botga yuboriladi " +
+      "(`telegramLinked: true`); ulanmagan bo'lsa javob " +
+      '`TelegramLinkResponseDto` shaklida keladi (`telegramLinked: false`) va ' +
+      'kod YUBORILMAYDI — avval `botUrl` orqali hisob ulanishi kerak.',
   })
+  @ApiExtraModels(TelegramLinkResponseDto)
   @ApiValidationError()
   @ApiError(400, 'INVALID_CREDENTIALS', 'Telefon raqam yoki parol xato')
   @ApiError(403, 'ACCOUNT_INACTIVE', 'Hisob bloklangan')
@@ -154,6 +152,21 @@ export class AuthController {
   })
   resendOtp(@Body() dto: PhoneDto) {
     return this.authService.resendSignInOtp(dto.phone);
+  }
+
+  @Public()
+  @StrictRateLimit()
+  @Get('telegram-link-status')
+  @ApiOperation({
+    summary: 'Telegram hisobi ulandimi — sign-in oqimida kutish uchun',
+    description:
+      "Ilova bu yerni qisqa oraliqda so'rab turadi. Javob token mavjudligini " +
+      "oshkor qilmaydi: noto'g'ri yoki eskirgan tokenda ham `linked: false`.",
+  })
+  @ApiQuery({ name: 'token', type: String, required: true })
+  @ApiSuccess(TelegramLinkStatusResponseDto, { description: 'Ulanish holati' })
+  telegramLinkStatus(@Query('token') token: string) {
+    return this.authService.telegramLinkStatus(token ?? '');
   }
 
   @Public()

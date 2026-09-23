@@ -44,10 +44,17 @@ export class UsersService {
   async getProfile(userId: number) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { ...userSelect, store: { select: { id: true, name: true } } },
+      select: {
+        ...userSelect,
+        telegramChatId: true,
+        store: { select: { id: true, name: true } },
+      },
     });
     if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
-    return successRes(user);
+
+    // Chat IDsi tashqariga chiqmaydi — faqat ulangan-ulanmagani ko'rinadi.
+    const { telegramChatId, ...profile } = user;
+    return successRes({ ...profile, telegramLinked: Boolean(telegramChatId) });
   }
 
   /** Faqat `fullName`. Telefon va parol bu yerdan o'zgarmaydi (xavfsizlik). */
@@ -148,10 +155,21 @@ export class UsersService {
 
   /* --------------------------- XODIMLAR BOSHQARUVI --------------------------- */
   /*
-   * ADMIN  — faqat o'z do'konidagi SELLER'lar (boshqa do'kon xodimi ko'rinmaydi: 404,
-   *          ADMIN/SUPERADMIN hisobiga tegish taqiqlanadi: 403)
-   * SUPERADMIN — barcha do'konlar va ADMIN'lar
+   * Ruxsatlar matritsasi (topshiriq 1-bo'lim):
+   *   MANAGER    — o'z do'konidagi ADMIN va SELLER'lar
+   *   ADMIN      — faqat o'z do'konidagi SELLER'lar
+   *   SUPERADMIN — barcha do'konlar
+   *
+   * Ko'rinmasligi kerak bo'lgan hisob 404, ko'rinsa-yu huquq yetmasa 403 beradi.
+   * MANAGER rolini bu endpointlar orqali BERIB BO'LMAYDI — meneger do'kon
+   * ochilganda yaratiladi yoki `PATCH /stores/:id/manager` bilan o'tkaziladi.
    */
+
+  /** Aktyor qaysi rollardagi xodimlarni boshqara oladi. */
+  private manageableRoles(actorRole: Role): Role[] {
+    if (actorRole === Role.MANAGER) return [Role.ADMIN, Role.SELLER];
+    return [Role.SELLER];
+  }
 
   async findAll(actor: IPayload, query: QueryUserDto) {
     const where: Prisma.UserWhereInput =
@@ -162,9 +180,14 @@ export class UsersService {
             ...(query.status ? { status: query.status } : {}),
           }
         : {
-            // ADMIN uchun storeId har doim o'z do'koni, role har doim SELLER
+            // Do'kon xodimi uchun storeId har doim o'z do'koni.
+            // MANAGER -> ADMIN va SELLER, ADMIN -> faqat SELLER.
             storeId: actor.storeId,
-            role: Role.SELLER,
+            role: query.role
+              ? this.manageableRoles(actor.role).includes(query.role)
+                ? query.role
+                : Role.SUPERADMIN // mos kelmaydigan filtr -> bo'sh natija
+              : { in: this.manageableRoles(actor.role) },
             ...(query.status ? { status: query.status } : {}),
           };
 
@@ -193,6 +216,12 @@ export class UsersService {
     if (dto.role === Role.SUPERADMIN) {
       throw new ForbiddenException('SUPERADMIN yaratish taqiqlanadi');
     }
+    if (dto.role === Role.MANAGER) {
+      throw new ForbiddenException(
+        "MANAGER bu endpoint orqali yaratilmaydi — do'kon ochilganda yoki " +
+          'menejerlikni o‘tkazish orqali belgilanadi',
+      );
+    }
 
     let storeId: number | undefined;
 
@@ -209,10 +238,12 @@ export class UsersService {
       }
       storeId = store.id;
     } else {
-      // ADMIN: faqat o'z do'koni va faqat SELLER
-      if (dto.role !== Role.SELLER) {
+      // Do'kon xodimi faqat o'z do'koniga va faqat ruxsat etilgan rolda qo'shadi
+      if (!this.manageableRoles(actor.role).includes(dto.role)) {
         throw new ForbiddenException(
-          'ADMIN faqat SELLER rolidagi xodim qo‘sha oladi',
+          actor.role === Role.MANAGER
+            ? 'MANAGER faqat ADMIN yoki SELLER qo‘sha oladi'
+            : 'ADMIN faqat SELLER rolidagi xodim qo‘sha oladi',
         );
       }
       if (!actor.storeId) {
@@ -242,19 +273,23 @@ export class UsersService {
     await this.loadManageableUser(actor, id);
 
     if (dto.role) {
-      if (dto.role === Role.SUPERADMIN) {
-        throw new ForbiddenException('SUPERADMIN roli berilishi taqiqlanadi');
-      }
-      if (actor.role !== Role.SUPERADMIN && dto.role !== Role.SELLER) {
+      if (dto.role === Role.SUPERADMIN || dto.role === Role.MANAGER) {
         throw new ForbiddenException(
-          'ADMIN rolni faqat SELLER qilib belgilashi mumkin',
+          `${dto.role} roli bu endpoint orqali berilmaydi`,
         );
+      }
+      if (
+        actor.role !== Role.SUPERADMIN &&
+        !this.manageableRoles(actor.role).includes(dto.role)
+      ) {
+        throw new ForbiddenException('Bu rolni belgilashga ruxsat yo‘q');
       }
     }
 
-    if (dto.status && id === actor.sub) {
+    // MANAGER o'zini bloklay olmaydi va o'z rolini o'zgartira olmaydi
+    if ((dto.status || dto.role) && id === actor.sub) {
       throw new ForbiddenException(
-        "O'z hisobingiz holatini o'zgartira olmaysiz",
+        "O'z hisobingizning roli yoki holatini o'zgartira olmaysiz",
       );
     }
 
@@ -337,14 +372,17 @@ export class UsersService {
       return user;
     }
 
-    // ADMIN: boshqa do'kon xodimi umuman ko'rinmaydi
+    // Boshqa do'kon xodimi umuman ko'rinmaydi
     if (!actor.storeId || user.storeId !== actor.storeId) {
       throw new NotFoundException('Foydalanuvchi topilmadi');
     }
-    // O'z do'konidagi ADMIN/SUPERADMIN hisobiga tegib bo'lmaydi
-    if (user.role !== Role.SELLER) {
+    // MANAGER -> ADMIN va SELLER, ADMIN -> faqat SELLER.
+    // Menejerning o'z hisobi bu yerdan boshqarilmaydi (o'zini bloklay olmaydi).
+    if (!this.manageableRoles(actor.role).includes(user.role)) {
       throw new ForbiddenException(
-        'Faqat SELLER rolidagi xodimlarni boshqarish mumkin',
+        actor.role === Role.MANAGER
+          ? 'Faqat ADMIN va SELLER xodimlarni boshqarish mumkin'
+          : 'Faqat SELLER rolidagi xodimlarni boshqarish mumkin',
       );
     }
     return user;

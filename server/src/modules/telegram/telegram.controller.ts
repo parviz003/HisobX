@@ -22,7 +22,7 @@ class TestNotificationDto {
 }
 
 @ApiTags('Telegram Notifications')
-@Roles(Role.ADMIN)
+@Roles(Role.MANAGER)
 @Controller('telegram')
 export class TelegramController {
   constructor(private readonly telegramService: TelegramNotificationService) {}

@@ -1,7 +1,6 @@
 import { HttpException, Logger, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../config/database/prisma.service';
 import { SignInDto } from './dto/sign-in.dto';
-import { SignUpDto } from './dto/sign-up.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Crypt } from '../../infrastructure/lib/Crypt';
 import { successRes } from '../../common/helper/success-response';
@@ -18,6 +17,7 @@ import { BusinessException } from '../../common/errors/business.exception';
 import { ErrorCode } from '../../common/errors/error-codes';
 import { Phone } from '../../common/helper/phone';
 import { DeviceService } from './device.service';
+import { TelegramLinkService } from '../telegram/telegram-link.service';
 
 @Injectable()
 export class AuthService {
@@ -28,50 +28,8 @@ export class AuthService {
     private readonly otp: OtpService,
     private readonly redis: RedisService,
     private readonly devices: DeviceService,
+    private readonly telegramLinks: TelegramLinkService,
   ) {}
-
-  async signUp(dto: SignUpDto) {
-    const phone = Phone.normalize(dto.phone);
-    const existing = await this.db.user.findUnique({ where: { phone } });
-    if (existing) {
-      throw BusinessException.conflict(
-        ErrorCode.PHONE_TAKEN,
-        'Bu telefon raqam allaqachon mavjud',
-      );
-    }
-
-    const hashedPassword = await Crypt.hash(dto.password);
-
-    const result = await this.db.$transaction(async (tx) => {
-      const store = await tx.store.create({
-        data: {
-          name: dto.storeName,
-          phone,
-        },
-      });
-
-      const user = await tx.user.create({
-        data: {
-          phone,
-          password: hashedPassword,
-          fullName: dto.fullName,
-          role: Role.ADMIN,
-          storeId: store.id,
-        },
-      });
-
-      return { store, user };
-    });
-
-    return successRes(
-      {
-        message: "Do'kon va administrator muvaffaqiyatli yaratildi",
-        storeId: result.store.id,
-        userId: result.user.id,
-      },
-      201,
-    );
-  }
 
   async signIn(dto: SignInDto) {
     const phone = Phone.normalize(dto.phone);
@@ -92,9 +50,29 @@ export class AuthService {
     await this.clearFailedLogins(phone);
     this.assertUserActive(user);
 
+    /*
+     * Kodlar faqat Telegram orqali boradi. Hisob hali botga ulanmagan bo'lsa,
+     * kod yuborilmaydi — foydalanuvchiga bir martalik ulash havolasi beriladi.
+     */
+    if (!user.telegramChatId) {
+      const invite = await this.telegramLinks.createInvite(user);
+      return successRes(
+        { telegramLinked: false, phone: user.phone, ...invite },
+        200,
+      );
+    }
+
     const data = await this.otp.sendOtp(user.phone, 'signin');
     await this.otp.markPending(user.phone, 'signin');
-    return successRes(data, 200);
+    return successRes({ telegramLinked: true, ...data }, 200);
+  }
+
+  /**
+   * Ulanish holati — ilova shu yerni qisqa oraliqda so'rab turadi.
+   * Javob token mavjudligini oshkor qilmaydi.
+   */
+  async telegramLinkStatus(token: string) {
+    return successRes(await this.telegramLinks.status(token), 200);
   }
 
   /* ----------------- Ketma-ket xato parollardan himoya (Redis) ---------------- */
@@ -404,7 +382,7 @@ export class AuthService {
     const data = await this.otp.sendOtp(phone, 'signin');
     // Muddat cho'zilganda urinish belgisi ham yangilanadi
     await this.otp.markPending(phone, 'signin');
-    return successRes(data, 200);
+    return successRes({ telegramLinked: true, ...data }, 200);
   }
 
   /**
