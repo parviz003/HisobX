@@ -26,15 +26,16 @@ import { ApiTags, ApiOperation, ApiParam } from '@nestjs/swagger';
 import {
   ApiAuthErrors,
   ApiError,
+  ApiPaginatedSuccess,
   ApiSuccess,
   ApiValidationError,
   MessageResponseDto,
 } from '../../common/swagger';
 import {
   ExpenseCategoryResponseDto,
-  ExpenseListResponseDto,
   ExpenseResponseDto,
 } from './dto/expense-response.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('Expenses')
 @Roles(Role.ADMIN)
@@ -45,13 +46,16 @@ export class ExpensesController {
   // Categories
   @Get('categories')
   @ApiOperation({ summary: 'Xarajat toifalarini olish' })
-  @ApiSuccess(ExpenseCategoryResponseDto, {
-    isArray: true,
+  @ApiPaginatedSuccess(ExpenseCategoryResponseDto, {
     description: 'Xarajat toifalari',
   })
+  @ApiValidationError()
   @ApiAuthErrors()
-  findAllCategories(@CurrentUser('storeId') storeId: number) {
-    return this.expensesService.findAllCategories(storeId);
+  findAllCategories(
+    @CurrentUser('storeId') storeId: number,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.expensesService.findAllCategories(storeId, query);
   }
 
   @Post('categories')
@@ -120,7 +124,7 @@ export class ExpensesController {
 
   @Get()
   @ApiOperation({ summary: 'Xarajatlar ro‘yxatini sahifalash va filtrlash' })
-  @ApiSuccess(ExpenseListResponseDto, {
+  @ApiPaginatedSuccess(ExpenseResponseDto, {
     description: 'Sahifalangan xarajatlar',
   })
   @ApiValidationError()

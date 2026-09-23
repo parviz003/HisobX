@@ -20,15 +20,17 @@ import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import {
   ApiAuthErrors,
   ApiError,
+  ApiPaginatedSuccess,
   ApiSuccess,
   ApiValidationError,
 } from '../../common/swagger';
 import {
   DebtDetailResponseDto,
-  DebtListResponseDto,
+  DebtListItemDto,
   DebtResponseDto,
   OverdueDebtGroupDto,
 } from './dto/debt-response.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('Debts')
 @Controller('debts')
@@ -38,7 +40,7 @@ export class DebtsController {
 
   @Get()
   @ApiOperation({ summary: "Qarzlar ro'yxati" })
-  @ApiSuccess(DebtListResponseDto, { description: 'Sahifalangan qarzlar' })
+  @ApiPaginatedSuccess(DebtListItemDto, { description: 'Sahifalangan qarzlar' })
   @ApiValidationError()
   @ApiAuthErrors()
   findAll(@Query() query: QueryDebtDto, @StoreId() storeId: number) {
@@ -50,13 +52,13 @@ export class DebtsController {
     summary: "Muddati o'tgan qarzlar",
     description: "Mijoz bo'yicha guruhlangan",
   })
-  @ApiSuccess(OverdueDebtGroupDto, {
-    isArray: true,
+  @ApiPaginatedSuccess(OverdueDebtGroupDto, {
     description: "Muddati o'tgan qarzlar",
   })
+  @ApiValidationError()
   @ApiAuthErrors()
-  getOverdue(@StoreId() storeId: number) {
-    return this.debtsService.getOverdue(storeId);
+  getOverdue(@StoreId() storeId: number, @Query() query: PaginationQueryDto) {
+    return this.debtsService.getOverdue(storeId, query);
   }
 
   @Get(':id')

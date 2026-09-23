@@ -4,6 +4,7 @@ import { CreateCashTransactionDto } from './dto/create-cash-transaction.dto';
 import { QueryCashTransactionDto } from './dto/query-cash-transaction.dto';
 import { CashTransactionType, Prisma } from '@prisma/client';
 import { successRes } from '../../common/helper/success-response';
+import { pageParams, paginate } from '../../common/helper/paginate';
 
 @Injectable()
 export class CashService {
@@ -73,8 +74,8 @@ export class CashService {
   }
 
   async findAll(storeId: number, query: QueryCashTransactionDto) {
-    const { page = 1, limit = 10, type, startDate, endDate } = query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { type, startDate, endDate } = query;
+    const { page, limit, skip, take } = pageParams(query);
 
     const where: Prisma.CashTransactionWhereInput = {
       storeId,
@@ -91,12 +92,12 @@ export class CashService {
       if (endDate) where.createdAt.lte = new Date(endDate);
     }
 
-    const [total, data] = await Promise.all([
+    const [total, items] = await Promise.all([
       this.prisma.cashTransaction.count({ where }),
       this.prisma.cashTransaction.findMany({
         where,
         skip,
-        take: Number(limit),
+        take,
         orderBy: { createdAt: 'desc' },
         include: {
           user: { select: { id: true, fullName: true, phone: true } },
@@ -105,11 +106,6 @@ export class CashService {
       }),
     ]);
 
-    return successRes({
-      data,
-      total,
-      page: Number(page),
-      limit: Number(limit),
-    });
+    return successRes(paginate(items, total, { page, limit }));
   }
 }

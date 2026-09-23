@@ -1,5 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PaginationMetaDto } from '../../../common/swagger';
 
 export class ExpenseCategoryResponseDto {
   @ApiProperty({ type: Number, example: 2 })
@@ -56,10 +55,4 @@ export class ExpenseResponseDto {
 
   @ApiProperty({ type: String, example: '2026-09-21T09:00:00.000Z' })
   updatedAt!: Date;
-}
-
-/** `GET /expenses` */
-export class ExpenseListResponseDto extends PaginationMetaDto {
-  @ApiProperty({ type: ExpenseResponseDto, isArray: true })
-  data!: ExpenseResponseDto[];
 }

@@ -8,8 +8,10 @@ import { PrismaService } from '../../config/database/prisma.service';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { OnboardStoreDto } from './dto/onboard-store.dto';
+import { QueryStoreDto } from './dto/query-store.dto';
 import { Crypt } from '../../infrastructure/lib/Crypt';
 import { successRes } from '../../common/helper/success-response';
+import { pageParams, paginate } from '../../common/helper/paginate';
 
 /** Admin javobida parol kabi maxfiy maydonlar qaytmaydi */
 const adminSelect = {
@@ -49,14 +51,28 @@ export class StoresService {
 
   /* ------------------------------- SUPERADMIN ------------------------------- */
 
-  async findAll() {
-    const stores = await this.prisma.store.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        _count: { select: { users: true, products: true, sales: true } },
-      },
-    });
-    return successRes(stores);
+  async findAll(query?: QueryStoreDto) {
+    const { page, limit, skip, take } = pageParams(query);
+    const where: Prisma.StoreWhereInput = {
+      ...(query?.search
+        ? { name: { contains: query.search, mode: 'insensitive' } }
+        : {}),
+      ...(query?.isActive !== undefined ? { isActive: query.isActive } : {}),
+    };
+
+    const [total, items] = await Promise.all([
+      this.prisma.store.count({ where }),
+      this.prisma.store.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          _count: { select: { users: true, products: true, sales: true } },
+        },
+        skip,
+        take,
+      }),
+    ]);
+    return successRes(paginate(items, total, { page, limit }));
   }
 
   async create(dto: CreateStoreDto) {

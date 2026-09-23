@@ -6,7 +6,10 @@ import {
 import { PrismaService } from '../../config/database/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { QueryCategoryDto } from './dto/query-category.dto';
 import { successRes } from '../../common/helper/success-response';
+import { pageParams, paginate } from '../../common/helper/paginate';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CategoriesService {
@@ -35,12 +38,25 @@ export class CategoriesService {
     return successRes(category, 201);
   }
 
-  async findAll(storeId: number) {
-    const categories = await this.prisma.category.findMany({
-      where: { storeId },
-      orderBy: { createdAt: 'desc' },
-    });
-    return successRes(categories);
+  async findAll(storeId: number, query?: QueryCategoryDto) {
+    const { page, limit, skip, take } = pageParams(query);
+    const where: Prisma.CategoryWhereInput = {
+      storeId,
+      ...(query?.search
+        ? { name: { contains: query.search, mode: 'insensitive' } }
+        : {}),
+    };
+
+    const [total, items] = await Promise.all([
+      this.prisma.category.count({ where }),
+      this.prisma.category.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+    ]);
+    return successRes(paginate(items, total, { page, limit }));
   }
 
   async update(

@@ -9,14 +9,16 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   ApiAuthErrors,
   ApiError,
+  ApiPaginatedSuccess,
   ApiSuccess,
   ApiValidationError,
 } from '../../common/swagger';
 import {
   InventoryOperationResponseDto,
-  InventoryTransactionListResponseDto,
+  InventoryTransactionResponseDto,
   StockLevelResponseDto,
 } from './dto/inventory-response.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('Inventory')
 @Controller('inventory')
@@ -77,7 +79,7 @@ export class InventoryController {
 
   @Get('transactions')
   @ApiOperation({ summary: 'Ombor harakatlari tarixi' })
-  @ApiSuccess(InventoryTransactionListResponseDto, {
+  @ApiPaginatedSuccess(InventoryTransactionResponseDto, {
     description: 'Sahifalangan ombor harakatlari',
   })
   @ApiValidationError()
@@ -92,13 +94,16 @@ export class InventoryController {
 
   @Get('stock')
   @ApiOperation({ summary: 'Joriy qoldiqlar' })
-  @ApiSuccess(StockLevelResponseDto, {
-    isArray: true,
+  @ApiPaginatedSuccess(StockLevelResponseDto, {
     description: 'Mahsulotlar qoldig‘i va kam qolganlik belgisi',
   })
+  @ApiValidationError()
   @ApiAuthErrors()
   @Roles(Role.ADMIN, Role.SELLER)
-  getStockLevels(@CurrentUser('storeId') storeId: number) {
-    return this.inventoryService.getStockLevels(storeId);
+  getStockLevels(
+    @CurrentUser('storeId') storeId: number,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.inventoryService.getStockLevels(storeId, query);
   }
 }

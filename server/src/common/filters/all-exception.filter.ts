@@ -55,7 +55,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
           details?: unknown;
         };
 
-        code = body.code ?? body.error ?? code;
+        /*
+         * `code` faqat SCREAMING_SNAKE_CASE bo'ladi: frontend unga mantiq
+         * bog'laydi. Nest'ning standart `error` maydoni ("Unauthorized",
+         * "Not Found") inson uchun matn — uni kod sifatida ishlatmaymiz;
+         * status nomi (UNAUTHORIZED, NOT_FOUND) aniqroq va barqarorroq.
+         */
+        code = body.code ?? code;
 
         if (typeof body.message === 'string') {
           message = body.message;

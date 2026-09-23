@@ -90,29 +90,6 @@ export class DebtListItemDto extends DebtResponseDto {
   sale?: DebtSaleDto;
 }
 
-export class DebtListMetaDto {
-  @ApiProperty({ type: Number, example: 42 })
-  total!: number;
-
-  @ApiProperty({ type: Number, example: 1 })
-  page!: number;
-
-  @ApiProperty({ type: Number, example: 10 })
-  limit!: number;
-
-  @ApiProperty({ type: Number, example: 5 })
-  totalPages!: number;
-}
-
-/** `GET /debts` */
-export class DebtListResponseDto {
-  @ApiProperty({ type: DebtListItemDto, isArray: true })
-  data!: DebtListItemDto[];
-
-  @ApiProperty({ type: DebtListMetaDto })
-  meta!: DebtListMetaDto;
-}
-
 /** `GET /debts/:id` */
 export class DebtDetailResponseDto extends DebtResponseDto {
   @ApiPropertyOptional({ type: DebtCustomerDto })

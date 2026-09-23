@@ -1,17 +1,13 @@
-import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
-import type { ValidationError } from '@nestjs/common';
+import { INestApplication, Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import type { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
-import { AllExceptionsFilter } from '../../src/common/filters/all-exception.filter';
-import { BusinessException } from '../../src/common/errors/business.exception';
-import { ErrorCode } from '../../src/common/errors/error-codes';
+import { API_PREFIX, applyGlobalSetup } from '../../src/app.setup';
 import { PrismaService } from '../../src/config/database/prisma.service';
 import { RedisService } from '../../src/config/redis/redis.service';
 
-export const API = '/api/v1';
+export const API = API_PREFIX;
 
 export interface TestContext {
   app: INestApplication;
@@ -22,9 +18,9 @@ export interface TestContext {
 }
 
 /**
- * Test ilovasi `App.main()` dagi global sozlamalarni AYNAN takrorlaydi:
- * prefix, ValidationPipe (VALIDATION_ERROR formatida), xato filtri, cookie-parser.
- * Aks holda testlar production'dan farqli xatolarni ko'rgan bo'lardi.
+ * Test ilovasi global sozlamalarni `applyGlobalSetup` dan OLADI — ya'ni
+ * ishlayotgan server bilan bitta manbadan. Sozlamalar bu yerda takrorlansa,
+ * production'da yo'q narsa testda "ishlab" turgan bo'lardi.
  */
 export async function createTestApp(): Promise<TestContext> {
   /*
@@ -44,24 +40,7 @@ export async function createTestApp(): Promise<TestContext> {
     logger: process.env.DEBUG_TEST_LOGS ? undefined : false,
   });
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      transform: true,
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      exceptionFactory: (errors: ValidationError[]) => {
-        const fields = flatten(errors);
-        return BusinessException.badRequest(
-          ErrorCode.VALIDATION_ERROR,
-          fields[0] ?? "So'rov ma'lumotlari noto'g'ri",
-          { fields },
-        );
-      },
-    }),
-  );
-  app.useGlobalFilters(new AllExceptionsFilter());
-  app.use(cookieParser());
-  app.setGlobalPrefix(API);
+  applyGlobalSetup(app);
 
   await app.init();
 
@@ -77,18 +56,6 @@ export async function createTestApp(): Promise<TestContext> {
       await app.close();
     },
   };
-}
-
-function flatten(errors: ValidationError[]): string[] {
-  const messages: string[] = [];
-  const walk = (list: ValidationError[]) => {
-    for (const error of list) {
-      if (error.constraints) messages.push(...Object.values(error.constraints));
-      if (error.children?.length) walk(error.children);
-    }
-  };
-  walk(errors);
-  return messages;
 }
 
 /** Testlar orasida bazani tozalaydi (SUPERADMIN saqlanib qoladi) */

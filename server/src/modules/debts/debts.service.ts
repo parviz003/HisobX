@@ -6,17 +6,18 @@ import {
 import { PrismaService } from '../../config/database/prisma.service';
 import { QueryDebtDto } from './dto/query-debt.dto';
 import { MakePaymentDto } from './dto/make-payment.dto';
-import { JwtPayload } from '../../common/types/jwt-payload.interface';
 import { Prisma } from '@prisma/client';
 import { successRes } from '../../common/helper/success-response';
+import { pageParams, paginate } from '../../common/helper/paginate';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @Injectable()
 export class DebtsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(query: QueryDebtDto, storeId: number) {
-    const { page = 1, limit = 10, customerId, isPaid } = query;
-    const skip = (page - 1) * limit;
+    const { customerId, isPaid } = query;
+    const { page, limit, skip, take } = pageParams(query);
 
     const where: Prisma.DebtWhereInput = {
       storeId,
@@ -25,12 +26,12 @@ export class DebtsService {
       ...(isPaid !== undefined && { isPaid }),
     };
 
-    const [total, data] = await Promise.all([
+    const [total, items] = await Promise.all([
       this.prisma.debt.count({ where }),
       this.prisma.debt.findMany({
         where,
         skip,
-        take: limit,
+        take,
         include: {
           customer: { select: { id: true, name: true, phone: true } },
           sale: {
@@ -46,15 +47,7 @@ export class DebtsService {
       }),
     ]);
 
-    return successRes({
-      data,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
+    return successRes(paginate(items, total, { page, limit }));
   }
 
   async findOne(id: number, storeId: number) {
@@ -78,7 +71,7 @@ export class DebtsService {
     return successRes(debt);
   }
 
-  async getOverdue(storeId: number) {
+  async getOverdue(storeId: number, query?: PaginationQueryDto) {
     const overdueDebts = await this.prisma.debt.findMany({
       where: {
         storeId,
@@ -109,7 +102,11 @@ export class DebtsService {
       {} as Record<number, any>,
     );
 
-    return successRes(Object.values(grouped));
+    const groups = Object.values(grouped);
+    const { page, limit, skip, take } = pageParams(query);
+    return successRes(
+      paginate(groups.slice(skip, skip + take), groups.length, { page, limit }),
+    );
   }
 
   async makePayment(

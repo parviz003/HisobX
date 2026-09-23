@@ -13,18 +13,26 @@ import {
 import { QueryExpenseDto } from './dto/query-expense.dto';
 import { CashTransactionType, Prisma } from '@prisma/client';
 import { successRes } from '../../common/helper/success-response';
+import { pageParams, paginate } from '../../common/helper/paginate';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @Injectable()
 export class ExpensesService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Category methods
-  async findAllCategories(storeId: number) {
-    const categories = await this.prisma.expenseCategory.findMany({
-      where: { storeId },
-      orderBy: { name: 'asc' },
-    });
-    return successRes(categories);
+  async findAllCategories(storeId: number, query?: PaginationQueryDto) {
+    const { page, limit, skip, take } = pageParams(query);
+    const [total, items] = await Promise.all([
+      this.prisma.expenseCategory.count({ where: { storeId } }),
+      this.prisma.expenseCategory.findMany({
+        where: { storeId },
+        orderBy: { name: 'asc' },
+        skip,
+        take,
+      }),
+    ]);
+    return successRes(paginate(items, total, { page, limit }));
   }
 
   async createCategory(storeId: number, dto: CreateExpenseCategoryDto) {
@@ -129,14 +137,8 @@ export class ExpensesService {
   }
 
   async findAll(storeId: number, query: QueryExpenseDto) {
-    const {
-      page = 1,
-      limit = 10,
-      expenseCategoryId,
-      startDate,
-      endDate,
-    } = query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { expenseCategoryId, startDate, endDate } = query;
+    const { page, limit, skip, take } = pageParams(query);
 
     const where: Prisma.ExpenseWhereInput = {
       storeId,
@@ -153,12 +155,12 @@ export class ExpensesService {
       if (endDate) where.createdAt.lte = new Date(endDate);
     }
 
-    const [total, data] = await Promise.all([
+    const [total, items] = await Promise.all([
       this.prisma.expense.count({ where }),
       this.prisma.expense.findMany({
         where,
         skip,
-        take: Number(limit),
+        take,
         orderBy: { createdAt: 'desc' },
         include: {
           expenseCategory: true,
@@ -167,11 +169,6 @@ export class ExpensesService {
       }),
     ]);
 
-    return successRes({
-      data,
-      total,
-      page: Number(page),
-      limit: Number(limit),
-    });
+    return successRes(paginate(items, total, { page, limit }));
   }
 }

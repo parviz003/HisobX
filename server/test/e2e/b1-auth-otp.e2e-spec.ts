@@ -97,6 +97,21 @@ describe('B1 — Auth va OTP kodlari (e2e)', () => {
       expect(res.body).toHaveProperty('data');
     });
 
+    it('kodlar har doim SCREAMING_SNAKE_CASE (Nest matnlari emas)', async () => {
+      // Autentifikatsiyasiz so'rov -> AuthGuard'ning standart 401'i
+      const unauthorized = await ctx.http().get(`${API}/users/me`).expect(401);
+      expect(unauthorized.body.code).toBe('UNAUTHORIZED');
+      expect(unauthorized.body.code).toMatch(/^[A-Z][A-Z0-9_]*$/);
+
+      const session = await signIn(ctx, user);
+      const notFound = await ctx
+        .http()
+        .get(`${API}/users/999999`)
+        .set('Cookie', session.cookies)
+        .expect(404);
+      expect(notFound.body.code).toBe('NOT_FOUND');
+    });
+
     it('validatsiya xatosi VALIDATION_ERROR kodi bilan qaytadi', async () => {
       const res = await ctx
         .http()

@@ -6,8 +6,10 @@ import {
 import { PrismaService } from '../../config/database/prisma.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { QueryCustomerDto } from './dto/query-customer.dto';
 import { Prisma } from '@prisma/client';
 import { successRes } from '../../common/helper/success-response';
+import { pageParams, paginate } from '../../common/helper/paginate';
 
 @Injectable()
 export class CustomersService {
@@ -23,19 +25,26 @@ export class CustomersService {
     return successRes(customer, 201);
   }
 
-  async findAll(storeId: number, search?: string) {
+  async findAll(storeId: number, query?: QueryCustomerDto) {
+    const { page, limit, skip, take } = pageParams(query);
     const where: Prisma.CustomerWhereInput = { storeId };
-    if (search) {
+    if (query?.search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } },
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { phone: { contains: query.search, mode: 'insensitive' } },
       ];
     }
-    const customers = await this.prisma.customer.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-    });
-    return successRes(customers);
+
+    const [total, items] = await Promise.all([
+      this.prisma.customer.count({ where }),
+      this.prisma.customer.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+    ]);
+    return successRes(paginate(items, total, { page, limit }));
   }
 
   async findOne(storeId: number, id: number) {

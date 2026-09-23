@@ -79,6 +79,52 @@ describe('B1 — Swagger kontrakti (e2e)', () => {
     expect(wrong).toEqual([]);
   });
 
+  it("barcha ro'yxat endpointlari { items, meta } sxemasida", () => {
+    const listEndpoints = [
+      [`${API}/products`, 'get'],
+      [`${API}/categories`, 'get'],
+      [`${API}/customers`, 'get'],
+      [`${API}/users`, 'get'],
+      [`${API}/stores`, 'get'],
+      [`${API}/sales`, 'get'],
+      [`${API}/debts`, 'get'],
+      [`${API}/debts/overdue`, 'get'],
+      [`${API}/cash/transactions`, 'get'],
+      [`${API}/expenses`, 'get'],
+      [`${API}/expenses/categories`, 'get'],
+      [`${API}/inventory/transactions`, 'get'],
+      [`${API}/inventory/stock`, 'get'],
+    ] as const;
+
+    for (const [path, method] of listEndpoints) {
+      const operation: any = (doc.paths[path] as any)?.[method];
+      expect(operation).toBeDefined();
+      const schema =
+        operation.responses['200'].content['application/json'].schema;
+      const data = schema.properties.data;
+      expect(Object.keys(data.properties).sort()).toEqual(['items', 'meta']);
+      expect(data.properties.items.type).toBe('array');
+      expect(data.properties.meta.$ref).toContain('PaginationMetaDto');
+    }
+  });
+
+  it("ro'yxat endpointlarida page/limit parametrlari hujjatlangan", () => {
+    const operation: any = (doc.paths[`${API}/products`] as any).get;
+    const names = (operation.parameters ?? []).map((p: any) => p.name);
+    expect(names).toEqual(expect.arrayContaining(['page', 'limit']));
+  });
+
+  it('PaginationMetaDto kelishilgan maydonlarni saqlaydi', () => {
+    const schema: any = doc.components?.schemas?.PaginationMetaDto;
+    expect(schema).toBeDefined();
+    expect(Object.keys(schema.properties).sort()).toEqual([
+      'limit',
+      'page',
+      'total',
+      'totalPages',
+    ]);
+  });
+
   it('xato javoblari ErrorResponseDto sxemasiga tayanadi', () => {
     expect(doc.components?.schemas?.ErrorResponseDto).toBeDefined();
     const schema: any = doc.components!.schemas!.ErrorResponseDto;

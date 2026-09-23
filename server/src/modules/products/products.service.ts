@@ -11,6 +11,7 @@ import { Prisma } from '@prisma/client';
 import { File } from '../../infrastructure/lib/File';
 import { successRes } from '../../common/helper/success-response';
 import 'multer';
+import { pageParams, paginate } from '../../common/helper/paginate';
 
 @Injectable()
 export class ProductsService {
@@ -51,8 +52,8 @@ export class ProductsService {
   }
 
   async findAll(storeId: number, query: QueryProductDto) {
-    const { page = 1, limit = 10, categoryId, isActive, search } = query;
-    const skip = (Number(page) - 1) * Number(limit);
+    const { categoryId, isActive, search } = query;
+    const { page, limit, skip, take } = pageParams(query);
 
     const where: Prisma.ProductWhereInput = { storeId };
 
@@ -71,12 +72,12 @@ export class ProductsService {
       };
     }
 
-    const [total, data] = await Promise.all([
+    const [total, items] = await Promise.all([
       this.prisma.product.count({ where }),
       this.prisma.product.findMany({
         where,
         skip,
-        take: Number(limit),
+        take,
         orderBy: { createdAt: 'desc' },
         include: {
           category: { select: { id: true, name: true } },
@@ -84,12 +85,7 @@ export class ProductsService {
       }),
     ]);
 
-    return successRes({
-      data,
-      total,
-      page: Number(page),
-      limit: Number(limit),
-    });
+    return successRes(paginate(items, total, { page, limit }));
   }
 
   async findOne(storeId: number, id: number) {

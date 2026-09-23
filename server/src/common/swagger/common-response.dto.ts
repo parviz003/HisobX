@@ -12,14 +12,24 @@ export class DeletedResponseDto extends MessageResponseDto {
   id!: number;
 }
 
-/** Sahifalangan ro'yxatlarning umumiy maydonlari */
+/**
+ * Barcha ro'yxat endpointlarida bir xil `meta` bloki.
+ * Javob shakli: `{ statusCode, data: { items, meta } }`.
+ */
 export class PaginationMetaDto {
   @ApiProperty({ type: Number, example: 42, description: 'Jami yozuvlar soni' })
   total!: number;
 
-  @ApiProperty({ type: Number, example: 1 })
+  @ApiProperty({
+    type: Number,
+    example: 1,
+    description: 'Joriy sahifa (1 dan)',
+  })
   page!: number;
 
-  @ApiProperty({ type: Number, example: 10 })
+  @ApiProperty({ type: Number, example: 20, description: 'Sahifa hajmi' })
   limit!: number;
+
+  @ApiProperty({ type: Number, example: 3, description: 'Jami sahifalar soni' })
+  totalPages!: number;
 }

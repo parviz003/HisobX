@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { InventoryTransactionType } from '@prisma/client';
-import { PaginationMetaDto } from '../../../common/swagger';
 import { ProductResponseDto } from '../../products/dto/product-response.dto';
 
 export class InventoryProductDto {
@@ -56,12 +55,6 @@ export class InventoryOperationResponseDto {
 
   @ApiProperty({ type: InventoryTransactionResponseDto })
   transaction!: InventoryTransactionResponseDto;
-}
-
-/** `GET /inventory/transactions` */
-export class InventoryTransactionListResponseDto extends PaginationMetaDto {
-  @ApiProperty({ type: InventoryTransactionResponseDto, isArray: true })
-  data!: InventoryTransactionResponseDto[];
 }
 
 /** `GET /inventory/stock` */

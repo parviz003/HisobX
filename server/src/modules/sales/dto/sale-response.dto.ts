@@ -128,21 +128,3 @@ export class SaleListItemDto extends SaleResponseDto {
   @ApiPropertyOptional({ type: SaleUserDto })
   user?: SaleUserDto;
 }
-
-/** `GET /sales` */
-export class SaleListResponseDto {
-  @ApiProperty({ type: SaleListItemDto, isArray: true })
-  items!: SaleListItemDto[];
-
-  @ApiProperty({ type: Number, example: 42 })
-  total!: number;
-
-  @ApiProperty({ type: Number, example: 1 })
-  page!: number;
-
-  @ApiProperty({ type: Number, example: 10 })
-  limit!: number;
-
-  @ApiProperty({ type: Number, example: 5 })
-  totalPages!: number;
-}

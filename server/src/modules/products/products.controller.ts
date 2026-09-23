@@ -17,7 +17,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
 import {
   ProductDetailResponseDto,
-  ProductListResponseDto,
+  ProductListItemDto,
   ProductResponseDto,
 } from './dto/product-response.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -34,6 +34,7 @@ import {
 import {
   ApiAuthErrors,
   ApiError,
+  ApiPaginatedSuccess,
   ApiSuccess,
   ApiValidationError,
   MessageResponseDto,
@@ -94,7 +95,7 @@ export class ProductsController {
   @Roles('ADMIN', 'SELLER')
   @Get()
   @ApiOperation({ summary: 'Barcha mahsulotlarni qidirish va sahifalash' })
-  @ApiSuccess(ProductListResponseDto, {
+  @ApiPaginatedSuccess(ProductListItemDto, {
     description: "Sahifalangan mahsulotlar ro'yxati",
   })
   @ApiValidationError()

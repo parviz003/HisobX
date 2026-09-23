@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
@@ -14,11 +15,13 @@ import { StoresService } from './stores.service';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { OnboardStoreDto } from './dto/onboard-store.dto';
+import { QueryStoreDto } from './dto/query-store.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import {
   ApiAuthErrors,
   ApiError,
+  ApiPaginatedSuccess,
   ApiSuccess,
   ApiValidationError,
   DeletedResponseDto,
@@ -63,13 +66,13 @@ export class StoresController {
   @Roles(Role.SUPERADMIN)
   @Get()
   @ApiOperation({ summary: "Barcha do'konlar (faqat SUPERADMIN)" })
-  @ApiSuccess(StoreListItemResponseDto, {
-    isArray: true,
+  @ApiPaginatedSuccess(StoreListItemResponseDto, {
     description: "Do'konlar ro'yxati (xodim/mahsulot/savdo soni bilan)",
   })
+  @ApiValidationError()
   @ApiAuthErrors()
-  findAll() {
-    return this.storesService.findAll();
+  findAll(@Query() query: QueryStoreDto) {
+    return this.storesService.findAll(query);
   }
 
   @Roles(Role.SUPERADMIN)

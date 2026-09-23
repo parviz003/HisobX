@@ -1,5 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PaginationMetaDto } from '../../../common/swagger';
 import { CategoryResponseDto } from '../../categories/dto/category-response.dto';
 
 /** Mahsulot ichidagi qisqa toifa */
@@ -73,9 +72,4 @@ export class ProductListItemDto extends ProductResponseDto {
 export class ProductDetailResponseDto extends ProductResponseDto {
   @ApiPropertyOptional({ type: CategoryResponseDto, nullable: true })
   category?: CategoryResponseDto | null;
-}
-
-export class ProductListResponseDto extends PaginationMetaDto {
-  @ApiProperty({ type: ProductListItemDto, isArray: true })
-  data!: ProductListItemDto[];
 }

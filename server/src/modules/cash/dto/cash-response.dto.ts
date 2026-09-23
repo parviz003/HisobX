@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CashTransactionType } from '@prisma/client';
-import { PaginationMetaDto } from '../../../common/swagger';
 
 /** `GET /cash/balance` */
 export class CashBalanceResponseDto {
@@ -79,10 +78,4 @@ export class CashTransactionResponseDto {
 
   @ApiProperty({ type: String, example: '2026-09-23T09:00:00.000Z' })
   createdAt!: Date;
-}
-
-/** `GET /cash/transactions` */
-export class CashTransactionListResponseDto extends PaginationMetaDto {
-  @ApiProperty({ type: CashTransactionResponseDto, isArray: true })
-  data!: CashTransactionResponseDto[];
 }

@@ -1,6 +1,7 @@
 import { applyDecorators, Type } from '@nestjs/common';
 import { ApiExtraModels, ApiResponse, getSchemaPath } from '@nestjs/swagger';
 import { ErrorResponseDto } from './error-response.dto';
+import { PaginationMetaDto } from './common-response.dto';
 
 type SuccessOptions = {
   /** HTTP status (standart: 200) */
@@ -37,6 +38,45 @@ export const ApiSuccess = <TModel extends Type<unknown>>(
         properties: {
           statusCode: { type: 'integer', example: status },
           data: dataSchema,
+        },
+      },
+    }),
+  );
+};
+
+/**
+ * Sahifalangan ro'yxat javobi — BARCHA ro'yxat endpointlari uchun yagona shakl:
+ *
+ * ```json
+ * { "statusCode": 200, "data": { "items": [...], "meta": { "total", "page", "limit", "totalPages" } } }
+ * ```
+ */
+export const ApiPaginatedSuccess = <TModel extends Type<unknown>>(
+  model: TModel,
+  options: { status?: number; description?: string } = {},
+) => {
+  const { status = 200, description } = options;
+  return applyDecorators(
+    ApiExtraModels(model, PaginationMetaDto),
+    ApiResponse({
+      status,
+      description,
+      schema: {
+        type: 'object',
+        required: ['statusCode', 'data'],
+        properties: {
+          statusCode: { type: 'integer', example: status },
+          data: {
+            type: 'object',
+            required: ['items', 'meta'],
+            properties: {
+              items: {
+                type: 'array',
+                items: { $ref: getSchemaPath(model) },
+              },
+              meta: { $ref: getSchemaPath(PaginationMetaDto) },
+            },
+          },
         },
       },
     }),

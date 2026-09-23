@@ -19,6 +19,7 @@ import { BusinessException } from '../../common/errors/business.exception';
 import { ErrorCode } from '../../common/errors/error-codes';
 import { Phone } from '../../common/helper/phone';
 import 'multer';
+import { pageParams, paginate } from '../../common/helper/paginate';
 
 const userSelect = {
   id: true,
@@ -167,12 +168,18 @@ export class UsersService {
             ...(query.status ? { status: query.status } : {}),
           };
 
-    const users = await this.prisma.user.findMany({
-      where,
-      select: userSelect,
-      orderBy: { createdAt: 'desc' },
-    });
-    return successRes(users);
+    const { page, limit, skip, take } = pageParams(query);
+    const [total, items] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        select: userSelect,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+    ]);
+    return successRes(paginate(items, total, { page, limit }));
   }
 
   async findOne(actor: IPayload, id: number) {

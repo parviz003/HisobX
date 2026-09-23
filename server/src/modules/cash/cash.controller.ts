@@ -12,12 +12,12 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import {
   ApiAuthErrors,
   ApiError,
+  ApiPaginatedSuccess,
   ApiSuccess,
   ApiValidationError,
 } from '../../common/swagger';
 import {
   CashBalanceResponseDto,
-  CashTransactionListResponseDto,
   CashTransactionResponseDto,
 } from './dto/cash-response.dto';
 
@@ -60,7 +60,7 @@ export class CashController {
   @ApiOperation({
     summary: 'Kassa operatsiyalari tarixini sahifalash va filtrlash',
   })
-  @ApiSuccess(CashTransactionListResponseDto, {
+  @ApiPaginatedSuccess(CashTransactionResponseDto, {
     description: 'Sahifalangan kassa harakatlari',
   })
   @ApiValidationError()

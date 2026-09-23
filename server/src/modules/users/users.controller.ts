@@ -45,6 +45,7 @@ import type { IPayload } from '../../common/interface';
 import {
   ApiAuthErrors,
   ApiError,
+  ApiPaginatedSuccess,
   ApiSuccess,
   ApiValidationError,
   DeletedResponseDto,
@@ -149,10 +150,8 @@ export class UsersController {
     summary:
       "Xodimlar ro'yxati (ADMIN — faqat o'z do'koni SELLER'lari, SUPERADMIN — barchasi)",
   })
-  @ApiSuccess(UserResponseDto, {
-    isArray: true,
-    description: "Xodimlar ro'yxati",
-  })
+  @ApiPaginatedSuccess(UserResponseDto, { description: "Xodimlar ro'yxati" })
+  @ApiValidationError()
   @ApiAuthErrors()
   findAll(@CurrentUser() actor: IPayload, @Query() query: QueryUserDto) {
     return this.usersService.findAll(actor, query);

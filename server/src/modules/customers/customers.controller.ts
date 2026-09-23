@@ -12,6 +12,7 @@ import {
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { QueryCustomerDto } from './dto/query-customer.dto';
 import {
   CustomerDetailResponseDto,
   CustomerResponseDto,
@@ -19,10 +20,11 @@ import {
 import { StoreId } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
-import { ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import {
   ApiAuthErrors,
   ApiError,
+  ApiPaginatedSuccess,
   ApiSuccess,
   ApiValidationError,
   DeletedResponseDto,
@@ -51,17 +53,12 @@ export class CustomersController {
 
   @Roles(Role.ADMIN, Role.SELLER)
   @Get()
-  @ApiOperation({ summary: "Mijozlar ro'yxati (qidiruv bilan)" })
-  @ApiQuery({
-    name: 'search',
-    required: false,
-    example: 'Alisher',
-    description: 'Ism yoki telefon bo‘yicha qidiruv',
-  })
-  @ApiSuccess(CustomerResponseDto, { isArray: true, description: 'Mijozlar' })
+  @ApiOperation({ summary: "Mijozlar ro'yxati (qidiruv va sahifalash bilan)" })
+  @ApiPaginatedSuccess(CustomerResponseDto, { description: 'Mijozlar' })
+  @ApiValidationError()
   @ApiAuthErrors()
-  findAll(@StoreId() storeId: number, @Query('search') search?: string) {
-    return this.customersService.findAll(storeId, search);
+  findAll(@StoreId() storeId: number, @Query() query: QueryCustomerDto) {
+    return this.customersService.findAll(storeId, query);
   }
 
   @Roles(Role.ADMIN, Role.SELLER)

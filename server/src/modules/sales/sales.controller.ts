@@ -21,12 +21,13 @@ import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import {
   ApiAuthErrors,
   ApiError,
+  ApiPaginatedSuccess,
   ApiSuccess,
   ApiValidationError,
 } from '../../common/swagger';
 import {
   SaleDetailResponseDto,
-  SaleListResponseDto,
+  SaleListItemDto,
   SaleResponseDto,
 } from './dto/sale-response.dto';
 
@@ -57,7 +58,9 @@ export class SalesController {
   @Roles(Role.ADMIN, Role.SELLER)
   @Get()
   @ApiOperation({ summary: "Savdolar ro'yxati (filtrlar bilan)" })
-  @ApiSuccess(SaleListResponseDto, { description: 'Sahifalangan savdolar' })
+  @ApiPaginatedSuccess(SaleListItemDto, {
+    description: 'Sahifalangan savdolar',
+  })
   @ApiValidationError()
   @ApiAuthErrors()
   findAll(@StoreId() storeId: number, @Query() query: QuerySaleDto) {

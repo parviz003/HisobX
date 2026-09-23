@@ -7,10 +7,12 @@ import {
   Param,
   Delete,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { QueryCategoryDto } from './dto/query-category.dto';
 import { CategoryResponseDto } from './dto/category-response.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -18,6 +20,7 @@ import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import {
   ApiAuthErrors,
   ApiError,
+  ApiPaginatedSuccess,
   ApiSuccess,
   ApiValidationError,
   DeletedResponseDto,
@@ -47,11 +50,15 @@ export class CategoriesController {
 
   @Roles('ADMIN', 'SELLER')
   @Get()
-  @ApiOperation({ summary: "Toifalar ro'yxati" })
-  @ApiSuccess(CategoryResponseDto, { isArray: true, description: 'Toifalar' })
+  @ApiOperation({ summary: "Toifalar ro'yxati (sahifalangan)" })
+  @ApiPaginatedSuccess(CategoryResponseDto, { description: 'Toifalar' })
+  @ApiValidationError()
   @ApiAuthErrors()
-  findAll(@CurrentUser('storeId') storeId: number) {
-    return this.categoriesService.findAll(storeId);
+  findAll(
+    @CurrentUser('storeId') storeId: number,
+    @Query() query: QueryCategoryDto,
+  ) {
+    return this.categoriesService.findAll(storeId, query);
   }
 
   @Roles('ADMIN')

@@ -8,6 +8,7 @@ import { CreateSaleDto } from './dto/create-sale.dto';
 import { QuerySaleDto } from './dto/query-sale.dto';
 import { PaymentType, SaleStatus, Prisma } from '@prisma/client';
 import { successRes } from '../../common/helper/success-response';
+import { pageParams, paginate } from '../../common/helper/paginate';
 
 @Injectable()
 export class SalesService {
@@ -163,16 +164,8 @@ export class SalesService {
   }
 
   async findAll(storeId: number, query: QuerySaleDto) {
-    const {
-      page = 1,
-      limit = 10,
-      status,
-      paymentType,
-      customerId,
-      startDate,
-      endDate,
-    } = query;
-    const skip = (page - 1) * limit;
+    const { status, paymentType, customerId, startDate, endDate } = query;
+    const { page, limit, skip, take } = pageParams(query);
 
     const where: Prisma.SaleWhereInput = { storeId, deletedAt: null };
 
@@ -190,7 +183,7 @@ export class SalesService {
       this.prisma.sale.findMany({
         where,
         skip,
-        take: limit,
+        take,
         orderBy: { createdAt: 'desc' },
         include: {
           customer: { select: { name: true } },
@@ -200,13 +193,7 @@ export class SalesService {
       this.prisma.sale.count({ where }),
     ]);
 
-    return successRes({
-      items,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    });
+    return successRes(paginate(items, total, { page, limit }));
   }
 
   async findOne(storeId: number, id: number) {

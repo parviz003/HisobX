@@ -7,6 +7,8 @@ import { PrismaService } from '../../config/database/prisma.service';
 import { CreateInventoryDto } from './dto/create-inventory.dto';
 import { QueryInventoryDto } from './dto/query-inventory.dto';
 import { successRes } from '../../common/helper/success-response';
+import { pageParams, paginate } from '../../common/helper/paginate';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @Injectable()
 export class InventoryService {
@@ -105,8 +107,8 @@ export class InventoryService {
   }
 
   async getTransactions(storeId: number, query: QueryInventoryDto) {
-    const { productId, type, page = 1, limit = 10 } = query;
-    const skip = (page - 1) * limit;
+    const { productId, type } = query;
+    const { page, limit, skip, take } = pageParams(query);
 
     const where = {
       storeId,
@@ -114,11 +116,11 @@ export class InventoryService {
       ...(type && { type }),
     };
 
-    const [data, total] = await Promise.all([
+    const [items, total] = await Promise.all([
       this.prisma.inventoryTransaction.findMany({
         where,
         skip,
-        take: limit,
+        take,
         orderBy: { createdAt: 'desc' },
         include: {
           product: {
@@ -129,27 +131,35 @@ export class InventoryService {
       this.prisma.inventoryTransaction.count({ where }),
     ]);
 
-    return successRes({ data, total, page, limit });
+    return successRes(paginate(items, total, { page, limit }));
   }
 
-  async getStockLevels(storeId: number) {
-    const products = await this.prisma.product.findMany({
-      where: { storeId },
-      select: {
-        id: true,
-        name: true,
-        stock: true,
-        minStock: true,
-        isActive: true,
-      },
-      orderBy: { name: 'asc' },
-    });
+  async getStockLevels(storeId: number, query?: PaginationQueryDto) {
+    const { page, limit, skip, take } = pageParams(query);
+    const select = {
+      id: true,
+      name: true,
+      stock: true,
+      minStock: true,
+      isActive: true,
+    };
 
-    return successRes(
-      products.map((p) => ({
-        ...p,
-        lowStock: p.stock <= p.minStock,
-      })),
-    );
+    const [total, products] = await Promise.all([
+      this.prisma.product.count({ where: { storeId } }),
+      this.prisma.product.findMany({
+        where: { storeId },
+        select,
+        orderBy: { name: 'asc' },
+        skip,
+        take,
+      }),
+    ]);
+
+    const items = products.map((p) => ({
+      ...p,
+      lowStock: p.stock <= p.minStock,
+    }));
+
+    return successRes(paginate(items, total, { page, limit }));
   }
 }
