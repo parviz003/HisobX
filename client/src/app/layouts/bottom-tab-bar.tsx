@@ -42,15 +42,16 @@ export function BottomTabBar({ role, onOpenMore }: BottomTabBarProps) {
                       'flex items-center justify-center rounded-xl transition-colors duration-150',
                       // Savdo tugmasi ajratib ko'rsatiladi — eng ko'p bosiladigan amal.
                       item.highlight
-                        ? 'bg-primary text-primary-foreground -mt-5 size-12 shadow-lg'
+                        ? 'bg-primary text-primary-foreground ring-card -mt-5 size-12 shadow-lg ring-4 dark:shadow-none'
                         : 'size-6',
                       !item.highlight && isActive && 'text-primary',
                     )}
                   >
                     <item.icon className={item.highlight ? 'size-6' : 'size-5'} aria-hidden />
                   </span>
-                  <span className="text-[11px] leading-none font-medium">
-                    {t(item.labelKey)}
+                  <span className="w-full truncate px-0.5 text-center text-[13px] leading-none font-medium">
+                    {/* Panelda joy tor — `nav:tab.*` qisqa yorlig'i bo'lsa o'sha olinadi */}
+                    {t([`tab.${item.labelKey}`, item.labelKey])}
                   </span>
                 </>
               )}
@@ -67,7 +68,9 @@ export function BottomTabBar({ role, onOpenMore }: BottomTabBarProps) {
             <span className="flex size-6 items-center justify-center">
               <MoreHorizontal className="size-5" aria-hidden />
             </span>
-            <span className="text-[11px] leading-none font-medium">{t('more')}</span>
+            <span className="w-full truncate px-0.5 text-center text-[13px] leading-none font-medium">
+              {t('more')}
+            </span>
           </button>
         </li>
       </ul>

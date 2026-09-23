@@ -11,7 +11,7 @@ export function InstallPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="bg-card fixed inset-x-4 bottom-24 z-40 rounded-2xl border p-4 shadow-lg md:bottom-4 md:left-auto md:w-80">
+    <div className="bg-card fixed inset-x-4 bottom-24 z-40 rounded-2xl border p-4 shadow-lg dark:shadow-none md:bottom-4 md:left-auto md:w-80">
       <div className="flex items-start gap-3">
         <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl">
           <Download className="size-5" aria-hidden />

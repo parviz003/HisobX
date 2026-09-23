@@ -27,7 +27,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
+          // Toast ham karta — `rounded-2xl` bilan bir xil radius
+          "--border-radius": "calc(var(--radius) + 8px)",
         } as React.CSSProperties
       }
       {...props}

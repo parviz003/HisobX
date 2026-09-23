@@ -18,5 +18,13 @@
   "stores": "Do'konlar",
   "more": "Ko'proq",
   "menu": "Menyu",
-  "openMenu": "Menyuni ochish"
+  "openMenu": "Menyuni ochish",
+  "tab": {
+    "dashboard": "Bosh",
+    "pos": "Savdo",
+    "sales": "Savdolar",
+    "products": "Mahsulot",
+    "debts": "Qarzlar",
+    "stores": "Do'konlar"
+  }
 }

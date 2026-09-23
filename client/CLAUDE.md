@@ -98,21 +98,34 @@ Ro'yxatdan tashqari kutubxona qo'shilmaydi.
 
 ## 3. Dizayn tizimi
 
-- **Ranglar:** primary emerald (light 600, dark 500). Neytral light'da slate (fon `slate-50`,
-  kartalar oq), dark'da zinc (fon `zinc-950`, kartalar `zinc-900`). Semantik: success emerald,
-  warning amber, xato/qarz rose, info sky. Pul: kirim yashil, chiqim qizil, qarz rose.
+- **Ranglar:** primary emerald — **light'da 700**, dark'da 500. Neytral light'da slate
+  (fon `slate-50`, kartalar oq), dark'da zinc (fon `zinc-950`, kartalar `zinc-900`).
+  Semantik: success emerald, warning amber, xato/qarz rose, info sky — light'da hammasi
+  700-daraja, dark'da 500. Pul: kirim yashil, chiqim qizil, qarz rose.
   Kontrast WCAG AA dan past emas. Tokenlar — `src/index.css`.
+  > **Kelishuv o'zgarishi (3-bosqich).** Dastlab light uchun 600-daraja kelishilgandi, lekin
+  > oq/`slate-50` fonda emerald-600 3.5:1, amber-600 3.1:1, sky-600 3.8:1 beradi — AA (4.5:1)
+  > dan past. Ikki qoida to'qnashganda kontrast ustun qo'yildi va light shkalasi 700 ga
+  > tushirildi. Dark 500-daraja o'zgarmadi (zinc-950 fonida 7:1 dan yuqori).
+  > Barcha token juftliklari `src/lib/design-tokens.test.ts` da avtomatik tekshiriladi
+  > (matn ≥ 4.5:1, focus halqasi va grafik belgilar ≥ 3:1); hisob-kitob — `src/lib/color.ts`.
 - **Tipografiya:** Inter Variable. Pul raqamlari `tabular-nums` (`.tabular` klassi).
   Ekran sarlavhasi 22–24px, karta sarlavhasi 16px, asosiy matn 15–16px, yordamchi 13px.
-  Telefonda matn 13px dan kichik emas.
+  Telefonda matn 13px dan kichik emas — pastki panel yorliqlari ham 13px, shuning uchun
+  ular `nav:tab.*` dagi qisqartirilgan nomlardan olinadi (5 ustun × ~72px sig'adi).
 - **Shakl:** kartalar `rounded-2xl`, tugma/inputlar `rounded-xl`. Dark'da soya o'rniga nozik border.
-  Bo'shliqlar 4px shkalada, telefonda chetdan 16px. Bosiladigan elementlar ≥44×44px (`.min-h-touch`).
+  Bo'shliqlar 4px shkalada, telefonda chetdan 16px. Bosiladigan elementlar ≥44×44px
+  (`.min-h-touch`): `Button`/`Input`/`SelectTrigger` ning asosiy o'lchami telefonda 44px,
+  `md` dan boshlab 40px. `sm`/`xs` o'lchamlar faqat desktop jadval va chiplar uchun.
 - **Joylashuv:** telefonda pastki tab bar (maks 5) + ajratilgan POS tugmasi; planshet/desktopda sidebar.
   Forma va tanlov oynalari — `ResponsiveDialog` (telefonda Drawer, desktopda Dialog).
   Safe-area: `.pt-safe` / `.pb-safe`.
 - **Harakat:** 150–250ms, yumshoq. `prefers-reduced-motion` da o'chadi. Faqat Tailwind/CSS.
 - **Holatlar:** skeleton (spinner emas), `EmptyState`, `ErrorState` ("Qayta urinish"), toast'lar.
-- **Brend:** emerald fonli "H" ikonkasi + matnli logotip (`BrandLogo`). PWA ikonkalari shundan.
+- **Brend:** emerald fonli "H" ikonkasi + matnli logotip (`BrandLogo`). PWA ikonkalari shundan:
+  `pnpm icons` (`scripts/generate-icons.mjs`) favicon, 192/512, maskable va apple-touch
+  ikonkalarini qayta chizadi. Brend rangi `--primary` bilan bir xil (`#007a55`) —
+  `vite.config.ts` dagi `theme_color`, `index.html` dagi `theme-color` va `favicon.svg` ham shu.
 
 ---
 
