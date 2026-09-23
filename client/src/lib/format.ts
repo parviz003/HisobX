@@ -23,19 +23,37 @@ function toDate(value: Date | string | number): Date | null {
 }
 
 /**
+ * Pul va miqdorni songa keltiradigan YAGONA joy.
+ *
+ * Kontrakt bo'yicha backend bu maydonlarni `number` qaytaradi. String ham
+ * qabul qilinadi — o'tish davri uchun (eski javoblar Prisma `Decimal` ni matn
+ * qilib qaytarardi). Kodning boshqa joyida `Number()` yozilmaydi.
+ * TODO(backend): barcha endpointlar `number` qaytarayotgani tasdiqlangach,
+ * `string` varianti olib tashlanadi.
+ */
+export function toAmount(value: string | number | null | undefined): number {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+/**
  * Pulni so'mda ko'rsatadi: `1 250 000 so'm`.
  * Backend butun son (so'm) qaytaradi, shuning uchun yaxlitlab ko'rsatamiz.
  */
 export function formatMoney(
-  value: number | null | undefined,
+  value: string | number | null | undefined,
   options: { withSuffix?: boolean; sign?: boolean } = {},
 ): string {
   const { withSuffix = true, sign = false } = options;
-  if (value === null || value === undefined || !Number.isFinite(value)) {
+  if (value === null || value === undefined || value === '') {
     return withSuffix ? `0${NBSP}so'm` : '0';
   }
 
-  const rounded = Math.round(value);
+  const rounded = Math.round(toAmount(value));
   const isNegative = rounded < 0;
   const digits = Math.abs(rounded)
     .toString()
@@ -53,12 +71,12 @@ export function formatMoney(
  * `dona` → `12 dona`; `kg`/`litr` → `1,25 kg` (ortiqcha nollar kesiladi).
  */
 export function formatQuantity(
-  value: number | null | undefined,
+  value: string | number | null | undefined,
   unit: Unit = 'dona',
   options: { withUnit?: boolean } = {},
 ): string {
   const { withUnit = true } = options;
-  const safe = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  const safe = toAmount(value);
 
   let text: string;
   if (unit === 'dona') {

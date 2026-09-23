@@ -1,8 +1,9 @@
-import { formatMoney } from '@/lib/format';
+import { formatMoney, toAmount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 type MoneyTextProps = {
-  value: number | null | undefined;
+  /** Kontrakt bo'yicha `number`; `string` o'tish davri uchun qabul qilinadi. */
+  value: string | number | null | undefined;
   /** `in` — kirim (yashil), `out` — chiqim (qizil), `debt` — qarz (rose) */
   tone?: 'default' | 'in' | 'out' | 'debt' | 'auto';
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -27,8 +28,9 @@ export function MoneyText({
   className,
 }: MoneyTextProps) {
   // `auto` — ishorasiga qarab rang tanlaydi (kassa harakatlari uchun qulay).
+  const amount = toAmount(value);
   const resolvedTone =
-    tone === 'auto' ? ((value ?? 0) < 0 ? 'out' : (value ?? 0) > 0 ? 'in' : 'default') : tone;
+    tone === 'auto' ? (amount < 0 ? 'out' : amount > 0 ? 'in' : 'default') : tone;
 
   return (
     <span
