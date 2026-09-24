@@ -8,14 +8,12 @@ import { TelegramApi } from '../../infrastructure/lib/TelegramApi';
 import { OtpService } from '../otp/otp.service';
 import { BOT_TEXT } from './telegram-messages';
 
-/** `POST /auth/signin` javobi — hisob hali ulanmagan bo'lsa */
 export interface TelegramLinkInvite {
   linkToken: string;
   botUrl: string;
   linkExpiresAt: string;
 }
 
-/** `GET /auth/telegram-link-status` javobi */
 export interface TelegramLinkStatus {
   linked: boolean;
   expiresAt?: string;
@@ -24,14 +22,7 @@ export interface TelegramLinkStatus {
 
 type LinkTokenPayload = { userId: number; phone: string };
 
-/**
- * Foydalanuvchi hisobini Telegram chatiga bog'lash.
- *
- * Token Redis'da yashaydi (TTL 10 daqiqa) va faqat bitta marta ishlatiladi.
- * Bog'lanish muvaffaqiyatli bo'lsa OTP darhol botga yuboriladi va uning
- * muddatlari alohida kalitda saqlanadi — frontend `link-status` orqali
- * kutib turgani uchun.
- */
+
 @Injectable()
 export class TelegramLinkService {
   private readonly logger = new Logger(TelegramLinkService.name);

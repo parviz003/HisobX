@@ -1,5 +1,12 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  NotFoundException,
+} from '@nestjs/common';
 import { TelegramNotificationService } from './telegram-notification.service';
+import { TelegramLinkService } from './telegram-link.service';
+import { PrismaService } from '../../config/database/prisma.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
@@ -13,6 +20,7 @@ import {
 } from '../../common/swagger';
 import { IsNotEmpty, IsString } from 'class-validator';
 import { successRes } from '../../common/helper/success-response';
+import { IPayload } from '../../common/interface';
 
 class TestNotificationDto {
   @ApiProperty({ example: 'Salom, bu test xabar' })
@@ -21,18 +29,52 @@ class TestNotificationDto {
   message!: string;
 }
 
+class TelegramInviteResponseDto {
+  @ApiProperty({ type: String, example: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6' })
+  linkToken!: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'https://t.me/hisobx_bot?start=a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6',
+  })
+  botUrl!: string;
+
+  @ApiProperty({ type: String, example: '2026-09-23T09:10:00.000Z' })
+  linkExpiresAt!: string;
+}
+
 @ApiTags('Telegram Notifications')
-@Roles(Role.MANAGER)
 @Controller('telegram')
 export class TelegramController {
-  constructor(private readonly telegramService: TelegramNotificationService) {}
+  constructor(
+    private readonly telegramService: TelegramNotificationService,
+    private readonly telegramLinkService: TelegramLinkService,
+    private readonly prisma: PrismaService,
+  ) {}
 
+  @Roles(Role.ADMIN, Role.MANAGER, Role.SELLER, Role.SUPERADMIN)
+  @Post('invite')
+  @ApiOperation({
+    summary: 'Foydalanuvchi hisobiga Telegram ulash havolasini olish',
+  })
+  @ApiSuccess(TelegramInviteResponseDto, { description: 'Telegram ulash havolasi' })
+  @ApiAuthErrors()
+  async createInvite(@CurrentUser() actor: IPayload) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: actor.sub },
+      select: { id: true, phone: true },
+    });
+    if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
+    const invite = await this.telegramLinkService.createInvite(user);
+    return successRes(invite);
+  }
+
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Post('test')
   @ApiOperation({
     summary: `Do'kon telegram guruhiga test xabar yuborish`,
     description:
-      "Do'konning `telegramChatId` maydoni sozlangan bo'lishi kerak," +
-      ' aks holda 400 qaytadi. Telegram xabarni qabul qilmasa — 503.',
+      "Do'konning `telegramChatId` maydoni yoki xodimlar telegrami sozlangan bo'lishi kerak.",
   })
   @ApiSuccess(MessageResponseDto, { description: 'Xabar yuborildi' })
   @ApiValidationError()
@@ -50,6 +92,7 @@ export class TelegramController {
     return successRes(result);
   }
 
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Post('trigger/debt-reminder')
   @ApiOperation({ summary: 'Qarzdorlik eslatmalarini qo‘lda ishga tushirish' })
   @ApiSuccess(MessageResponseDto, { description: 'Bajarildi' })
@@ -59,6 +102,7 @@ export class TelegramController {
     return successRes({ message: 'Qarzlar eslatmasi bajarildi' });
   }
 
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Post('trigger/low-stock')
   @ApiOperation({
     summary: 'Kam qolgan mahsulotlar eslatmasini qo‘lda ishga tushirish',
@@ -70,6 +114,7 @@ export class TelegramController {
     return successRes({ message: 'Kam qolgan tovarlar eslatmasi bajarildi' });
   }
 
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Post('trigger/daily-summary')
   @ApiOperation({ summary: 'Kunlik yakuniy hisobotni qo‘lda yuborish' })
   @ApiSuccess(MessageResponseDto, { description: 'Bajarildi' })

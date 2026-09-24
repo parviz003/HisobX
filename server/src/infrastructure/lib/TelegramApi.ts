@@ -1,7 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { env } from '../../config';
 
-/** Telegram `Update` obyektining bizga kerak bo'lgan qismi */
 export interface TelegramUpdate {
   update_id: number;
   message?: {
@@ -11,7 +10,6 @@ export interface TelegramUpdate {
     text?: string;
     contact?: {
       phone_number: string;
-      /** Kontakt EGASINING Telegram IDsi. Begona kontaktda bu maydon boshqa bo'ladi. */
       user_id?: number;
     };
   };
@@ -19,17 +17,13 @@ export interface TelegramUpdate {
 
 type ReplyMarkup = {
   keyboard?: { text: string; request_contact?: boolean }[][];
+  inline_keyboard?: { text: string; url?: string; callback_data?: string }[][];
   resize_keyboard?: boolean;
   one_time_keyboard?: boolean;
   remove_keyboard?: boolean;
 };
 
-/**
- * Telegram Bot API bilan ishlash — bog'liqliksiz (faqat `fetch`).
- *
- * Alohida sinf sifatida turadi, chunki uni ham OTP yuboruvchi, ham bot
- * xizmati ishlatadi; DI grafida halqa hosil bo'lmasligi uchun provayder emas.
- */
+
 export class TelegramApi {
   private static readonly logger = new Logger(TelegramApi.name);
 
@@ -37,7 +31,7 @@ export class TelegramApi {
     return Boolean(env.TELEGRAM.TOKEN);
   }
 
-  /** `https://t.me/<bot>?start=<token>` — hisobni ulash havolasi */
+ 
   static startUrl(token: string): string {
     const username = env.TELEGRAM.BOT_USERNAME.replace(/^@/, '');
     return `https://t.me/${username}?start=${token}`;
@@ -72,7 +66,6 @@ export class TelegramApi {
     }
   }
 
-  /** Xabar yuboradi. Token sozlanmagan bo'lsa `false` qaytaradi (ilova yiqilmaydi). */
   static async sendMessage(
     chatId: string | number,
     text: string,
@@ -92,7 +85,6 @@ export class TelegramApi {
     return result !== null;
   }
 
-  /** Long polling. `offset` — oxirgi o'qilgan `update_id` + 1. */
   static async getUpdates(
     offset: number,
     timeoutSeconds: number,
@@ -105,7 +97,6 @@ export class TelegramApi {
     return result ?? [];
   }
 
-  /** "Raqamni ulashish" tugmasi — foydalanuvchi faqat O'Z kontaktini yubora oladi. */
   static shareContactKeyboard(buttonText: string): ReplyMarkup {
     return {
       keyboard: [[{ text: buttonText, request_contact: true }]],

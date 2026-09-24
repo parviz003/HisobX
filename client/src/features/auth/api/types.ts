@@ -39,6 +39,8 @@ export type SignInOtpSent = {
   windowExpiresAt?: string;
   /** Faqat dev rejimida keladi. */
   code?: string;
+  qrToken?: string;
+  qrBotUrl?: string;
 };
 
 /** Telegram ulanmagan — kod yuborilmaydi, avval botga ulanish kerak. */
@@ -67,6 +69,18 @@ export type TelegramLinkStatus = {
 
 /** `GET /device` — sessiya qurilmasi */
 export type Device = DeviceResponseDto;
+
+/** `GET /auth/qr-status?token=` */
+export type QrLoginStatus = {
+  status: 'pending' | 'confirmed' | 'expired' | 'invalid';
+  userId?: number;
+  deviceId?: number;
+  device?: string;
+  role?: Role;
+  storeId?: number | null;
+  phone?: string;
+  fullName?: string;
+};
 
 /** Qurilma limiti to'lganda `DEVICE_LIMIT_REACHED` xatosining `data` qismi */
 export type DeviceLimitPayload = AuthControllerConfirmSignIn403Data;

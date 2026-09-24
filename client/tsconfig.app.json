@@ -15,12 +15,12 @@
     "jsx": "react-jsx",
 
     "strict": true,
-    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
-    "paths": { "@/*": ["./src/*"] },
-    // "node" — faqat testlar uchun (dizayn tokenlari index.css dan o'qiladi)
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom", "node"]
   },
   "include": ["src"]

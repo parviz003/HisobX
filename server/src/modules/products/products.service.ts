@@ -67,10 +67,10 @@ export class ProductsService {
     }
 
     if (search) {
-      where.name = {
-        contains: search,
-        mode: 'insensitive',
-      };
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { barcode: { contains: search, mode: 'insensitive' } },
+      ];
     }
 
     const [total, items] = await Promise.all([

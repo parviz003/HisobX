@@ -18,6 +18,7 @@ import {
   DeviceResponseDto,
   ForgotPasswordResponseDto,
   OtpSentResponseDto,
+  QrLoginStatusResponseDto,
   RefreshResponseDto,
   TelegramLinkResponseDto,
   TelegramLinkStatusResponseDto,
@@ -47,10 +48,7 @@ import {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  /*
-   * Signup YO'Q: foydalanuvchini faqat yuqori rol yaratadi.
-   * Do'kon va uning menejeri — `POST /stores/onboard` (SUPERADMIN).
-   */
+
 
   @Public()
   @StrictRateLimit()
@@ -167,6 +165,21 @@ export class AuthController {
   @ApiSuccess(TelegramLinkStatusResponseDto, { description: 'Ulanish holati' })
   telegramLinkStatus(@Query('token') token: string) {
     return this.authService.telegramLinkStatus(token ?? '');
+  }
+
+  @Public()
+  @Get('qr-status')
+  @ApiOperation({
+    summary: 'Telefon orqali QR kod tasdiqlanganini tekshirish',
+  })
+  @ApiQuery({ name: 'token', type: String, required: true })
+  @ApiSuccess(QrLoginStatusResponseDto, { description: 'QR orqali kirish holati' })
+  checkQrStatus(
+    @Query('token') token: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.checkQrLoginStatus(token ?? '', req, res);
   }
 
   @Public()

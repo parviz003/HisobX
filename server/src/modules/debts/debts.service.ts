@@ -10,10 +10,14 @@ import { Prisma } from '@prisma/client';
 import { successRes } from '../../common/helper/success-response';
 import { pageParams, paginate } from '../../common/helper/paginate';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { TelegramNotificationService } from '../telegram/telegram-notification.service';
 
 @Injectable()
 export class DebtsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly telegramNotificationService: TelegramNotificationService,
+  ) {}
 
   async findAll(query: QueryDebtDto, storeId: number) {
     const { customerId, isPaid } = query;
@@ -118,7 +122,7 @@ export class DebtsService {
     const { amount, note } = dto;
     const paymentAmount = new Prisma.Decimal(amount);
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const debt = await tx.debt.findUnique({
         where: { id },
         include: { sale: true },
@@ -183,7 +187,31 @@ export class DebtsService {
         },
       });
 
-      return successRes(updatedDebt);
+      return { updatedDebt, debt };
     });
+
+    // Fire-and-forget Telegram notification
+    void (async () => {
+      try {
+        const customer = await this.prisma.customer.findUnique({
+          where: { id: result.debt.customerId },
+          select: { name: true, phone: true },
+        });
+
+        await this.telegramNotificationService.notifyDebtPayment(storeId, {
+          customerName: customer?.name || 'Mijoz',
+          customerPhone: customer?.phone || null,
+          amount: Number(paymentAmount),
+          remainingAmount: Number(result.updatedDebt.remainingAmount),
+          isPaid: result.updatedDebt.isPaid,
+          note: note || null,
+          saleNumber: result.debt.sale?.saleNumber || null,
+        }, userId);
+      } catch (err: any) {
+        // Safe error handling
+      }
+    })();
+
+    return successRes(result.updatedDebt);
   }
 }

@@ -20,6 +20,7 @@ import { CashModule } from './modules/cash/cash.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuthGuard } from './common/guards/jwt-auth.guard';
 import {
   AppThrottlerGuard,
@@ -45,7 +46,6 @@ import { AllExceptionsFilter } from './common/filters/all-exception.filter';
           {
             name: DEFAULT_THROTTLER,
             ttl: env.RATE_LIMIT.TTL_SECONDS * 1000,
-            // Autentifikatsiyalangan foydalanuvchiga kengroq limit
             limit: async (context: ExecutionContext) =>
               (await resolveThrottleUserId(context.switchToHttp().getRequest()))
                 ? env.RATE_LIMIT.USER_LIMIT
@@ -75,9 +75,9 @@ import { AllExceptionsFilter } from './common/filters/all-exception.filter';
     ExpensesModule,
     ReportsModule,
     TelegramModule,
+    NotificationsModule,
   ],
   providers: [
-    // Throttler birinchi ishlaydi: anonim so'rovlar ham hisobga olinadi
     { provide: APP_GUARD, useClass: AppThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },

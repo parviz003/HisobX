@@ -1,4 +1,5 @@
 import { HttpException, Logger, Injectable } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../../config/database/prisma.service';
 import { SignInDto } from './dto/sign-in.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -71,9 +72,140 @@ export class AuthService {
       );
     }
 
+    const qrToken = randomBytes(16).toString('hex');
+    const qrKey = `auth:qr:${qrToken}`;
+    await this.redis.client.set(
+      qrKey,
+      JSON.stringify({
+        userId: user.id,
+        phone: user.phone,
+        status: 'pending',
+      }),
+      'EX',
+      env.OTP.PENDING_WINDOW_SECONDS,
+    );
+    const qrBotUrl = TelegramApi.startUrl(`login_${qrToken}`);
+
     const data = await this.otp.sendOtp(user.phone, 'signin');
     await this.otp.markPending(user.phone, 'signin');
-    return successRes({ telegramLinked: true, ...data }, 200);
+    return successRes(
+      { telegramLinked: true, qrToken, qrBotUrl, ...data },
+      200,
+    );
+  }
+
+  /**
+   * QR orqali kirish holatini tekshirish (telefon botda tasdiqlaganini tekshiradi)
+   */
+  async checkQrLoginStatus(qrToken: string, req: Request, res: Response) {
+    if (!qrToken) {
+      return successRes({ status: 'invalid' }, 200);
+    }
+    const key = `auth:qr:${qrToken}`;
+    const raw = await this.redis.client.get(key);
+    if (!raw) {
+      return successRes({ status: 'expired' }, 200);
+    }
+
+    const data = JSON.parse(raw) as {
+      userId: number;
+      phone: string;
+      status: string;
+    };
+    if (data.status !== 'confirmed') {
+      return successRes({ status: 'pending' }, 200);
+    }
+
+    // Telefon orqali tasdiqlangan — tizimga kirish sessiyasini yakunlaymiz
+    const user = await this.db.user.findUnique({
+      where: { id: data.userId },
+    });
+    if (!user) {
+      throw BusinessException.notFound(
+        ErrorCode.USER_NOT_FOUND,
+        'Foydalanuvchi topilmadi',
+      );
+    }
+    this.assertUserActive(user);
+
+    await this.otp.consumePending(user.phone, 'signin').catch(() => {});
+    await this.redis.client.del(key);
+
+    const info = getDeviceInfo(req);
+
+    let device = await this.db.devices.findFirst({
+      where: { userId: user.id, device: info.device },
+    });
+
+    if (!device) {
+      const deviceCount = await this.db.devices.count({
+        where: { userId: user.id },
+      });
+      if (deviceCount >= env.DEVICE.LIMIT_PER_USER) {
+        throw BusinessException.forbidden(
+          ErrorCode.DEVICE_LIMIT_REACHED,
+          `Qurilmalar soni ${env.DEVICE.LIMIT_PER_USER} tadan oshmasligi kerak. Avval eski qurilmalardan birini o'chiring`,
+          {
+            limit: env.DEVICE.LIMIT_PER_USER,
+            devices: await this.devices.listForUser(user.id),
+          },
+        );
+      }
+      device = await this.db.devices.create({
+        data: {
+          userId: user.id,
+          device: info.device,
+          browser: info.browser,
+          os: info.os,
+          deviceType: info.deviceType,
+          ip: info.ip,
+          hashedRefreshToken: '',
+        },
+      });
+    }
+
+    const payload: IPayload = {
+      sub: user.id,
+      role: user.role,
+      status: user.status,
+      deviceId: device.deviceId,
+      storeId: user.storeId,
+    };
+
+    const { accessToken, refreshToken } = await Token.getToken(payload);
+    const hashedRefreshToken = Crypt.hashToken(refreshToken);
+
+    device = await this.db.devices.update({
+      where: { deviceId: device.deviceId },
+      data: {
+        hashedRefreshToken,
+        prevHashedRefreshToken: null,
+        prevTokenExpiresAt: null,
+        prevTokenUsed: false,
+        browser: info.browser,
+        os: info.os,
+        deviceType: info.deviceType,
+        ip: info.ip,
+        lastActiveAt: new Date(),
+      },
+    });
+
+    Token.setCookie(res, accessToken, refreshToken);
+
+    return successRes(
+      {
+        status: 'confirmed',
+        userId: device.userId,
+        deviceId: device.deviceId,
+        device: device.device,
+        role: user.role,
+        storeId: user.storeId,
+        phone: user.phone,
+        fullName: user.fullName,
+        createdAt: device.createdAt,
+      },
+      200,
+    );
   }
 
   /**
@@ -388,10 +520,35 @@ export class AuthService {
   async resendSignInOtp(phoneInput: string) {
     const phone = Phone.normalize(phoneInput);
     await this.otp.assertPending(phone, 'signin');
+    const user = await this.db.user.findUnique({ where: { phone } });
+    if (!user) {
+      throw BusinessException.notFound(
+        ErrorCode.USER_NOT_FOUND,
+        'Foydalanuvchi topilmadi',
+      );
+    }
+
+    const qrToken = randomBytes(16).toString('hex');
+    const qrKey = `auth:qr:${qrToken}`;
+    await this.redis.client.set(
+      qrKey,
+      JSON.stringify({
+        userId: user.id,
+        phone: user.phone,
+        status: 'pending',
+      }),
+      'EX',
+      env.OTP.PENDING_WINDOW_SECONDS,
+    );
+    const qrBotUrl = TelegramApi.startUrl(`login_${qrToken}`);
+
     const data = await this.otp.sendOtp(phone, 'signin');
     // Muddat cho'zilganda urinish belgisi ham yangilanadi
     await this.otp.markPending(phone, 'signin');
-    return successRes({ telegramLinked: true, ...data }, 200);
+    return successRes(
+      { telegramLinked: true, qrToken, qrBotUrl, ...data },
+      200,
+    );
   }
 
   /**

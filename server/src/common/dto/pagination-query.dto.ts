@@ -2,17 +2,12 @@ import { IsInt, IsOptional, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
-/** Sahifalash standarti */
 export const PAGINATION = {
   DEFAULT_PAGE: 1,
   DEFAULT_LIMIT: 20,
   MAX_LIMIT: 100,
 } as const;
 
-/**
- * Barcha ro'yxat endpointlari uchun umumiy sahifalash parametrlari.
- * Modul query DTO'lari shundan meros oladi.
- */
 export class PaginationQueryDto {
   @ApiPropertyOptional({
     type: Number,

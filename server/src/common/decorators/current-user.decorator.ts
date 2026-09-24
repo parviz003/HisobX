@@ -20,10 +20,6 @@ export const UserId = createParamDecorator(
   },
 );
 
-/**
- * Joriy do'kon IDsi. SUPERADMIN uchun `x-store-id` headeridan olinadi,
- * ko'rsatilmasa tushunarli xatolik qaytariladi.
- */
 export const StoreId = createParamDecorator(
   (data: unknown, ctx: ExecutionContext): number => {
     const request = ctx.switchToHttp().getRequest();

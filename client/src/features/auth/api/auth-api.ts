@@ -2,6 +2,7 @@ import { api } from '@/lib/api/client';
 import type {
   CurrentUser,
   Device,
+  QrLoginStatus,
   SignInResponse,
   TelegramLinkStatus,
 } from './types';
@@ -57,12 +58,19 @@ export const authApi = {
     await api.delete(`/device/${id}`);
   },
 
-  /** TODO(backend) 5.2-3: hozircha faqat MSW mock'ida. */
   telegramLinkStatus: async (
     token: string,
     signal?: AbortSignal,
   ): Promise<TelegramLinkStatus> => {
     const { data } = await api.get<TelegramLinkStatus>('/auth/telegram-link-status', {
+      params: { token },
+      signal,
+    });
+    return data;
+  },
+
+  qrStatus: async (token: string, signal?: AbortSignal): Promise<QrLoginStatus> => {
+    const { data } = await api.get<QrLoginStatus>('/auth/qr-status', {
       params: { token },
       signal,
     });

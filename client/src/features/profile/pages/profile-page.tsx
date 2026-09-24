@@ -27,6 +27,7 @@ import {
   type ProfileValues,
 } from '@/features/auth/schemas';
 import { emitSessionEvent, setImpersonatedStoreId } from '@/lib/api/session';
+import { api } from '@/lib/api/client';
 import { profileApi } from '../api/profile-api';
 import { PreferencesCard } from '../components/preferences-card';
 
@@ -146,14 +147,39 @@ export default function ProfilePage() {
               ) : null}
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-[13px] font-medium">{t('auth:profile.telegramStatus')}:</span>
-              <StatusBadge tone={user?.telegramLinked ? 'success' : 'neutral'}>
-                <Send className="mr-1 size-3" aria-hidden />
-                {user?.telegramLinked
-                  ? t('auth:profile.telegramLinked')
-                  : t('auth:profile.telegramNotLinked')}
-              </StatusBadge>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/20 p-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-medium">{t('auth:profile.telegramStatus')}:</span>
+                <StatusBadge tone={user?.telegramLinked ? 'success' : 'neutral'}>
+                  <Send className="mr-1 size-3" aria-hidden />
+                  {user?.telegramLinked
+                    ? t('auth:profile.telegramLinked')
+                    : t('auth:profile.telegramNotLinked')}
+                </StatusBadge>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1.5"
+                onClick={async () => {
+                  try {
+                    const res = await api.post<any>('/telegram/invite');
+                    const botUrl = res.data?.data?.botUrl || res.data?.botUrl;
+                    if (botUrl) {
+                      window.open(botUrl, '_blank', 'noopener,noreferrer');
+                    } else {
+                      toast.error('Havola topilmadi');
+                    }
+                  } catch {
+                    toast.error('Telegram botga ulanish havolasini olib bo‘lmadi');
+                  }
+                }}
+              >
+                <Send className="size-3.5" />
+                <span>{user?.telegramLinked ? 'Qayta ulash' : 'Telegramni ulash'}</span>
+              </Button>
             </div>
 
             <Button

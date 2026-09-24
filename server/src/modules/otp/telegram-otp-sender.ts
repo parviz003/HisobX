@@ -7,13 +7,7 @@ import { otpMessage } from '../telegram/telegram-messages';
 import type { OtpSender } from './otp-sender.interface';
 import type { OtpPurpose } from './otp.service';
 
-/**
- * OTP kodlarni Telegram bot orqali yuboradi (SMS yo'q).
- *
- * Hisob botga ulanmagan bo'lsa kod yuborilmaydi — bu holatni sign-in oqimi
- * oldindan aniqlaydi va foydalanuvchiga ulash havolasini beradi. Bot tokeni
- * sozlanmagan development'da kod logga yoziladi, aks holda umuman chiqmaydi.
- */
+
 @Injectable()
 export class TelegramOtpSender implements OtpSender {
   private readonly logger = new Logger(TelegramOtpSender.name);

@@ -22,9 +22,8 @@ export class File {
 
   static async create(file: Express.Multer.File): Promise<string> {
     try {
-      const fileName = `${Date.now()}_${randomUUID()}_${basename(
-        file.originalname,
-      )}`;
+      const cleanName = basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileName = `${Date.now()}_${randomUUID()}_${cleanName}`;
       if (!existsSync(File.filePath)) {
         mkdirSync(File.filePath, { recursive: true });
       }

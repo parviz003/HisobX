@@ -40,9 +40,9 @@ export default function OtpPage() {
 
   if (!flow) return <Navigate to="/login" replace />;
 
-  const codeExpired = Boolean(flow.expiresAt) && expiresIn === 0;
-  const windowExpired = Boolean(flow.windowExpiresAt) && windowLeft === 0;
-  const outOfAttempts = flow.attemptsLeft <= 0;
+  const codeExpired = Boolean(flow?.expiresAt) && expiresIn === 0;
+  const windowExpired = Boolean(flow?.windowExpiresAt) && windowLeft === 0;
+  const outOfAttempts = (flow?.attemptsLeft ?? 0) <= 0;
   const isBlocked = blockedSeconds > 0;
 
   // Urinishlar tugagan yoki 10 daqiqalik oyna yopilgan — login'ga qaytaramiz.
@@ -67,6 +67,7 @@ export default function OtpPage() {
 
   const canResend = resendIn === 0 && !isResending && !isBlocked;
   const canSubmit = code.length === 6 && !isConfirming && !codeExpired && !isBlocked;
+  const botUrl = flow.qrBotUrl || flow.botUrl;
 
   return (
     <Card className="rounded-2xl">
@@ -90,9 +91,9 @@ export default function OtpPage() {
           invalid={Boolean(confirmError) && confirmError?.status !== 429}
         />
 
-        {flow.botUrl ? (
+        {botUrl ? (
           <Button asChild variant="outline" className="min-h-touch w-full">
-            <a href={flow.botUrl} target="_blank" rel="noopener noreferrer">
+            <a href={botUrl} target="_blank" rel="noopener noreferrer">
               <Send className="size-4" aria-hidden />
               {t('auth:otp.openBot')}
             </a>

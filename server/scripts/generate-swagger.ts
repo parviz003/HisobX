@@ -11,7 +11,11 @@ import { NestFactory } from '@nestjs/core';
 import { writeFileSync, mkdirSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { AppModule } from '../src/app.module';
-import { API_PREFIX, applyGlobalSetup, createSwaggerDocument } from '../src/app.setup';
+import {
+  API_PREFIX,
+  applyGlobalSetup,
+  createSwaggerDocument,
+} from '../src/app.setup';
 
 const OUTPUT = resolve(__dirname, '../../docs/swagger.json');
 
