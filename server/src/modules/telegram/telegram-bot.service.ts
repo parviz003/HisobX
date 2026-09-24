@@ -13,14 +13,10 @@ import { TelegramLinkService } from './telegram-link.service';
 import { PrismaService } from '../../config/database/prisma.service';
 import { RedisService } from '../../config/redis/redis.service';
 
-/** Long polling oynasi (sekund) — Telegram tavsiya etgan oraliq. */
 const POLL_TIMEOUT_SECONDS = 25;
-/** Xatodan keyin qayta urinishdan oldingi kutish (ms) */
 const RETRY_DELAY_MS = 3000;
 
-/**
- * Botning yangilanishlarini o'qiydi (localhost uchun polling).
- */
+
 @Injectable()
 export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TelegramBotService.name);

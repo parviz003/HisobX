@@ -61,13 +61,6 @@ export class TelegramNotificationService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Bildirishnoma qabul qilishi kerak bo'lgan Telegram chat ID larini aniqlaydi:
-   * 1. Shu do'konga tegishli ADMIN va MANAGER foydalanuvchilar (o'z Telegramini ulaganlar)
-   * 2. Amalni bajargan xodim (actorUserId) — agar Telegramini ulagan bo'lsa
-   * 3. Do'konning maxsus guruhi (store.telegramChatId) — agar alohida guruh sifatida sozlangan bo'lsa
-   * MUHIM: Begona do'konlarning savdolari Superadminga bormaydi!
-   */
   async getRecipientChatIds(
     storeId: number,
     options?: {
@@ -99,14 +92,12 @@ export class TelegramNotificationService {
 
       if (!store) return [];
 
-      // 1. Shu do'konning adminlari va menejerlariga
       for (const u of store.users) {
         if (u.telegramChatId && targetRoles.includes(u.role)) {
           chatIds.add(u.telegramChatId);
         }
       }
 
-      // 2. Amalni bajargan xodim (sotuvchi) o'z hisobiga
       if (options?.actorUserId) {
         const actor = store.users.find((u) => u.id === options.actorUserId);
         if (actor?.telegramChatId) {
@@ -122,13 +113,11 @@ export class TelegramNotificationService {
         }
       }
 
-      // 3. Do'kon guruhi (agar sozlangan bo'lsa va superadmin shaxsiy chati bo'lmasa)
       if (store.telegramChatId) {
         const superAdminId = env.TELEGRAM.ID ? String(env.TELEGRAM.ID) : null;
         const isSuperAdminPersonalChat = store.telegramChatId === superAdminId;
         const hasStoreUsers = store.users.length > 0;
 
-        // Agar do'konda foydalanuvchilar bo'lsa, superadminga yubormaymiz
         if (!isSuperAdminPersonalChat || !hasStoreUsers) {
           chatIds.add(store.telegramChatId);
         }
@@ -165,9 +154,7 @@ export class TelegramNotificationService {
     }
   }
 
-  /**
-   * Barcha tegishli qabul qiluvchilarga xabar yuboradi
-   */
+
   async sendToRecipients(
     chatIds: string[],
     message: string,
@@ -185,9 +172,7 @@ export class TelegramNotificationService {
     return sentCount;
   }
 
-  /**
-   * Real vaqtdagi yangi savdo bildirishnomasi
-   */
+
   async notifySale(
     storeId: number,
     data: SaleNotificationData,
@@ -240,9 +225,7 @@ ${itemsText}
     }
   }
 
-  /**
-   * Mahsulot zaxirasi kritik kamayganda real-vaqt ogohlantirish
-   */
+
   async notifyLowStock(
     storeId: number,
     product: LowStockNotificationData,
@@ -283,9 +266,7 @@ ${itemsText}
     }
   }
 
-  /**
-   * Qarz to'lovi qabul qilinganda xabarnoma
-   */
+
   async notifyDebtPayment(
     storeId: number,
     data: DebtPaymentNotificationData,
@@ -332,9 +313,7 @@ ${data.note ? `📝 <b>Izoh:</b> ${data.note}\n` : ''}${data.saleNumber ? `🧾 
     }
   }
 
-  /**
-   * Xarajat kiritilganda xabarnoma
-   */
+
   async notifyExpense(
     storeId: number,
     data: ExpenseNotificationData,
@@ -370,9 +349,7 @@ ${data.userName ? `👤 <b>Kiritdi:</b> ${data.userName}\n` : ''}${data.balance 
     }
   }
 
-  /**
-   * Do'kon guruhiga qo'lda test xabar yuboradi.
-   */
+
   async sendTestMessage(storeId: number, message: string) {
     const store = await this.prisma.store.findUnique({
       where: { id: storeId },
@@ -398,7 +375,6 @@ ${data.userName ? `👤 <b>Kiritdi:</b> ${data.userName}\n` : ''}${data.balance 
     };
   }
 
-  // 1. Har soatda qarzlar muddatini tekshirish
   @Cron(CronExpression.EVERY_HOUR)
   async checkDebtReminders() {
     this.logger.log('Qarzdorlik eslatmalari tekshirilmoqda...');
@@ -445,7 +421,7 @@ ${data.userName ? `👤 <b>Kiritdi:</b> ${data.userName}\n` : ''}${data.balance 
     }
   }
 
-  // 2. Kam qolgan tovarlar (Low stock)
+
   @Cron(CronExpression.EVERY_4_HOURS)
   async checkLowStock() {
     this.logger.log('Kam qolgan mahsulotlar tekshirilmoqda...');
@@ -487,7 +463,7 @@ ${data.userName ? `👤 <b>Kiritdi:</b> ${data.userName}\n` : ''}${data.balance 
     }
   }
 
-  // 3. Har kuni kechki soat 22:00 da kunlik hisobot
+
   @Cron('0 22 * * *')
   async sendDailySummary() {
     this.logger.log('Kunlik hisobotlar yuborilmoqda...');

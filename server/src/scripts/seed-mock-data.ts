@@ -12,7 +12,6 @@ const prisma = new PrismaClient({ adapter });
 async function seed() {
   console.log('--- HisobX Mock Data Seeding Boshlandi ---');
 
-  // 1. Topish yoki yaratish: Store
   let store = await prisma.store.findFirst({
     where: { isActive: true },
     include: { users: true },
@@ -36,7 +35,6 @@ async function seed() {
 
   const storeId = store.id;
 
-  // 2. Manager yoki Admin topish/yaratish
   let manager = store.users.find((u) => u.role === Role.MANAGER || u.role === Role.ADMIN);
   if (!manager) {
     const hashedPassword = await bcrypt.hash('Admin123!', 7);
@@ -57,7 +55,6 @@ async function seed() {
 
   const userId = manager.id;
 
-  // Qo'shimcha sotuvchi va admin xodimlar
   const sellerPass = await bcrypt.hash('Seller123!', 7);
   const seller = await prisma.user.upsert({
     where: { phone: '+998901112233' },
@@ -87,7 +84,6 @@ async function seed() {
   });
   console.log('Xodimlar tayyorlandi (Sotuvchi va Admin).');
 
-  // 3. Kategoriyalar
   const categoryNames = [
     'Ichimliklar',
     'Sut va sut mahsulotlari',
@@ -108,9 +104,7 @@ async function seed() {
   }
   console.log(`${Object.keys(categories).length} ta kategoriya tayyorlandi.`);
 
-  // 4. Mahsulotlar (Katalog)
   const productDefs = [
-    // Ichimliklar
     {
       name: 'Coca-Cola Classic 1.5L',
       barcode: '4780001234567',
@@ -161,7 +155,6 @@ async function seed() {
       minStock: 5,
       unit: 'dona',
     },
-    // Sut mahsulotlari
     {
       name: 'Nestle Sut 3.2% 1L',
       barcode: '4780002345671',
@@ -192,7 +185,6 @@ async function seed() {
       minStock: 5,
       unit: 'dona',
     },
-    // Non va qandolat
     {
       name: 'Toshkent non (patir)',
       barcode: '4780004567891',
@@ -213,7 +205,6 @@ async function seed() {
       minStock: 10,
       unit: 'dona',
     },
-    // Shirinliklar
     {
       name: 'Qandolatchi Vafli 500g',
       barcode: '4780003456781',
@@ -244,7 +235,6 @@ async function seed() {
       minStock: 5,
       unit: 'dona',
     },
-    // Oziq-ovqat va un
     {
       name: 'Makfa Oliy navli un 2kg',
       barcode: '4607001239871',
@@ -285,7 +275,6 @@ async function seed() {
       minStock: 15,
       unit: 'kg',
     },
-    // Maishiy kimyo
     {
       name: 'Fairy Limon Idish yuvish vositasi 450ml',
       barcode: '5410076543210',
@@ -334,7 +323,6 @@ async function seed() {
     });
     productsMap[p.name] = prod;
 
-    // Ombor kirimi (Inventory Transaction)
     await prisma.inventoryTransaction.create({
       data: {
         storeId,
@@ -348,7 +336,6 @@ async function seed() {
   }
   console.log(`${Object.keys(productsMap).length} ta mahsulot va ombor kirimlari yaratildi.`);
 
-  // 5. Mijozlar
   const customerDefs = [
     { name: 'Jasur Mahmudov', phone: '+998901114455', address: 'Toshkent, Chilonzor 8' },
     { name: 'Bobur Aliyev', phone: '+998935556677', address: 'Toshkent, Yunusobod 12' },
@@ -371,7 +358,6 @@ async function seed() {
   }
   console.log(`${Object.keys(customersMap).length} ta mijoz yaratildi.`);
 
-  // 6. Xarajat toifalari va Xarajatlar
   const expenseCatDefs = [
     'Ijara to‘lovi',
     'Kommunal to‘lovlar',
@@ -390,7 +376,6 @@ async function seed() {
     expCats[name] = ec.id;
   }
 
-  // Boshlang'ich kassa tranzaksiyasi
   let runningBalance = 1000000;
   await prisma.cashTransaction.create({
     data: {
@@ -403,7 +388,6 @@ async function seed() {
     },
   });
 
-  // Xarajat 1: Xodimlar tushligi
   const expAmount1 = 150000;
   runningBalance -= expAmount1;
   const exp1 = await prisma.expense.create({
@@ -426,7 +410,6 @@ async function seed() {
     },
   });
 
-  // Xarajat 2: Kommunal
   const expAmount2 = 250000;
   runningBalance -= expAmount2;
   await prisma.expense.create({
@@ -449,8 +432,7 @@ async function seed() {
     },
   });
 
-  // 7. Savdolar (Sales)
-  // Savdo #1: Naqd savdo (Coca-cola + Non)
+
   const pCola = productsMap['Coca-Cola Classic 1.5L'];
   const pNon = productsMap['Toshkent non (patir)'];
   const sale1Amount = 14000 * 3 + 5000 * 4; // 42,000 + 20,000 = 62,000
@@ -499,13 +481,12 @@ async function seed() {
     },
   });
 
-  // Savdo #2: Naqd savdo (Un, Yog', Shakar - 5% chegirma bilan)
   const pUn = productsMap['Makfa Oliy navli un 2kg'];
   const pYog = productsMap["Kungaboqar yog'i Zolotaya Semechka 1L"];
   const pShakar = productsMap['Shakar 1kg'];
-  const sub2 = 28000 * 1 + 21000 * 2 + 14000 * 2; // 28,000 + 42,000 + 28,000 = 98,000
+  const sub2 = 28000 * 1 + 21000 * 2 + 14000 * 2; 
   const disc2 = 4900;
-  const tot2 = sub2 - disc2; // 93,100
+  const tot2 = sub2 - disc2; 
   runningBalance += tot2;
 
   const sale2 = await prisma.sale.create({
@@ -542,11 +523,10 @@ async function seed() {
     },
   });
 
-  // Savdo #3: Naqd savdo (Sut, Vafli, Sharbat)
   const pSut = productsMap['Nestle Sut 3.2% 1L'];
   const pVafli = productsMap['Qandolatchi Vafli 500g'];
   const pDena = productsMap['Dena Olma Sharbat 1L'];
-  const tot3 = 16000 * 2 + 24000 * 1 + 15000 * 2; // 32,000 + 24,000 + 30,000 = 86,000
+  const tot3 = 16000 * 2 + 24000 * 1 + 15000 * 2;
   runningBalance += tot3;
 
   const sale3 = await prisma.sale.create({
@@ -580,10 +560,9 @@ async function seed() {
     },
   });
 
-  // Savdo #4: NASIYA (Jasur Mahmudov) — Qarz va qisman to'lov
   const custJasur = customersMap['Jasur Mahmudov'];
   const pGuruch = productsMap['Lazzat Guruch Alanga 1kg'];
-  const tot4 = 22000 * 2 + 21000 * 2 + 5000 * 2; // 44,000 + 42,000 + 10,000 = 96,000
+  const tot4 = 22000 * 2 + 21000 * 2 + 5000 * 2; 
 
   const sale4 = await prisma.sale.create({
     data: {
@@ -615,14 +594,13 @@ async function seed() {
       customerId: custJasur.id,
       saleId: sale4.id,
       amount: tot4,
-      remainingAmount: 46000, // 50,000 to'langan!
+      remainingAmount: 46000, 
       dueDate: dueJasur,
       isPaid: false,
       note: '10 kunda to‘laydi',
     },
   });
 
-  // Qarz to'lovi (50,000 so'm kassaga kirdi)
   runningBalance += 50000;
   await prisma.debtPayment.create({
     data: {
@@ -644,11 +622,10 @@ async function seed() {
     },
   });
 
-  // Savdo #5: NASIYA (Bobur Aliyev) — MUDDATI O'TGAN QARZ
   const custBobur = customersMap['Bobur Aliyev'];
   const pTea = productsMap['Ahmad Tea Ceylon 100g'];
   const pChoc = productsMap['Alpen Gold Shokolad 85g'];
-  const tot5 = 35000 * 2 + 15000 * 4; // 70,000 + 60,000 = 130,000
+  const tot5 = 35000 * 2 + 15000 * 4; 
 
   const sale5 = await prisma.sale.create({
     data: {
@@ -671,7 +648,7 @@ async function seed() {
   });
 
   const overdueDate = new Date();
-  overdueDate.setDate(overdueDate.getDate() - 3); // 3 kun oldin tugagan!
+  overdueDate.setDate(overdueDate.getDate() - 3); 
 
   await prisma.debt.create({
     data: {
@@ -686,7 +663,6 @@ async function seed() {
     },
   });
 
-  // 8. Bildirishnomalar (Notifications)
   await prisma.notification.createMany({
     data: [
       {

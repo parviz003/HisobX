@@ -46,7 +46,6 @@ import { AllExceptionsFilter } from './common/filters/all-exception.filter';
           {
             name: DEFAULT_THROTTLER,
             ttl: env.RATE_LIMIT.TTL_SECONDS * 1000,
-            // Autentifikatsiyalangan foydalanuvchiga kengroq limit
             limit: async (context: ExecutionContext) =>
               (await resolveThrottleUserId(context.switchToHttp().getRequest()))
                 ? env.RATE_LIMIT.USER_LIMIT
@@ -79,7 +78,6 @@ import { AllExceptionsFilter } from './common/filters/all-exception.filter';
     NotificationsModule,
   ],
   providers: [
-    // Throttler birinchi ishlaydi: anonim so'rovlar ham hisobga olinadi
     { provide: APP_GUARD, useClass: AppThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },

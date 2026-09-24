@@ -1,7 +1,4 @@
-/**
- * Bot xabarlari — o'zbekcha va qisqa.
- * Matnlar bitta joyda turadi: xabar o'zgarsa, kod izlab yurilmaydi.
- */
+
 export const BOT_TEXT = {
   startWithoutToken:
     'Salom! Bu — HisobX boti.\n\n' +
@@ -27,7 +24,6 @@ export const BOT_TEXT = {
   linked: '✅ Hisobingiz ulandi. Tasdiqlash kodi hozir yuboriladi.',
 } as const;
 
-/** OTP xabari: kod, muddat va ogohlantirish. */
 export function otpMessage(code: string, ttlSeconds: number): string {
   const minutes = Math.max(1, Math.round(ttlSeconds / 60));
   return (

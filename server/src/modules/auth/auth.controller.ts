@@ -48,10 +48,7 @@ import {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  /*
-   * Signup YO'Q: foydalanuvchini faqat yuqori rol yaratadi.
-   * Do'kon va uning menejeri — `POST /stores/onboard` (SUPERADMIN).
-   */
+
 
   @Public()
   @StrictRateLimit()
